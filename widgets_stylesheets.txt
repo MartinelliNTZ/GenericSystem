@@ -1,0 +1,753 @@
+====================================================================================================
+  RELATÓRIO DE STYLESHEETS — Aetheris ToolBox Widgets
+====================================================================================================
+  Diretório: C:\Users\marti\Documents\GitHub\AetherisToolBox\resources\widgets
+  Data: 19/07/2026 22:26:49
+====================================================================================================
+
+📁 app_bar.py
+   🏷️  AppBar
+   ⬜ Sem stylesheet (vazio)
+
+📁 app_bar.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 app_bar.py
+   🏷️  QMenu
+   ⬜ Sem stylesheet (vazio)
+
+📁 app_bar.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 app_bar.py
+   🏷️  QToolBar
+   ⬜ Sem stylesheet (vazio)
+
+📁 app_bar.py
+   🏷️  QToolButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 BasePage.py
+   🏷️  BasePage
+   ⬜ Sem stylesheet (vazio)
+
+📁 buttons\ToolbarButton.py
+   🏷️  QToolButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 buttons\ToolbarButton.py
+   🏷️  ToolbarButton
+   ❌ ERRO: TypeError: ToolbarButton.__init__() missing 1 required positional argument: 'tool'
+
+📁 CollapsibleParams.py
+   🏷️  CollapsibleParams
+   ⬜ Sem stylesheet (vazio)
+
+📁 CollapsibleParams.py
+   🏷️  SimpleLabel
+   🎨 STYLESHEET:
+      color: #A1A1AA; font-family: Consolas, monospace; font-size: 12px;
+
+📁 complex\ComplexSelector.py
+   🏷️  ComplexSelector
+   ⬜ Sem stylesheet (vazio)
+
+📁 complex\ComplexSelector.py
+   🏷️  ListFileDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 complex\ComplexSelector.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 complex\ComplexSelector.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 complex\ComplexSelector.py
+   🏷️  SimpleSecondaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1f1f23,stop:1 #18181b);  color: #e8c76a;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background: #1f1f23;  color: #fff6d8;}QPushButton:pressed {  background: #121214;}
+
+📁 complex\GridComplexSelector.py
+   🏷️  ComplexSelector
+   ⬜ Sem stylesheet (vazio)
+
+📁 complex\GridComplexSelector.py
+   🏷️  GridComplexSelector
+   ❌ ERRO: TypeError: GridComplexSelector.__init__() missing 1 required positional argument: 'specs'
+
+📁 complex\GridComplexSelector.py
+   🏷️  GroupPainel
+   ⬜ Sem stylesheet (vazio)
+
+📁 complex\GridComplexSelector.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSearchDialog.py
+   🏷️  BaseDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 crs\CrsSearchDialog.py
+   🏷️  CrsSearchDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 crs\CrsSearchDialog.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSearchDialog.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSearchDialog.py
+   🏷️  QTreeWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSelectorWidget.py
+   🏷️  CrsSelectorWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSelectorWidget.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSelectorWidget.py
+   🏷️  SimpleComboBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 crs\CrsSelectorWidget.py
+   🏷️  SimpleSecondaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1f1f23,stop:1 #18181b);  color: #e8c76a;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background: #1f1f23;  color: #fff6d8;}QPushButton:pressed {  background: #121214;}
+
+📁 DialogPage.py
+   🏷️  BasePage
+   ⬜ Sem stylesheet (vazio)
+
+📁 DialogPage.py
+   🏷️  DialogPage
+   ⬜ Sem stylesheet (vazio)
+
+📁 dialogs\ListFileDialog.py
+   🏷️  BaseDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 dialogs\ListFileDialog.py
+   🏷️  ListFileDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 dialogs\ListFileDialog.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 dialogs\ListFileDialog.py
+   🏷️  QListWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 ExecutionButtons.py
+   🏷️  ExecutionButtons
+   ⬜ Sem stylesheet (vazio)
+
+📁 ExecutionButtons.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileListView.py
+   🏷️  FileListView
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileListView.py
+   🏷️  QListWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileListView.py
+   🏷️  SimpleSecondaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1f1f23,stop:1 #18181b);  color: #e8c76a;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background: #1f1f23;  color: #fff6d8;}QPushButton:pressed {  background: #121214;}
+
+📁 FileTreeWidget.py
+   🏷️  FileContextMenu
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileTreeWidget.py
+   🏷️  FileTreeWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileTreeWidget.py
+   🏷️  QInputDialog
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileTreeWidget.py
+   🏷️  QMessageBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 FileTreeWidget.py
+   🏷️  QTreeView
+   ⬜ Sem stylesheet (vazio)
+
+📁 FootballMatchWidget.py
+   🏷️  FootballMatchWidget
+   ❌ ERRO: TypeError: FootballMatchWidget.__init__() missing 1 required positional argument: 'fixture'
+
+📁 FootballMatchWidget.py
+   🏷️  QFrame
+   ⬜ Sem stylesheet (vazio)
+
+📁 FootballMatchWidget.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCardView.py
+   🏷️  GridCardView
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCardView.py
+   🏷️  QFrame
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCardView.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCheckBox.py
+   🏷️  GridCheckBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCheckBox.py
+   🏷️  QCheckBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridCheckBox.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridDoubleSpinBox.py
+   🏷️  GridDoubleSpinBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridDoubleSpinBox.py
+   🏷️  QDoubleSpinBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridDoubleSpinBox.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridDoubleSpinBox.py
+   🏷️  QSpinBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridFieldMapping.py
+   🏷️  GridFieldMapping
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridFieldMapping.py
+   🏷️  QCheckBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridFieldMapping.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridFieldMapping.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridFieldMapping.py
+   🏷️  QScrollArea
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridGroupPainel.py
+   🏷️  GridGroupPainel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridGroupPainel.py
+   🏷️  GroupPainel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridLabel.py
+   🏷️  GridLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridLabel.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridLineEdit.py
+   🏷️  GridLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridLineEdit.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridLineEdit.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPercentView.py
+   🏷️  GridPercentView
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  GridPreferenceItem
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  PreferenceRow
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QCheckBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QDoubleSpinBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  QScrollArea
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridPreferenceItem.py
+   🏷️  SimpleDangerButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: #c53a3a;  color: #1a0505;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 700;  font-size: 12px;  letter-spacing: 0.5px;}QPushButton:hover {  background-color: #ff5c5c;}QPushButton:pressed {  background-color: #c53a3a;}QPushButton:disabled {  background-color: #18181b;  color: #5c5442;}
+
+📁 grid\GridRadio.py
+   🏷️  GridRadio
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridRadio.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridRadio.py
+   🏷️  QRadioButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridSelector.py
+   🏷️  GridSelector
+   ❌ ERRO: TypeError: GridSelector.__init__() missing 1 required positional argument: 'specs'
+
+📁 grid\GridSelector.py
+   🏷️  GroupPainel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridSelector.py
+   🏷️  SimpleSelector
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridSlider.py
+   🏷️  GridSlider
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridSlider.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 grid\GridSlider.py
+   🏷️  QSlider
+   ⬜ Sem stylesheet (vazio)
+
+📁 GroupPainel.py
+   🏷️  GroupPainel
+   ⬜ Sem stylesheet (vazio)
+
+📁 GroupPainel.py
+   🏷️  QGroupBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 HorizontalTab.py
+   🏷️  HorizontalTab
+   ⬜ Sem stylesheet (vazio)
+
+📁 HorizontalTab.py
+   🏷️  QTabBar
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeyCaptureLine.py
+   🏷️  HotkeyCaptureLine
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeyCaptureLine.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeyCaptureLine.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeySequenceCapture.py
+   🏷️  HotkeyCaptureLine
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeySequenceCapture.py
+   🏷️  HotkeySequenceCapture
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeySequenceCapture.py
+   🏷️  QFrame
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeySequenceCapture.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 HotkeySequenceCapture.py
+   🏷️  SimpleGhostButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: transparent;  color: #e8c76a;  border: none;  border-radius: 8px;  padding: 6px 14px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background-color: #18181b;}QPushButton:pressed {  background-color: #121214;}
+
+📁 HotkeySequenceCapture.py
+   🏷️  SimpleLabel
+   🎨 STYLESHEET:
+      color: #A1A1AA; font-family: Consolas, monospace; font-size: 12px;
+
+📁 HotkeySequenceCapture.py
+   🏷️  SimpleRemoveButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: #18181b;  color: #1a0505;  border: none;  border-radius: 10px;  padding: 6px 14px;  font-weight: 600;  font-size: 11px;}QPushButton:hover {  background-color: #ff5c5c;}QPushButton:pressed {  background-color: #c53a3a;}
+
+📁 ImagePreviewPanel.py
+   🏷️  ImagePreviewPanel
+   ⬜ Sem stylesheet (vazio)
+
+📁 ItemTable.py
+   🏷️  ItemTable
+   ⬜ Sem stylesheet (vazio)
+
+📁 ItemTable.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 ItemTable.py
+   🏷️  QSpinBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 ItemTable.py
+   🏷️  QTableWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 ItemTable.py
+   🏷️  SimpleRemoveButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: #18181b;  color: #1a0505;  border: none;  border-radius: 10px;  padding: 6px 14px;  font-weight: 600;  font-size: 11px;}QPushButton:hover {  background-color: #ff5c5c;}QPushButton:pressed {  background-color: #c53a3a;}
+
+📁 ListViewWidget.py
+   🏷️  ListViewWidget
+   🎨 STYLESHEET:
+      QWidget#list_view_widget { background: transparent; }
+
+📁 ListViewWidget.py
+   🏷️  QScrollArea
+   ⬜ Sem stylesheet (vazio)
+
+📁 MapInfos.py
+   🏷️  MapInfos
+   ⬜ Sem stylesheet (vazio)
+
+📁 MapInfos.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 MapInfos.py
+   🏷️  SeparatorWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 MenuBar.py
+   🏷️  MenuBar
+   🎨 STYLESHEET:
+      QWidget#app_menu_bar_container {  background-color: #08080a;  border-bottom: 1px solid #2e2a1f;}
+
+📁 MenuBar.py
+   🏷️  QMenuBar
+   ⬜ Sem stylesheet (vazio)
+
+📁 MouseButtonCapture.py
+   🏷️  MouseButtonCapture
+   ⬜ Sem stylesheet (vazio)
+
+📁 MouseButtonCapture.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 MouseButtonCapture.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  Badge
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  BasePage
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  ExecutionButtons
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  PluginPage
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  QFrame
+   ⬜ Sem stylesheet (vazio)
+
+📁 PluginPage.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 PreviewPanel.py
+   🏷️  ImagePreviewPanel
+   ⬜ Sem stylesheet (vazio)
+
+📁 PreviewPanel.py
+   🏷️  PreviewPanel
+   ⬜ Sem stylesheet (vazio)
+
+📁 PreviewPanel.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 PreviewPanel.py
+   🏷️  TextPreviewWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 PropertyInfoWidget.py
+   🏷️  GridLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 PropertyInfoWidget.py
+   🏷️  PropertyInfoWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 PropertyInfoWidget.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 ReadOnlyTextBrowser.py
+   🏷️  QTextBrowser
+   ⬜ Sem stylesheet (vazio)
+
+📁 ReadOnlyTextBrowser.py
+   🏷️  ReadOnlyTextBrowser
+   ⬜ Sem stylesheet (vazio)
+
+📁 RecentProjectsMenu.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 RecentProjectsMenu.py
+   🏷️  QMenu
+   ⬜ Sem stylesheet (vazio)
+
+📁 RecentProjectsMenu.py
+   🏷️  RecentProjectsMenu
+   🎨 STYLESHEET:
+      QMenu {  background-color: #050506;  border: 1px solid #2e2a1f;  border-radius: 10px;  padding: 6px;  margin: 4px;}QMenu::item {  background-color: transparent;  color: #c9ab5c;  padding: 8px 12px;  border-radius: 6px;  font-size: 12px;  border-left: 1px solid transparent;}QMenu::item:hover {  background-color: #e8c76a;  color: #050506;  border-left: 1px solid #f0d783;  font-weight: 700;}QMenu::item:selected {  background-color: #f0d783;  color: #050506;  border-left: 1px solid #e8c76a;  font-weight: 700;}QMenu::item:disabled {  background-color: transparent;  color: #5c5442;  border-left: 1px solid transparent;}QMenu::separator {  height: 1px;  background: #221f17;  margin: 4px 8px;}
+
+📁 ScrollWidget.py
+   🏷️  QScrollArea
+   ⬜ Sem stylesheet (vazio)
+
+📁 ScrollWidget.py
+   🏷️  ScrollWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 SectionPanel.py
+   🏷️  SectionPanel
+   ⬜ Sem stylesheet (vazio)
+
+📁 SeparatorWidget.py
+   🏷️  QFrame
+   ⬜ Sem stylesheet (vazio)
+
+📁 SeparatorWidget.py
+   🏷️  SeparatorWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleComboBox.py
+   🏷️  QComboBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleComboBox.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleComboBox.py
+   🏷️  SimpleComboBox
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleDangerButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleDangerButton.py
+   🏷️  SimpleDangerButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: #c53a3a;  color: #1a0505;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 700;  font-size: 12px;  letter-spacing: 0.5px;}QPushButton:hover {  background-color: #ff5c5c;}QPushButton:pressed {  background-color: #c53a3a;}QPushButton:disabled {  background-color: #18181b;  color: #5c5442;}
+
+📁 simple\SimpleGhostButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleGhostButton.py
+   🏷️  SimpleGhostButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: transparent;  color: #e8c76a;  border: none;  border-radius: 8px;  padding: 6px 14px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background-color: #18181b;}QPushButton:pressed {  background-color: #121214;}
+
+📁 simple\SimpleLabel.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleLabel.py
+   🏷️  SimpleLabel
+   🎨 STYLESHEET:
+      color: #A1A1AA; font-family: Consolas, monospace; font-size: 12px;
+
+📁 simple\SimplePrimaryButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimplePrimaryButton.py
+   🏷️  SimplePrimaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0.000,y1:0.500,x2:1.000,y2:0.500,stop:0.0 #b8912f,stop:0.5 #e8c76a,stop:1.0 #b8912f);  color: #241a05;  border: none;  border-radius: 10px;  padding: 11px 26px;  font-weight: 800;  font-size: 14px;  letter-spacing: 1px;}QPushButton:hover {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #f0d783,stop:1 #e8c76a);}QPushButton:pressed {  background: #c9ab5c;}QPushButton:disabled {  background-color: #18181b;  color: #5c5442;}
+
+📁 simple\SimpleRemoveButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleRemoveButton.py
+   🏷️  SimpleRemoveButton
+   🎨 STYLESHEET:
+      QPushButton {  background-color: #18181b;  color: #1a0505;  border: none;  border-radius: 10px;  padding: 6px 14px;  font-weight: 600;  font-size: 11px;}QPushButton:hover {  background-color: #ff5c5c;}QPushButton:pressed {  background-color: #c53a3a;}
+
+📁 simple\SimpleSecondaryButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleSecondaryButton.py
+   🏷️  SimpleSecondaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1f1f23,stop:1 #18181b);  color: #e8c76a;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background: #1f1f23;  color: #fff6d8;}QPushButton:pressed {  background: #121214;}
+
+📁 simple\SimpleSelector.py
+   🏷️  GridRadio
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleSelector.py
+   🏷️  ListFileDialog
+   🎨 STYLESHEET:
+      QDialog {  background-color: #0b0b0d;  border: 1px solid #2e2a1f;  border-radius: 16px;}
+
+📁 simple\SimpleSelector.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleSelector.py
+   🏷️  QLineEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleSelector.py
+   🏷️  SimpleSecondaryButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1f1f23,stop:1 #18181b);  color: #e8c76a;  border: none;  border-radius: 10px;  padding: 10px 22px;  font-weight: 600;  font-size: 12px;}QPushButton:hover {  background: #1f1f23;  color: #fff6d8;}QPushButton:pressed {  background: #121214;}
+
+📁 simple\SimpleSelector.py
+   🏷️  SimpleSelector
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleThemeButton.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 simple\SimpleThemeButton.py
+   🏷️  SimpleThemeButton
+   🎨 STYLESHEET:
+      QPushButton {  background: qlineargradient(x1:0.000,y1:0.500,x2:1.000,y2:0.500,stop:0.0 #b8912f,stop:0.5 #e8c76a,stop:1.0 #b8912f);  color: #241a05;  border: none;  border-radius: 10px;  padding: 11px 26px;  font-weight: 800;  font-size: 14px;  min-height: 60px;  letter-spacing: 1px;}QPushButton:hover {  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f0d783, stop:1 #e8c76a);}QPushButton:pressed {  background: #c9ab5c;}QPushButton:disabled {  background-color: #18181b;  color: #5c5442;  border: none;  border-radius: 10px;}
+
+📁 TextPreviewWidget.py
+   🏷️  QPlainTextEdit
+   ⬜ Sem stylesheet (vazio)
+
+📁 TextPreviewWidget.py
+   🏷️  QPushButton
+   ⬜ Sem stylesheet (vazio)
+
+📁 TextPreviewWidget.py
+   🏷️  TextPreviewWidget
+   ⬜ Sem stylesheet (vazio)
+
+📁 ToastNotification.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 ToolBar.py
+   🏷️  ToolBar
+   🎨 STYLESHEET:
+      QWidget#toolbar_panel {
+                      background-color: #050506;
+                      border-bottom: 1px solid #2e2a1f;
+                  }
+
+📁 ToolBar.py
+   🏷️  ToolGroup
+   ❌ ERRO: TypeError: ToolGroup.__init__() missing 2 required positional arguments: 'tool_type' and 'tools'
+
+📁 ToolGroup.py
+   🏷️  QLabel
+   ⬜ Sem stylesheet (vazio)
+
+📁 ToolGroup.py
+   🏷️  ToolGroup
+   ❌ ERRO: TypeError: ToolGroup.__init__() missing 2 required positional arguments: 'tool_type' and 'tools'
+
+📁 ToolGroup.py
+   🏷️  ToolSeparator
+   ⬜ Sem stylesheet (vazio)
+
+📁 ToolGroup.py
+   🏷️  ToolbarButton
+   ❌ ERRO: TypeError: ToolbarButton.__init__() missing 1 required positional argument: 'tool'
+
+📁 ToolSeparator.py
+   🏷️  ToolSeparator
+   ⬜ Sem stylesheet (vazio)
+
+📁 VerticalTab.py
+   🏷️  VerticalTab
+   ⬜ Sem stylesheet (vazio)
+
+====================================================================================================
+  RESUMO
+====================================================================================================
+  Widgets encontrados:  177
+  Com stylesheet:       27
+  Sem stylesheet:       143
+  Com erro:             7
+====================================================================================================

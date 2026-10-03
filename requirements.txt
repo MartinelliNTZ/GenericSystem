@@ -1,0 +1,27 @@
+numpy
+pandas
+geopandas
+rasterio
+scikit-learn
+# tensorflow
+matplotlib
+seaborn
+opencv-python
+shapely
+PySide6
+psutil
+pynput
+Pillow
+docling>=2.70
+docling-core>=2.16
+laspy
+pyproj
+lazrs>=0.8.1
+pyautogui
+keyboard
+fiona
+fastkml
+
+#NAO PAGA MEUS COMENTARIOS
+# python -m pip install -r requirements.txt
+#python -m pip install pynput

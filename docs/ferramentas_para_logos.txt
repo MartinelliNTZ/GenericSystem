@@ -1,0 +1,330 @@
+══════════════════════════════════════════════════════════════════
+  AETHERIS TOOLBOX — LISTA DE FERRAMENTAS PARA CRIAÇÃO DE LOGOS
+══════════════════════════════════════════════════════════════════
+
+Data: 01/06/2026
+Propósito: Descrever a essência de cada ferramenta do sistema
+            para servir de inspiração na criação de logos/ícones.
+
+══════════════════════════════════════════════════════════════════
+LEGENDAS
+══════════════════════════════════════════════════════════════════
+- ToolType: SYSTEM | RASTER | FOLDER | IMAGE
+- Category: CENTRAL | SIDE | BOTH | INSTANT
+
+══════════════════════════════════════════════════════════════════
+1. INICIAL (Home)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: CENTRAL
+
+Essência: Página inicial / Portal de boas-vindas.
+           É a primeira tela que o usuário vê ao abrir o software.
+           Apresenta o nome "Aetheris ToolBox" e instruções de uso.
+
+Funções Básicas:
+  - Exibir título e subtítulo de boas-vindas
+  - Informar o usuário sobre como acessar as ferramentas
+
+Elementos Visuais para Logo:
+  - ✅ Casa / Home
+  - Portal / Entrada
+  - Boas-vindas / Acolhimento
+  - Logotipo "Aetheris" estilizado
+  - Ícone de abrir porta
+
+══════════════════════════════════════════════════════════════════
+2. CONSOLE (Console)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: SIDE
+
+Essência: Terminal compartilhado de execução.
+           Exibe logs formatados com HTML, suporte a links.
+           Botões: Selecionar Tudo, Copiar Tudo, Limpar Console.
+
+Funções Básicas:
+  - Exibir logs coloridos do sistema em tempo real
+  - Selecionar / copiar / limpar conteúdo
+  - Log de mensagens de todas as ferramentas
+
+Elementos Visuais para Logo:
+  - 🖥️ Tela de terminal / prompt (>_)
+  - Console / painel de comando
+  - Barras de log horizontal
+  - Ícone de texto com cursor piscando
+  - Símbolo de saída de dados
+
+══════════════════════════════════════════════════════════════════
+3. LOGVIEWER (LogViewer)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: BOTH
+
+Essência: Visualizador/analisador de logs em tabela.
+           Tabela com colunas: timestamp, level, tool, class, message, code.
+           Pesquisa por texto, filtro por nível (DEBUG à CRITICAL),
+           ordenação por coluna, seleção múltipla, exportar filtro/seleção.
+
+Funções Básicas:
+  - Exibir logs em tabela ordenável
+  - Filtrar por nível de severidade (cores)
+  - Buscar texto nos logs
+  - Copiar seleção / filtro para clipboard
+  - Detalhes em diálogo ao dar duplo clique
+
+Elementos Visuais para Logo:
+  - 📋 Tabela / Grade
+  - Lupa sobre linhas de texto
+  - Barras de nível (INFO, WARN, ERROR) com cores
+  - Ícone de relatório / lista
+  - Checklist com indicadores coloridos
+
+══════════════════════════════════════════════════════════════════
+4. TENSORFLOW (TensorFlow / Classificador Raster)
+══════════════════════════════════════════════════════════════════
+ToolType: RASTER  |  Category: CENTRAL
+Status: INATIVO (não funcional no momento)
+
+Essência: Classificação de imagens raster com redes neurais.
+           Pipeline completo: carregar imagens, configurar modelo,
+           executar classificação, exportar resultados.
+
+Funções Básicas:
+  - Carregar configuração de rede neural
+  - Selecionar imagens raster de entrada
+  - Configurar parâmetros do modelo (bandas, épocas, etc.)
+  - Executar pipeline de classificação
+  - Salvar resultados classificados
+
+Elementos Visuais para Logo:
+  - 🧠 Rede neural / cérebro
+  - Círculos conectados (nós + arestas)
+  - Grade de imagens / pixels
+  - Satélite / sensor remoto
+  - Camadas sobrepostas (layers)
+
+══════════════════════════════════════════════════════════════════
+5. TECLADOR (Hotkey / Teclador F)
+══════════════════════════════════════════════════════════════════
+ToolType: FOLDER  |  Category: CENTRAL
+
+Essência: Automação de teclado por tecla de atalho.
+           Três modos:
+           - "Teclar Texto": digita uma string caractere por caractere
+           - "Teclar Atalho": executa sequência de teclas N vezes
+           - "Multi Clique Mouse": cliques automáticos
+           Configura: tecla gatilho, delay inicial, intervalo.
+
+Funções Básicas:
+  - Capturar tecla de atalho (ex: F)
+  - Digitar texto automaticamente ao pressionar a tecla
+  - Executar sequência de teclas em loop
+  - Cliques automáticos de mouse
+  - Salvar/carregar configurações
+
+Elementos Visuais para Logo:
+  - ⌨️ Teclado com tecla em destaque (F)
+  - Dedo pressionando tecla
+  - Seta de automação / loop
+  - Texto sendo digitado (cursor)
+  - Engrenagem + tecla
+
+══════════════════════════════════════════════════════════════════
+6. PREFERÊNCIAS (Preferences / Gerenciador de Preferências)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: CENTRAL
+Menu: Sistema
+
+Essência: Editor de todas as preferências salvas do sistema.
+           Carrega dinamicamente de preferences.json.
+           Permite editar, resetar ou remover itens por seção/tool.
+           Detecta tipo automaticamente (int, float, string, bool).
+
+Funções Básicas:
+  - Listar todas as seções de preferências
+  - Editar valores (texto, número, booleano, cor)
+  - Resetar item ao valor padrão
+  - Remover item
+  - Salvar alterações em disco
+
+Elementos Visuais para Logo:
+  - ⚙️ Engrenagem
+  - Chave inglesa / ferramenta
+  - Sliders / controles
+  - Lista com checkbox
+  - Configurações / ajustes
+
+══════════════════════════════════════════════════════════════════
+7. CONFIGURAÇÃO (Configuration)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: BOTH
+Menu: Sistema
+
+Essência: Configurações visuais do sistema (tema).
+           Seletor de temas visuais (Dark Charcoal, Base, etc.).
+           Salva tema escolhido nas preferências do sistema.
+
+Funções Básicas:
+  - Selecionar tema visual (dropdown)
+  - Salvar configuração de tema
+  - Aplicar tema em toda a interface
+
+Elementos Visuais para Logo:
+  - 🎨 Paleta de cores / pincel
+  - Lua / sol (tema escuro/claro)
+  - Monitores com aparência diferente
+  - Slider de brilho/tema
+  - Ícone de customização visual
+
+══════════════════════════════════════════════════════════════════
+8. RENOMEADOR (Renamer / Renomeador em Lote)
+══════════════════════════════════════════════════════════════════
+ToolType: FOLDER  |  Category: CENTRAL
+
+Essência: Renomeador de arquivos em lote com 6 modos.
+           Modos: Prefixo, Sufixo, Remover do Começo, Remover do Final,
+           Substituir Texto, Limpar Extensão.
+           Filtro por extensão de arquivo. Pré-visualização antes de executar.
+
+Funções Básicas:
+  - Adicionar prefixo/sufixo nos nomes
+  - Remover caracteres do início/final
+  - Buscar e substituir texto no nome
+  - Limpar extensões dos arquivos
+  - Pré-visualizar alterações antes de aplicar
+  - Filtrar por extensão
+
+Elementos Visuais para Logo:
+  - ✏️ Lápis / caneta sobre arquivo
+  - Lista de arquivos com seta de transformação
+  - Etiqueta / tag de renomeio
+  - Símbolo de substituição (A→B)
+  - Documentos organizados
+
+══════════════════════════════════════════════════════════════════
+9. GERENCIAR PROJETO (SaveProject / Projeto .mtl)
+══════════════════════════════════════════════════════════════════
+ToolType: SYSTEM  |  Category: INSTANT
+Ação: Não abre aba — executa imediatamente.
+
+Essência: Criar/salvar projetos no formato .mtl.
+           Se projeto existe → atualiza metadados (modo salvar).
+           Se não existe → abre diálogo "Salvar como" nativo.
+           Gerencia root_folder e current_project nas preferências.
+
+Funções Básicas:
+  - Criar novo arquivo de projeto (.mtl)
+  - Salvar projeto existente (atualizar metadados)
+  - Registrar root_folder nas preferências do sistema
+  - Emitir sinal de projeto alterado
+
+Elementos Visuais para Logo:
+  - 💾 Disquete / salvar
+  - Pasta com estrela (projeto)
+  - Documento com + (novo projeto)
+  - Caixa / baú de arquivos
+  - Símbolo de salvamento
+
+══════════════════════════════════════════════════════════════════
+10. EXPLORADOR (FileManager / Explorador de Arquivos)
+══════════════════════════════════════════════════════════════════
+ToolType: FOLDER  |  Category: SIDE
+
+Essência: Árvore de navegação de arquivos do projeto atual.
+           Mostra a root_folder do projeto em árvore com ícones nativos.
+           Renomear (F2), Excluir (Del c/ confirmação), Drag & Drop.
+           Clique duplo abre preview/visualização de arquivos.
+
+Funções Básicas:
+  - Navegar diretórios em árvore
+  - Criar arquivo de texto vazio
+  - Renomear arquivos/pastas
+  - Excluir com confirmação
+  - Arrastar arquivos para fora (Explorer, QGIS)
+  - Pré-visualizar arquivos ao clicar
+
+Elementos Visuais para Logo:
+  - 📂 Pastas em árvore / hierarquia
+  - Documentos organizados
+  - Seta de navegação em diretórios
+  - Lupa sobre pasta (explorar)
+  - Nós conectados (estrutura)
+
+══════════════════════════════════════════════════════════════════
+11. CONVERSOR ICO (IcoConverter)
+══════════════════════════════════════════════════════════════════
+ToolType: IMAGE  |  Category: CENTRAL
+
+Essência: Converte imagens para formato .ico (ícone Windows).
+           Suporta PNG, JPG, BMP, etc.
+           Gera múltiplos tamanhos: 16, 32, 48, 64, 128, 256 px.
+           Preview das imagens selecionadas.
+
+Funções Básicas:
+  - Selecionar imagens para conversão
+  - Escolher tamanhos desejados (checkboxes)
+  - Converter para .ico com Pillow
+  - Pré-visualizar imagens selecionadas
+  - Salvar ícones .ico no disco
+
+Elementos Visuais para Logo:
+  - 🖼️ Moldura de imagem → ícone
+  - Imagens em múltiplos tamanhos (16x16 até 256x256)
+  - Seta de conversão PNG → ICO
+  - Pincel + pixel art
+  - Paleta com formato quadrado
+
+══════════════════════════════════════════════════════════════════
+12. DOCLING (Docling)
+══════════════════════════════════════════════════════════════════
+ToolType: FOLDER  |  Category: CENTRAL
+
+Essência: Conversão de documentos para Markdown via Docling.
+           Converte PDF, imagens, Office (DOCX, PPTX, XLSX), HTML.
+           Opções: multi-coluna, extração de imagens, tabelas.
+           Preview do Markdown gerado. Salva em .md.
+
+Funções Básicas:
+  - Selecionar documento (PDF, imagem, Office)
+  - Configurar opções (multi-coluna, imagem, tabela)
+  - Converter para Markdown com Docling
+  - Visualizar preview do Markdown
+  - Salvar resultado como .md
+
+Elementos Visuais para Logo:
+  - 📄 Documento PDF → Markdown (.md)
+  - Seta de conversão (document → texto)
+  - Página com formato de texto (markdown)
+  - Pilha de documentos
+  - Símbolo de transformação com seta
+
+══════════════════════════════════════════════════════════════════
+RESUMO — TODAS AS FERRAMENTAS
+══════════════════════════════════════════════════════════════════
+
+1.  INICIAL        → Casa / Portal / Boas-vindas
+2.  CONSOLE        → Terminal / Prompt / Log
+3.  LOGVIEWER      → Tabela / Relatório / Checklist colorido
+4.  TENSORFLOW     → Rede Neural / Satélite / Pixels (inativo)
+5.  TECLADOR       → Teclado / Tecla F / Automação
+6.  PREFERÊNCIAS   → Engrenagem / Sliders / Ajustes
+7.  CONFIGURAÇÃO   → Paleta de cores / Tema / Lua+Sol
+8.  RENOMEADOR     → Lápis / Etiqueta / A→B
+9.  GERENCIAR PROJETO → Disquete / Pasta estrela / Salvar
+10. EXPLORADOR     → Pastas em árvore / Documentos
+11. CONVERSOR ICO  → Imagem → Ícone / Tamanhos múltiplos
+12. DOCLING        → PDF → Markdown / Transformação docs
+
+══════════════════════════════════════════════════════════════════
+SUGESTÕES DE ABORDAGEM VISUAL
+══════════════════════════════════════════════════════════════════
+
+- Estilo: Linhas finas (outline), ícones consistentes, 48-64px
+- Cores: Use a paleta do tema escuro (dark_charcoal) como base
+  - Fundo escuro (#1A1A20), destaque azul (#4A9EFF), 
+    verde (#4CAF50), laranja (#FF9800), vermelho (#F44336)
+- Todos devem ter um fundo arredondado (ex: círculo ou quadrado 
+  com bordas arredondadas) para parecerem unificados
+- Evitar texto nos logos — apenas ícones/símbolos
+- Se possível, manter uma linha artística comum: todos outline,
+  ou todos filled, ou todos duotone
+
+══════════════════════════════════════════════════════════════════

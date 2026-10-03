@@ -1,0 +1,756 @@
+#!/usr/bin/env python3
+"""
+DJI Drone Image Metadata Extractor
+====================================
+Extrai 100% dos metadados de imagens DJI (JPEG/MPO) em JSON estruturado.
+
+Camadas extraídas:
+  - EXIF IFD0 + SubIFD + GPS IFD (via PIL)
+  - XMP/RDF proprietário DJI (parsing binário do APP1)
+  - DJI MakerNote IFD (decodificação binária little-endian)
+  - Estrutura de segmentos JPEG (SOI, APP*, DQT, DHT, SOF, SOS, EOI)
+  - Métricas fotogramétricas derivadas (GSD, footprint, altimetria)
+
+Dependências:
+  pip install Pillow
+
+Uso:
+  python3 dji_metadata_extractor.py <imagem.jpg> [saida.json]
+  python3 dji_metadata_extractor.py DJI_foto.JPG
+  python3 dji_metadata_extractor.py DJI_foto.JPG resultado.json
+"""
+
+import sys
+import os
+import json
+import struct
+import math
+from pathlib import Path
+
+# ── Dependência única ──────────────────────────────────────────────────────────
+try:
+    from PIL import Image
+    from PIL.ExifTags import TAGS, GPSTAGS
+    from PIL.TiffImagePlugin import IFDRational
+except ImportError:
+    sys.exit("Erro: instale Pillow com:  pip install Pillow")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CONSTANTES DE CONFIGURAÇÃO
+# ══════════════════════════════════════════════════════════════════════════════
+
+INPUT_IMAGE = "imagens/m3.jpg"
+OUTPUT_JSON = "m3_metadata.json"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  HELPERS DE SERIALIZAÇÃO
+# ══════════════════════════════════════════════════════════════════════════════
+
+def make_serializable(val):
+    """Converte qualquer valor EXIF para tipo serializável em JSON."""
+    if isinstance(val, IFDRational):
+        return float(val)
+    if isinstance(val, bytes):
+        decoded_ascii = None
+        decoded_utf16 = None
+        try:
+            s = val.decode("ascii").rstrip("\x00")
+            if s and s.isprintable():
+                decoded_ascii = s
+        except Exception:
+            pass
+        try:
+            s = val.decode("utf-16-le").rstrip("\x00")
+            if s and s.isprintable():
+                decoded_utf16 = s
+        except Exception:
+            pass
+        return {
+            "_type": "bytes",
+            "hex": val.hex(),
+            "length_bytes": len(val),
+            "decoded_ascii": decoded_ascii,
+            "decoded_utf16le": decoded_utf16,
+        }
+    if isinstance(val, (tuple, list)):
+        return [make_serializable(v) for v in val]
+    if isinstance(val, dict):
+        return {k: make_serializable(v) for k, v in val.items()}
+    return val
+
+
+def dms_to_decimal(dms, ref):
+    """Converte DMS (graus, minutos, segundos) + referência para decimal com sinal."""
+    deg, mn, sec = (float(v) for v in dms)
+    decimal = deg + mn / 60.0 + sec / 3600.0
+    if ref in ("S", "W"):
+        decimal = -decimal
+    return round(decimal, 10)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXTRAÇÃO DE EXIF (via PIL)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def extract_exif(img):
+    """Extrai todos os campos EXIF incluindo GPS e MakerNote."""
+    raw = img._getexif()
+    if not raw:
+        return {}
+
+    result = {}
+    for tag_id, value in raw.items():
+        tag = TAGS.get(tag_id, str(tag_id))
+        if tag == "GPSInfo":
+            gps = {}
+            for k, v in value.items():
+                gps_tag = GPSTAGS.get(k, str(k))
+                gps[gps_tag] = make_serializable(v)
+            result["GPSInfo"] = gps
+        else:
+            result[tag] = make_serializable(value)
+    return result
+
+
+def parse_gps_section(exif_raw):
+    """Extrai e interpreta coordenadas GPS do bloco EXIF."""
+    gps = exif_raw.get("GPSInfo", {})
+    if not gps:
+        return {}
+
+    lat_dms = gps.get("GPSLatitude")
+    lon_dms = gps.get("GPSLongitude")
+    lat_ref = gps.get("GPSLatitudeRef", "N")
+    lon_ref = gps.get("GPSLongitudeRef", "E")
+
+    lat_dec = dms_to_decimal(lat_dms, lat_ref) if lat_dms else None
+    lon_dec = dms_to_decimal(lon_dms, lon_ref) if lon_dms else None
+
+    alt_raw = gps.get("GPSAltitude")
+    alt = float(alt_raw) if alt_raw is not None else None
+
+    alt_ref_raw = gps.get("GPSAltitudeRef")
+    if isinstance(alt_ref_raw, dict):
+        alt_ref_byte = alt_ref_raw.get("raw_list", [0])[0]
+    else:
+        alt_ref_byte = 0
+
+    return {
+        "datum": gps.get("GPSMapDatum", "WGS-84").strip("\x00"),
+        "gps_version_id": gps.get("GPSVersionID", {}).get("raw_list"),
+        "gps_status_exif": gps.get("GPSStatus"),
+        "latitude_dms": lat_dms,
+        "longitude_dms": lon_dms,
+        "latitude_ref": lat_ref,
+        "longitude_ref": lon_ref,
+        "latitude_decimal_exif": lat_dec,
+        "longitude_decimal_exif": lon_dec,
+        "altitude_m_exif": alt,
+        "altitude_ref_byte": alt_ref_byte,
+        "altitude_ref_description": "Above sea level" if alt_ref_byte == 0 else "Below sea level",
+        "google_maps_url": (
+            f"https://maps.google.com/?q={lat_dec},{lon_dec}"
+            if lat_dec and lon_dec else None
+        ),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXTRAÇÃO DE XMP (parsing binário)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def extract_xmp(data: bytes):
+    """Localiza e parseia o bloco XMP/RDF embutido no JPEG."""
+    start = data.find(b"<x:xmpmeta")
+    end = data.find(b"</x:xmpmeta>")
+    if start == -1 or end == -1:
+        return None, {}
+
+    xmp_raw = data[start : end + len(b"</x:xmpmeta>")].decode("utf-8", errors="replace")
+
+    # Parse de atributos via busca de padrão  key="value"
+    import re
+    attrs = {}
+    for m in re.finditer(r'([\w:.\-]+)="([^"]*)"', xmp_raw):
+        key = m.group(1)
+        val = m.group(2)
+        # Tenta converter números
+        try:
+            if "." in val or val.lstrip("+-").replace(".", "").isdigit():
+                val_num = float(val)
+                attrs[key] = val_num if "." in val else int(val_num)
+            elif val.lstrip("+-").isdigit():
+                attrs[key] = int(val)
+            else:
+                attrs[key] = val
+        except (ValueError, AttributeError):
+            attrs[key] = val
+
+    return xmp_raw, attrs
+
+
+def parse_dji_xmp(attrs: dict):
+    """Organiza os atributos XMP DJI em seções estruturadas."""
+
+    def get(key, default=None):
+        return attrs.get(f"drone-dji:{key}", attrs.get(key, default))
+
+    def getf(key, default=None):
+        v = get(key, default)
+        try:
+            return float(v) if v is not None else default
+        except (ValueError, TypeError):
+            return default
+
+    def geti(key, default=None):
+        v = get(key, default)
+        try:
+            return int(v) if v is not None else default
+        except (ValueError, TypeError):
+            return default
+
+    # --- Dewarp parsing ---
+    def parse_dewarp(raw, model="K3"):
+        if not raw:
+            return None
+        try:
+            date_str, vals_str = raw.split(";")
+            vals = [float(v) for v in vals_str.split(",")]
+            base = {
+                "calibration_date": date_str,
+                "fx_px": vals[0],
+                "fy_px": vals[1],
+                "cx_offset_px": vals[2],
+                "cy_offset_px": vals[3],
+                "k1": vals[4],
+                "k2": vals[5],
+                "p1": vals[6],
+                "p2": vals[7],
+            }
+            if model == "K6" and len(vals) >= 12:
+                base.update({"k3": vals[8], "k4": vals[9], "k5": vals[10], "k6": vals[11]})
+            elif len(vals) >= 9:
+                base["k3"] = vals[8]
+            return base
+        except Exception:
+            return {"raw": raw}
+
+    return {
+        "dji_xmp_spec_version": get("Version"),
+        "image_source": get("ImageSource"),
+        "gps_status": get("GpsStatus"),
+        "altitude_type": get("AltitudeType"),
+        "gps_latitude": getf("GpsLatitude"),
+        "gps_longitude": getf("GpsLongitude"),
+        "absolute_altitude_m": getf("AbsoluteAltitude"),
+        "relative_altitude_m": getf("RelativeAltitude"),
+        "gimbal_roll_deg": getf("GimbalRollDegree"),
+        "gimbal_yaw_deg": getf("GimbalYawDegree"),
+        "gimbal_pitch_deg": getf("GimbalPitchDegree"),
+        "flight_roll_deg": getf("FlightRollDegree"),
+        "flight_yaw_deg": getf("FlightYawDegree"),
+        "flight_pitch_deg": getf("FlightPitchDegree"),
+        "flight_x_speed_ms": getf("FlightXSpeed"),
+        "flight_y_speed_ms": getf("FlightYSpeed"),
+        "flight_z_speed_ms": getf("FlightZSpeed"),
+        "cam_reverse": geti("CamReverse"),
+        "gimbal_reverse": geti("GimbalReverse"),
+        "sensor_temperature_celsius": getf("SensorTemperature"),
+        "product_name": get("ProductName"),
+        "self_data": get("SelfData"),
+        "rtk_flag": geti("RtkFlag"),
+        "rtk_std_lon_m": getf("RtkStdLon"),
+        "rtk_std_lat_m": getf("RtkStdLat"),
+        "rtk_std_hgt_m": getf("RtkStdHgt"),
+        "rtk_diff_age_sec": getf("RtkDiffAge"),
+        "surveying_mode": geti("SurveyingMode"),
+        "dewarp_flag": geti("DewarpFlag"),
+        "dewarp_model_K3": parse_dewarp(get("DewarpData"), "K3"),
+        "dewarp_model_K6": parse_dewarp(get("DewarpDataK6"), "K6"),
+        "calibrated_focal_length_px": getf("CalibratedFocalLength"),
+        "calibrated_optical_center_x_px": getf("CalibratedOpticalCenterX"),
+        "calibrated_optical_center_y_px": getf("CalibratedOpticalCenterY"),
+        "utc_at_exposure": get("UTCAtExposure"),
+        "shutter_type": get("ShutterType"),
+        "shutter_count": geti("ShutterCount"),
+        "camera_serial_number": get("CameraSerialNumber"),
+        "drone_model": get("DroneModel"),
+        "drone_serial_number": get("DroneSerialNumber"),
+        "lrf_status": get("LRFStatus"),
+        "lrf_target_distance_m": getf("LRFTargetDistance"),
+        "lrf_target_lon": getf("LRFTargetLon"),
+        "lrf_target_lat": getf("LRFTargetLat"),
+        "lrf_target_alt_agl_m": getf("LRFTargetAlt"),
+        "lrf_target_abs_alt_m": getf("LRFTargetAbsAlt"),
+        "white_balance_cct_k": geti("WhiteBalanceCCT"),
+        "sensor_fps_raw": get("SensorFPS"),
+        "lens_position": geti("LensPosition"),
+        "lens_infinite_position": geti("LensInfinitePosition"),
+        "lens_temperature_celsius": getf("LensTemperature"),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SEGMENTOS JPEG (análise binária)
+# ══════════════════════════════════════════════════════════════════════════════
+
+MARKER_NAMES = {
+    0xC0: "SOF0 (Baseline DCT)",
+    0xC1: "SOF1 (Extended Sequential DCT)",
+    0xC2: "SOF2 (Progressive DCT)",
+    0xC4: "DHT (Huffman Table)",
+    0xD8: "SOI (Start of Image)",
+    0xD9: "EOI (End of Image)",
+    0xDA: "SOS (Start of Scan)",
+    0xDB: "DQT (Quantization Table)",
+    0xDD: "DRI (Restart Interval)",
+    0xE0: "APP0 (JFIF)",
+    0xE1: "APP1 (EXIF/XMP)",
+    0xE2: "APP2 (ICC/MPF)",
+    0xE7: "APP7 (DJI proprietary)",
+    0xE8: "APP8 (DJI proprietary)",
+    0xFE: "COM (Comment)",
+}
+
+
+def scan_jpeg_segments(data: bytes):
+    """Varre todos os marcadores JPEG e retorna lista de segmentos."""
+    segments = []
+    i = 0
+    while i < len(data) - 1:
+        if data[i] != 0xFF or data[i + 1] in (0x00, 0xFF):
+            i += 1
+            continue
+
+        marker_byte = data[i + 1]
+        offset = i
+
+        if marker_byte in (0xD8, 0xD9):  # SOI / EOI — sem campo de comprimento
+            segments.append({
+                "offset_dec": offset,
+                "offset_hex": f"0x{offset:08X}",
+                "marker": f"FF{marker_byte:02X}",
+                "name": MARKER_NAMES.get(marker_byte, f"MARKER_{marker_byte:02X}"),
+                "length_bytes": None,
+            })
+            i += 2
+        elif i + 4 <= len(data):
+            length = struct.unpack(">H", data[i + 2 : i + 4])[0]
+            name = MARKER_NAMES.get(
+                marker_byte,
+                f"APP{marker_byte - 0xE0}" if 0xE0 <= marker_byte <= 0xEF
+                else f"MARKER_{marker_byte:02X}",
+            )
+            segments.append({
+                "offset_dec": offset,
+                "offset_hex": f"0x{offset:08X}",
+                "marker": f"FF{marker_byte:02X}",
+                "name": name,
+                "length_bytes": length,
+            })
+            i += 2 + length
+        else:
+            i += 1
+
+    return segments
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MAKERNOTE DJI (IFD proprietário little-endian)
+# ══════════════════════════════════════════════════════════════════════════════
+
+IFD_TYPES = {
+    1: "BYTE", 2: "ASCII", 3: "SHORT", 4: "LONG", 5: "RATIONAL",
+    7: "UNDEFINED", 9: "SLONG", 10: "SRATIONAL", 11: "FLOAT", 12: "DOUBLE",
+}
+
+
+def parse_makernote(raw_bytes: bytes):
+    """Decodifica o MakerNote DJI como IFD little-endian."""
+    if not raw_bytes or len(raw_bytes) < 4:
+        return None
+
+    # raw_bytes já é o valor bytes do campo MakerNote
+    data = raw_bytes if isinstance(raw_bytes, bytes) else bytes(raw_bytes)
+
+    try:
+        num_entries = struct.unpack("<H", data[:2])[0]
+        if num_entries > 50:  # sanity check
+            return {"_note": "IFD entry count implausible, skipping parse", "raw_hex": data.hex()}
+
+        entries = []
+        for i in range(num_entries):
+            off = 2 + i * 12
+            if off + 12 > len(data):
+                break
+            tag, typ, count = struct.unpack("<HHI", data[off : off + 8])
+            val_bytes = data[off + 8 : off + 12]
+
+            interpreted = None
+            if typ == 1 and count == 1:   # BYTE
+                interpreted = val_bytes[0]
+            elif typ == 3 and count == 1: # SHORT
+                interpreted = struct.unpack("<H", val_bytes[:2])[0]
+            elif typ == 4 and count == 1: # LONG
+                interpreted = struct.unpack("<I", val_bytes)[0]
+            elif typ == 11 and count == 1: # FLOAT
+                interpreted = round(struct.unpack("<f", val_bytes)[0], 6)
+            elif typ == 7:
+                interpreted = val_bytes.hex()
+
+            entries.append({
+                "tag_hex": f"0x{tag:04X}",
+                "tag_dec": tag,
+                "type": IFD_TYPES.get(typ, str(typ)),
+                "count": count,
+                "value_bytes_hex": val_bytes.hex(),
+                "interpreted_value": interpreted,
+            })
+
+        return {
+            "num_ifd_entries": num_entries,
+            "raw_hex": data.hex(),
+            "raw_length_bytes": len(data),
+            "entries": entries,
+        }
+    except Exception as e:
+        return {"_error": str(e), "raw_hex": data[:40].hex()}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MÉTRICAS FOTOGRAMÉTRICAS DERIVADAS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_photogrammetric_metrics(xmp: dict, exif: dict, img_w: int, img_h: int):
+    """Calcula GSD, footprint e métricas altimétricasderivadas."""
+
+    focal_mm = exif.get("FocalLength")
+    if not focal_mm:
+        return {"_note": "FocalLength não disponível para cálculo"}
+
+    # Tenta estimar tamanho do sensor a partir do equivalente 35mm
+    fl_35 = exif.get("FocalLengthIn35mmFilm")
+    if fl_35 and fl_35 > 0 and focal_mm > 0:
+        # crop_factor = fl_35 / focal_mm
+        # diagonal_35mm = 43.27mm; sensor_diag = 43.27/crop_factor
+        crop = fl_35 / focal_mm
+        sensor_diag = 43.27 / crop
+        # Assume aspect ratio do sensor = imagem
+        ar = img_w / img_h
+        sensor_h = sensor_diag / math.sqrt(1 + ar ** 2)
+        sensor_w = sensor_h * ar
+    else:
+        sensor_w, sensor_h = None, None
+
+    agl = xmp.get("relative_altitude_m")
+    abs_alt = xmp.get("absolute_altitude_m")
+    lrf_abs = xmp.get("lrf_target_abs_alt_m")
+    lrf_agl = xmp.get("lrf_target_alt_agl_m")
+    lrf_dist = xmp.get("lrf_target_distance_m")
+
+    metrics = {
+        "sensor_width_mm_estimated": round(sensor_w, 4) if sensor_w else None,
+        "sensor_height_mm_estimated": round(sensor_h, 4) if sensor_h else None,
+        "pixel_pitch_um_estimated": round(sensor_w / img_w * 1000, 3) if sensor_w else None,
+        "agl_from_relative_altitude_m": agl,
+        "agl_from_lrf_slant_distance_m": lrf_dist,
+        "agl_from_rtk_abs_diff_m": round(abs_alt - lrf_abs, 3) if abs_alt and lrf_abs else None,
+        "canopy_height_estimated_m": round(agl - lrf_dist, 3) if agl and lrf_dist else None,
+        "ground_elevation_at_lrf_target_wgs84_m": round(lrf_abs - lrf_agl, 3) if lrf_abs and lrf_agl else None,
+        "takeoff_ground_elevation_wgs84_m": round(abs_alt - agl, 3) if abs_alt and agl else None,
+    }
+
+    if sensor_w and agl and focal_mm:
+        pixel_pitch_mm = sensor_w / img_w
+        gsd_mm = (agl * 1000 * pixel_pitch_mm) / focal_mm
+        gsd_cm = gsd_mm / 10
+        fp_w = gsd_cm * img_w / 100
+        fp_h = gsd_cm * img_h / 100
+        metrics.update({
+            "gsd_mm_per_pixel": round(gsd_mm, 4),
+            "gsd_cm_per_pixel": round(gsd_cm, 4),
+            "footprint_width_m": round(fp_w, 2),
+            "footprint_height_m": round(fp_h, 2),
+            "footprint_area_m2": round(fp_w * fp_h, 1),
+        })
+
+    return metrics
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  FUNÇÃO PRINCIPAL
+# ══════════════════════════════════════════════════════════════════════════════
+
+def extract_all(image_path: str) -> dict:
+    """Extrai todos os metadados de uma imagem DJI e retorna dict completo."""
+
+    path = Path(image_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Arquivo não encontrado: {image_path}")
+
+    with open(path, "rb") as f:
+        raw_data = f.read()
+
+    # ── Abre imagem ────────────────────────────────────────────────────────
+    img = Image.open(path)
+    img_w, img_h = img.size
+
+    # ── Extrai camadas ─────────────────────────────────────────────────────
+    exif_raw = extract_exif(img)
+    gps_parsed = parse_gps_section(exif_raw)
+    xmp_raw_str, xmp_attrs = extract_xmp(raw_data)
+    dji_xmp = parse_dji_xmp(xmp_attrs)
+    jpeg_segments = scan_jpeg_segments(raw_data)
+
+    # MakerNote: recupera bytes brutos do EXIF
+    makernote_field = exif_raw.get("MakerNote")
+    if isinstance(makernote_field, dict) and "hex" in makernote_field:
+        mn_bytes = bytes.fromhex(makernote_field["hex"])
+    else:
+        mn_bytes = None
+    makernote_decoded = parse_makernote(mn_bytes) if mn_bytes else None
+
+    # Métricas derivadas
+    derived = compute_photogrammetric_metrics(dji_xmp, exif_raw, img_w, img_h)
+
+    # ── Monta JSON final ───────────────────────────────────────────────────
+    output = {
+        "_extraction_info": {
+            "source_file": path.name,
+            "source_path_absolute": str(path.resolve()),
+            "file_size_bytes": path.stat().st_size,
+            "file_size_mb": round(path.stat().st_size / 1024 / 1024, 4),
+            "metadata_layers_extracted": [
+                "EXIF IFD0 + SubIFD + GPS IFD",
+                "XMP/RDF DJI proprietary namespace",
+                "DJI MakerNote IFD (binary little-endian)",
+                "JPEG segment map (binary scan)",
+            ],
+            "total_jpeg_segments_found": len(jpeg_segments),
+            "eoi_count_frames": sum(1 for s in jpeg_segments if "EOI" in s["name"]),
+            "jpeg_format_detected": (
+                "MPO (Multi-Picture Object)"
+                if sum(1 for s in jpeg_segments if "EOI" in s["name"]) > 1
+                else "JPEG"
+            ),
+        },
+        "image_properties": {
+            "width_px": img_w,
+            "height_px": img_h,
+            "total_pixels": img_w * img_h,
+            "megapixels": round(img_w * img_h / 1e6, 2),
+            "color_mode": img.mode,
+            "format_detected": img.format,
+            "color_space_code": exif_raw.get("ColorSpace"),
+            "color_space_description": (
+                "sRGB" if exif_raw.get("ColorSpace") == 1 else
+                "Uncalibrated" if exif_raw.get("ColorSpace") == 0xFFFF else
+                str(exif_raw.get("ColorSpace"))
+            ),
+            "x_resolution_dpi": exif_raw.get("XResolution"),
+            "y_resolution_dpi": exif_raw.get("YResolution"),
+            "resolution_unit": exif_raw.get("ResolutionUnit"),
+            "ycbcr_positioning": exif_raw.get("YCbCrPositioning"),
+            "orientation": exif_raw.get("Orientation"),
+            "image_description": exif_raw.get("ImageDescription"),
+        },
+        "device_identification": {
+            "manufacturer": exif_raw.get("Make"),
+            "model_exif": exif_raw.get("Model"),
+            "unique_camera_model": exif_raw.get("UniqueCameraModel"),
+            "product_name_xmp": dji_xmp.get("product_name"),
+            "drone_model_xmp": dji_xmp.get("drone_model"),
+            "drone_serial_number": dji_xmp.get("drone_serial_number") or exif_raw.get("BodySerialNumber"),
+            "camera_serial_number": dji_xmp.get("camera_serial_number"),
+            "firmware_version": exif_raw.get("Software"),
+            "xmp_schema_version": xmp_attrs.get("xmp:ModifyDate", ""),  # fallback
+            "dji_xmp_spec_version": dji_xmp.get("dji_xmp_spec_version"),
+            "image_source": dji_xmp.get("image_source"),
+            "camera_file_type": xmp_attrs.get("Camera:FileType"),
+            "shutter_type": dji_xmp.get("shutter_type"),
+            "shutter_total_count": dji_xmp.get("shutter_count"),
+        },
+        "datetime": {
+            "datetime_local_exif": exif_raw.get("DateTime"),
+            "datetime_original_exif": exif_raw.get("DateTimeOriginal"),
+            "datetime_digitized_exif": exif_raw.get("DateTimeDigitized"),
+            "xmp_modify_date": xmp_attrs.get("xmp:ModifyDate"),
+            "xmp_create_date": xmp_attrs.get("xmp:CreateDate"),
+            "utc_at_exposure_precise_xmp": dji_xmp.get("utc_at_exposure"),
+        },
+        "gps_position_exif": gps_parsed,
+        "gps_position_xmp": {
+            "source": "XMP DJI namespace (RTK-fused)",
+            "gps_status": dji_xmp.get("gps_status"),
+            "altitude_type": dji_xmp.get("altitude_type"),
+            "rtk_flag": dji_xmp.get("rtk_flag"),
+            "rtk_flag_description": (
+                "Fixed RTK solution (centimetric accuracy)"
+                if dji_xmp.get("rtk_flag") == 16 else
+                "Float RTK solution (dm accuracy)"
+                if dji_xmp.get("rtk_flag") in (1, 2) else
+                str(dji_xmp.get("rtk_flag"))
+            ),
+            "rtk_diff_age_seconds": dji_xmp.get("rtk_diff_age_sec"),
+            "latitude_decimal": dji_xmp.get("gps_latitude"),
+            "longitude_decimal": dji_xmp.get("gps_longitude"),
+            "rtk_std_longitude_m": dji_xmp.get("rtk_std_lon_m"),
+            "rtk_std_latitude_m": dji_xmp.get("rtk_std_lat_m"),
+            "rtk_std_height_m": dji_xmp.get("rtk_std_hgt_m"),
+            "google_maps_url": (
+                f"https://maps.google.com/?q={dji_xmp.get('gps_latitude')},{dji_xmp.get('gps_longitude')}"
+                if dji_xmp.get("gps_latitude") and dji_xmp.get("gps_longitude") else None
+            ),
+        },
+        "altimetry": {
+            "absolute_altitude_m": dji_xmp.get("absolute_altitude_m"),
+            "absolute_altitude_source": "RTK GNSS ellipsoid height (WGS-84)",
+            "relative_altitude_m": dji_xmp.get("relative_altitude_m"),
+            "relative_altitude_source": "Height above home/takeoff point (AGL, baro+RTK fused)",
+            "estimated_takeoff_point_altitude_wgs84_m": derived.get("takeoff_ground_elevation_wgs84_m"),
+            "lrf": {
+                "status": dji_xmp.get("lrf_status"),
+                "target_slant_distance_m": dji_xmp.get("lrf_target_distance_m"),
+                "target_latitude": dji_xmp.get("lrf_target_lat"),
+                "target_longitude": dji_xmp.get("lrf_target_lon"),
+                "target_relative_altitude_agl_m": dji_xmp.get("lrf_target_alt_agl_m"),
+                "target_absolute_altitude_m": dji_xmp.get("lrf_target_abs_alt_m"),
+            },
+            "agl_calculations": {
+                "agl_via_relative_altitude_m": dji_xmp.get("relative_altitude_m"),
+                "agl_via_lrf_slant_m": dji_xmp.get("lrf_target_distance_m"),
+                "agl_via_rtk_abs_diff_m": derived.get("agl_from_rtk_abs_diff_m"),
+                "drone_height_above_canopy_m": derived.get("agl_from_rtk_abs_diff_m"),
+                "canopy_height_above_ground_m": derived.get("canopy_height_estimated_m"),
+                "lrf_ground_elevation_wgs84_m": derived.get("ground_elevation_at_lrf_target_wgs84_m"),
+            },
+        },
+        "flight_dynamics": {
+            "flight_roll_deg": dji_xmp.get("flight_roll_deg"),
+            "flight_yaw_deg": dji_xmp.get("flight_yaw_deg"),
+            "flight_pitch_deg": dji_xmp.get("flight_pitch_deg"),
+            "speed_x_ms": dji_xmp.get("flight_x_speed_ms"),
+            "speed_y_ms": dji_xmp.get("flight_y_speed_ms"),
+            "speed_z_ms": dji_xmp.get("flight_z_speed_ms"),
+            "horizontal_speed_ms": round(
+                math.sqrt(
+                    (dji_xmp.get("flight_x_speed_ms") or 0) ** 2 +
+                    (dji_xmp.get("flight_y_speed_ms") or 0) ** 2
+                ), 3
+            ),
+        },
+        "gimbal": {
+            "gimbal_pitch_deg": dji_xmp.get("gimbal_pitch_deg"),
+            "gimbal_yaw_deg": dji_xmp.get("gimbal_yaw_deg"),
+            "gimbal_roll_deg": dji_xmp.get("gimbal_roll_deg"),
+            "gimbal_reverse": dji_xmp.get("gimbal_reverse"),
+            "cam_reverse": dji_xmp.get("cam_reverse"),
+        },
+        "camera_exposure": {
+            "exposure_time_s": exif_raw.get("ExposureTime"),
+            "shutter_speed_apex": exif_raw.get("ShutterSpeedValue"),
+            "f_number": exif_raw.get("FNumber"),
+            "aperture_value_apex": exif_raw.get("ApertureValue"),
+            "max_aperture_value_apex": exif_raw.get("MaxApertureValue"),
+            "iso_speed": exif_raw.get("ISOSpeedRatings"),
+            "sensitivity_type": exif_raw.get("SensitivityType"),
+            "recommended_exposure_index": exif_raw.get("RecommendedExposureIndex"),
+            "exposure_program": exif_raw.get("ExposureProgram"),
+            "exposure_mode": exif_raw.get("ExposureMode"),
+            "exposure_bias_ev": exif_raw.get("ExposureBiasValue"),
+            "metering_mode": exif_raw.get("MeteringMode"),
+            "light_source": exif_raw.get("LightSource"),
+            "flash": exif_raw.get("Flash"),
+            "white_balance_mode": exif_raw.get("WhiteBalance"),
+            "white_balance_cct_k": dji_xmp.get("white_balance_cct_k"),
+            "digital_zoom_ratio": exif_raw.get("DigitalZoomRatio"),
+            "gain_control": exif_raw.get("GainControl"),
+            "custom_rendered": exif_raw.get("CustomRendered"),
+            "subject_distance_m": exif_raw.get("SubjectDistance"),
+            "scene_capture_type": exif_raw.get("SceneCaptureType"),
+        },
+        "camera_optics": {
+            "focal_length_mm_physical": exif_raw.get("FocalLength"),
+            "focal_length_35mm_equivalent": exif_raw.get("FocalLengthIn35mmFilm"),
+            "lens_specification": exif_raw.get("LensSpecification"),
+            "lens_position_encoder": dji_xmp.get("lens_position"),
+            "lens_infinite_position_encoder": dji_xmp.get("lens_infinite_position"),
+            "lens_temperature_celsius": dji_xmp.get("lens_temperature_celsius"),
+            "sensor_fps_raw": dji_xmp.get("sensor_fps_raw"),
+        },
+        "camera_calibration": {
+            "calibrated_focal_length_px": dji_xmp.get("calibrated_focal_length_px"),
+            "calibrated_optical_center_x_px": dji_xmp.get("calibrated_optical_center_x_px"),
+            "calibrated_optical_center_y_px": dji_xmp.get("calibrated_optical_center_y_px"),
+            "dewarp_applied": dji_xmp.get("dewarp_flag") == 0,
+            "dewarp_flag": dji_xmp.get("dewarp_flag"),
+            "lens_distortion_model_K3_Brown_Conrady": dji_xmp.get("dewarp_model_K3"),
+            "lens_distortion_model_K6_Brown_Conrady": dji_xmp.get("dewarp_model_K6"),
+        },
+        "thermal_environment": {
+            "sensor_temperature_celsius": dji_xmp.get("sensor_temperature_celsius"),
+            "lens_temperature_celsius": dji_xmp.get("lens_temperature_celsius"),
+        },
+        "image_processing": {
+            "contrast": exif_raw.get("Contrast"),
+            "saturation": exif_raw.get("Saturation"),
+            "sharpness": exif_raw.get("Sharpness"),
+            "surveying_mode": dji_xmp.get("surveying_mode"),
+            "crs_has_settings": xmp_attrs.get("crs:HasSettings"),
+            "crs_has_crop": xmp_attrs.get("crs:HasCrop"),
+            "crs_already_applied": xmp_attrs.get("crs:AlreadyApplied"),
+            "crs_version": xmp_attrs.get("crs:Version"),
+        },
+        "derived_photogrammetric_metrics": derived,
+        "jpeg_segment_map": jpeg_segments,
+        "makernote_ifd_decoded": makernote_decoded,
+        "xmp_all_attributes_raw": xmp_attrs,
+        "exif_all_fields_raw": exif_raw,
+    }
+
+    return output
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ENTRY POINT
+# ══════════════════════════════════════════════════════════════════════════════
+
+def main():
+    image_path = INPUT_IMAGE
+    output_path = OUTPUT_JSON
+
+    print(f"[+] Processando: {image_path}")
+    result = extract_all(image_path)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2, ensure_ascii=False)
+
+    size_kb = os.path.getsize(output_path) / 1024
+    print(f"[+] JSON salvo em: {output_path}  ({size_kb:.1f} KB)")
+    print(f"[+] Seções extraídas: {len(result)}")
+    print(f"[+] Segmentos JPEG encontrados: {result['_extraction_info']['total_jpeg_segments_found']}")
+    print(f"[+] Frames (EOI): {result['_extraction_info']['eoi_count_frames']}")
+
+    # Resumo rápido no terminal
+    xmp = result.get("gps_position_xmp", {})
+    alt = result.get("altimetry", {})
+    print()
+    print("── RESUMO ─────────────────────────────────────────────")
+    print(f"  Drone:         {result['device_identification'].get('product_name_xmp')}")
+    print(f"  GPS (RTK):     {xmp.get('latitude_decimal')}, {xmp.get('longitude_decimal')}")
+    print(f"  Alt. absoluta: {alt.get('absolute_altitude_m')} m (WGS-84)")
+    print(f"  Alt. relativa: {alt.get('relative_altitude_m')} m (AGL)")
+    print(f"  Base estimada: {alt.get('estimated_takeoff_point_altitude_wgs84_m')} m")
+    lrf = alt.get("lrf", {})
+    print(f"  LRF distância: {lrf.get('target_slant_distance_m')} m")
+    print(f"  Altura dossel: {alt.get('agl_calculations', {}).get('canopy_height_above_ground_m')} m")
+    dm = result.get("derived_photogrammetric_metrics", {})
+    print(f"  GSD:           {dm.get('gsd_cm_per_pixel')} cm/px")
+    print(f"  Footprint:     {dm.get('footprint_width_m')} x {dm.get('footprint_height_m')} m")
+    print("────────────────────────────────────────────────────────")
+
+
+if __name__ == "__main__":
+    main()

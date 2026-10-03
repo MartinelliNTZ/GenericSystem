@@ -1,0 +1,1 @@
+c:/PythonPrograms/AetherisToolBox/.venv/Scripts/python.exe c:/PythonPrograms/AetherisToolBox/main.py

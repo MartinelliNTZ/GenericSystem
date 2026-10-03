@@ -1,0 +1,14 @@
+- padrao de nome de arquivos SimpleButton e nao simple_button
+- nao use __init__ importe o arquivo.py diretamente
+- Nao configure widgets diretamente use widgets existente ou crie novos widgets wxclusivos 
+em resources/widgets
+- Prefira sempre usar dict inves de list
+- Todas as tools herdam de Baseplugin
+- Sempre que criar uma classe atualize o @docs/CatalogoDeClasses.md
+
+
+
+CRIAR UM SISTEMA COMPLETO DE TASK
+CRIAR SKILL DE TASK
+COLOCAR O FILTRO DE PONTOS PRETOS EM TASK
+COLOCAR O FILTRO DE PONTOS PRETOS PARA FILTRAR PONTOS ZERADOS DE ALTITUDE

@@ -1,0 +1,171 @@
+[1.2.13][2026.07.22][10:36] - Correção: LasVectorConverter não transferia atributos entre LAS↔Vetor em ambas direções
+  - LasVectorConverterPlugin.py: _aplicar_ui_da_direcao() agora chama set_output_extension("Saída", "las") no modo vector_to_las
+  - LasToVectorTask.py: agora lê TODAS as dimensões do LAS (incluindo extra dimensions) em vez de apenas 6 campos fixos
+  - LasToVectorTask.py: itera sobre las.point_format.dimensions para capturar qualquer atributo personalizado
+  - VectorToLasTask.py: _save_las() preserva todos os atributos não-padrão como extra dimensions LAS (add_extra_dims)
+  - Adicionado helper _las_dtype_for_array() para escolher dtype mínimo adequado (uint8, uint16, int32, float64)
+  - Atributos padrão (intensity, classification, return_number, R/G/B) continuam mapeados para campos nativos LAS
+  - Changelog atualizado
+
+[1.2.12][2026.07.19][17:20] - Ajuste: MENU_PADDING do EmeraldTealTheme alterado de "2px" para "10px 30px"
+  - EmeraldTealTheme.py: MENU_PADDING = "2px" → "10px 30px" (padding vertical 10px, horizontal 30px)
+  - Changelog atualizado
+
+[1.2.11][2026.07.19][15:45] - Correção: BaseStyle.global_stylesheet() sobrescrevia border-radius de QPushButton
+  - Removido seletor genérico `QWidget` do QSS global (linha `QMainWindow, QWidget` → `QMainWindow`)
+  - O seletor `QWidget` aplicava font-family/font-size/background-color em TODOS os widgets,
+    incluindo QPushButton, sobrescrevendo o border-radius definido via setStyleSheet() local
+  - SimpleThemeButton agora respeita o border_radius=35 sem interferência global
+  - Changelog atualizado
+
+[1.2.10][2026.07.19][15:38] - Novo SimpleThemeButton: botão 100% autossuficiente com estilo vindo do tema
+  - Criado resources/widgets/simple/SimpleThemeButton.py: botão QPushButton que gera QSS internamente
+  - SimpleThemeButton importa theme_manager diretamente (sem AppStyles para estilização)
+  - SimpleThemeButton usa BORDER_RADIUS_BUTTON, GLOW_BUTTON_ENABLED e demais tokens do tema
+  - SimpleThemeButton: API pública update_theme() e set_shadow_enabled()
+  - SimpleThemeButton integrado ao HomePlugin.py como botão de exemplo
+  - Changelog atualizado
+
+[1.2.9][2026.07.19][12:10] - Estruturação do SimplePrimaryButton com parâmetros de estilo + novo tema Emerald Teal
+  - SimplePrimaryButton: adicionado parâmetros style_key, min_width, min_height, custom_stylesheet, shadow_enabled, shadow_blur/offset/color/alpha
+  - SimplePrimaryButton: adicionado set_style_key(), set_custom_stylesheet(), set_shadow_params() em runtime
+  - SimplePrimaryButton: style_key mapeia para AppStyles (primary, secondary, danger, ghost, remove)
+  - Criado resources/styles/EmeraldTealTheme.py: tema escuro esmeralda-teal inspirado no botao.py
+  - EmeraldTealTheme: gradiente vertical 3-stop (#1c6b63→#0f5952→#0a3d38), border-radius pill 35px, sombra 3D preta
+  - EmeraldTealTheme: registrado em ThemeManager.THEMES como "emerald_teal"
+  - Changelog atualizado
+
+[1.2.8][2026.07.18][23:14] - MapViewerPlugin: visualizador geoespacial com basemap de satélite
+  - Criado plugins/map_viewer/MapViewerPlugin.py: plugin visualizador de mapas (BasePlugin)
+  - Criado plugins/map_viewer/MapCanvasWidget.py: canvas com tiles XYZ, zoom/pan via mouse e drag & drop
+  - Criado plugins/map_viewer/TileManager.py: download e cache LRU de tiles (memória + disco via ExplorerUtils)
+  - Criado plugins/map_viewer/LayerManager.py: gerenciamento de camadas (LAS, SHP, KML) com limite de 10
+  - Criado plugins/map_viewer/model/MapLayer.py: DTO de camada com path, tipo, CRS, bounds
+  - Criado plugins/map_viewer/renderers/LasLayerRenderer.py: renderizador LAS/LAZ com subsampling adaptativo
+  - Criado plugins/map_viewer/renderers/VectorLayerRenderer.py: renderizador SHP/GPKG via VectorLayerSource/geopandas
+  - Criado plugins/map_viewer/renderers/KmlLayerRenderer.py: renderizador KML via fastkml/lxml
+  - Criado resources/widgets/MapInfos.py: widget reutilizável de info horizontal (coords, zoom, CRS, camadas)
+  - Adicionado MAP_VIEWER em core/enum/ToolKey.py
+  - Registrado MapViewer em core/config/ToolRegistry.py (ToolType.POINTS, CategoryTool.CENTRAL)
+  - Adicionado fastkml em requirements.txt
+  - Sem ExecutionButtons (ferramenta apenas visualiza, não executa)
+  - Cache de tiles via ExplorerUtils.get_system_temp_dir()
+  - SKILL_WIDGETS.md: adicionado MapInfos ao catálogo
+
+[1.2.7][2026.07.18][22:39] - ExecutionButtons integrado ao header do PluginPage
+  - PluginPage._build_header(): adicionado ExecutionButtons entre título e badge
+  - PluginPage: novo atributo self.buttons (ExecutionButtons | None)
+  - PluginPage.__init__(): novo parâmetro buttons_config (dict | None) — se None, oculta os buttons
+  - BasePlugin.__init__(): novo parâmetro buttons_config (dict | None) — repassado ao PluginPage
+  - BasePlugin._build_ui(): removido bloco de exibição de project_path (show_project_path mantido como parâmetro)
+  - ImageConverterPlugin: botão CONVERTER movido para buttons_config no super().__init__()
+  - ImageConverterPlugin: removido import e instância manual de ExecutionButtons
+  - ImageConverterPlugin: self._btns substituído por self.page.buttons
+  - DoclingPlugin: botões CONVERTER e SALVAR MD movidos para buttons_config no super().__init__()
+  - DoclingPlugin: removido import e instância manual de ExecutionButtons
+  - DoclingPlugin: self._btns substituído por self.page.buttons
+
+[1.2.6][2026.07.18][21:00] - ImageConverterPlugin: novo conversor universal de imagens
+  - ICO_SIZES movido para utils/DictManager.py como constante reutilizável
+  - HUD agora via SignalManager (hud_show/hud_update/hud_hide + execution_started/execution_finished)
+  - Substituído SimpleSelector por GridComplexSelector (subfolder="ImageConverter")
+  - Unificado painéis Opções + Configurações em único GroupPainel
+  - Pasta de Saída movida para dentro do painel "Formato e Destino"
+  - Removido HudCircularRingsLoader direto e resizeEvent
+  - Removido try sem logger em _load_project_folder
+  - Criado plugins/image_converter/ImageConverterPlugin.py: converte entre PNG, JPG, WEBP, ICO, BMP, GIF, TIFF
+  - Criado resources/widgets/grid/GridSlider.py: slider horizontal genérico com label e valor numérico
+  - Adicionado IMAGE_CONVERTER em core/enum/ToolKey.py
+  - Adicionado OUTPUT_IMAGE_FORMATS em utils/DictManager.py
+  - Registrado ImageConverter em core/config/ToolRegistry.py (ToolType.IMAGE, CategoryTool.CENTRAL)
+  - SKILL_WIDGETS.md: adicionado GridSlider ao catálogo
+  - Suporte a redimensionamento (GridDoubleSpinBox), qualidade (GridSlider), ICO multi-tamanho (GridCheckBox)
+  - Tratamento de alpha para JPEG/BMP (fundo branco automático)
+  - Prevenção de sobrescrita com opção "Sobrescrever sem perguntar"
+  - UI adaptativa: controles aparecem/desaparecem conforme formato selecionado
+
+[1.2.5][2026.07.17][21:22] - ToolbarButton: correção border-radius (WA_StyledBackground)
+  - Adicionado setAttribute(Qt.WA_StyledBackground, True) no ToolbarButton para forçar QToolButton a respeitar border-radius no Windows
+  - PearlWhiteTheme: BORDER_RADIUS_TOOLBAR_BTN alterado de 4 para 999 (pill total / totalmente arredondado)
+
+[1.2.4][2026.07.17][21:12] - PearlWhiteTheme: tema claro branco + dourado (oposto do DarkCharcoal)
+  - Criado resources/styles/PearlWhiteTheme.py: subclasse de BaseTheme com paleta exclusivamente branco + dourado
+  - Registrado em ThemeManager.THEMES como "pearl_white" com label "Pearl White"
+  - SURFACE: apenas variações sutis de branco (#FFFFFF, #FCFCFC, #FAFAFA, #F5F5F5, #F0F0F0)
+  - TEXT: preto puro #000000 + rgba(0,0,0,opacity) — sem cinza
+  - BORDER: dourado translúcido rgba(201,168,76,opacity) — sem cinza
+  - SHADOW: dourado translúcido rgba(201,168,76,opacity) — sem cinza/preto
+  - ACCENT: dourado #C9A84C — única cor cromática do tema
+
+[1.2.3][2026.07.17][20:48] - GroupPainel e SimpleLabel marcados como não instanciáveis
+  - GroupPainel: docstring marca como NÃO instanciável diretamente, usar sempre via GridGroupPainel
+  - SimpleLabel: docstring marca como NÃO instanciável diretamente, usar sempre via GridLabel
+  - SKILL_WIDGETS.md: GroupPainel atualizado com ⚠️ NÃO INSTANCIÁVEL, redireciona para GridGroupPainel
+  - SKILL_WIDGETS.md: SimpleLabel atualizado com ⚠️ NÃO INSTANCIÁVEL, redireciona para GridLabel
+  - SKILL_WIDGETS.md: GridLabel marcado como widget PADRÃO para labels
+  - SKILL_WIDGETS.md: GridGroupPainel atualizado com exemplo para 1 painel + regra de sempre usar GridGroupPainel
+[1.2.2][2026.07.17][20:33] - SKILL_WIDGETS.md: deprecação de widgets simples e seletor individual
+  - SelectorGrid: marcado como DEPRECATED, redireciona para GridComplexSelector
+  - SimpleSelector: marcado como DEPRECATED, removida documentação detalhada, redireciona para GridComplexSelector
+  - ComplexSelector: marcado como DEPRECATED, removida documentação detalhada, redireciona para GridComplexSelector
+  - Regra: sempre usar versão grid (Grid*) — widgets individuais só internamente
+[1.2.1][2026.07.17][14:19] - Projeto: status do projeto na AppBar + skill SKILL_PROJECT.md
+  - AppBar: novo QLabel lbl_project_status entre título e toolbar
+  - AppBar: métodos set_project_status(project_name, path) e clear_project_status()
+  - MainWindow: conexão project_changed → _update_appbar_project_status()
+  - MainWindow: carrega status inicial do projeto em _open_home_on_startup()
+  - MainWindow: import ProjectUtil adicionado
+  - SKILL_AGENT.md: adicionada referência à skill SKILL_PROJECT.md
+  - Nova skill: docs/skills/SKILL_PROJECT.md — documentação completa do sistema de projetos
+
+[1.2.0][2026.07.16][09:31] - Performance: startup 3x mais rapido + otimizacoes de I/O e CPU
+  - MenuManager._setup_system_monitor(): ResourceGovernor/SystemMonitorService movido para QTimer.singleShot (deferred)
+    (antes bloqueava 3s no startup, agora nao bloqueia)
+  - WorkspaceManager._build(): Home nao e mais aberta no construtor — aberta por app_startup signal apos UI pronta
+  - MainWindow._emit_startup_signals(): emite app_startup + QTimer.singleShot para abrir Home apos event loop
+  - CpuGovernor.CPU_USAGE_LIMIT: 0.25 -> 0.50 (TF usa 8 threads em vez de 4)
+  - Preferences: cache em memoria (_ensure_cache) + write assincrono com debounce 500ms (elimina I/O sincrono)
+  - main_controller.py (Classifier): debounce 300ms no savepreferences() (antes escrevia em disco a cada signal)
+  - main_controller.py (Classifier): flag _loading_preferences so liberada APOS todos widgets populados (finalize_load)
+  - main_controller.py (Classifier): timer de progresso so inicia quando pipeline executa (nao fica polando ocioso)
+  - main_controller.py (PipelineWorker): import do TensorFlow movido para dentro de run() (lazy load real)
+  - MenuManager.build(): adicionado logs [TIMING] para cada etapa do bootstrap
+  - MenuManager._setup_system_monitor(): view criada imediatamente; ResourceGovernor/psutil adiado
+[1.1.5][2026.07.16][21:12] - Estilização FootballMatchWidget com tokens do tema + hover
+  - FootballMatchWidget: QSS agora usa tokens do tema (SURFACE_3, BORDER_DEFAULT, ACCENT, TEXT_LOW, etc.)
+  - FootballMatchWidget: adicionado border-radius via BORDER_RADIUS_CARD do tema
+  - FootballMatchWidget: adicionado hover com enterEvent/leaveEvent (borda accent + fundo SURFACE_4)
+  - FootballMatchWidget: _load_logo_placeholder usa tokens do tema em vez de cores fixas
+  - GridCardView: adicionado border-radius via BORDER_RADIUS_CARD + hover com borda accent
+[1.1.4][2026.07.16][20:34] - Clima na Home + GridCardView genérico
+  - Criado resources/widgets/GridCardView.py: widget genérico de grid de cards configurável por dict
+  - Criado core/model/WeatherModel.py: dataclass WeatherData com from_api_response()
+  - Criado core/papeline/task/WeatherFetchTask.py: fetch WeatherStack com cache diário
+  - Criado core/papeline/step/WeatherFetchStep.py: step orquestrador da pipeline
+  - Modificado plugins/home/HomePlugin.py: adicionada pipeline de clima com GridCardView
+  - Adicionado WEATHER_API_KEY em core/config/ApiKeys.py
+  - Adicionado WEATHER_FETCH em core/enum/ToolKey.py
+  - Adicionado GridCardView ao catálogo de SKILL_WIDGETS.md
+[1.1.3][2026.07.15][23:05] - Toast via MessageBox.show_toast + AppStyles.toast_style com gradiente do tema
+  - utils.MessageBox: adicionado show_toast(text, is_error) — ponto de entrada único para ToastNotification
+  - AppStyles: adicionado toast_style(is_error) com gradiente ACCENT ou COLOR_DANGER do tema
+  - ToastNotification._ToastWidget: QSS via AppStyles.toast_style() + shadow via BaseStyle.apply_drop_shadow()
+  - ToastNotification: setMinimumWidth(280) e setMaximumWidth dinâmico
+  - ConfigurationPlugin: agora importa MessageBox e chama MessageBox.show_toast() (sem import direto do ToastNotification)
+  - SKILL_COMUNICATION.md: documentado show_toast com tabela bloqueante vs não-bloqueante
+[1.1.2][2026.07.15][22:55] - ToastNotification widget + substituição do MessageBox no ConfigurationPlugin
+  - Criado resources/widgets/ToastNotification.py: notificação toast estilo Android com fade out não-bloqueante
+  - Adicionado ToastNotification ao catálogo de SKILL_WIDGETS.md
+  - ConfigurationPlugin._on_salvar: MessageBox trocado por ToastNotification (mensagem não-bloqueante)
+  - Removido import de utils.MessageBox.MessageBox
+[1.1.1][2026.07.15][22:51] - Feedback visual ao salvar configurações
+  - ConfigurationPlugin._on_salvar: adicionado try/except com ToastNotification.show
+[1.1.0][2026.07.15][22:45] - Otimização thread principal + animação smooth CPU/RAM
+  - HudCircularRingsLoader: timer 60FPS agora só roda quando visível (antes rodava sempre)
+  - HudCircularRingsLoader: hide_loader() para o timer; _tick() aborta se oculto
+  - SystemMonitorService: cpu_count_physical/logical cacheados (syscall eliminada)
+  - RamGovernor.snapshot(): memory_pressure calculado com swap já obtido (1 chamada a menos)
+  - GridPercentView.set(): só repaint se valor mudou (evita update() desnecessário)
+  - GridPercentView.animate_to(key, target, duration_ms): transição suave entre valores via QTimer 30FPS
+  - MenuManager._on_stats_updated: usa animate_to() em vez de set() para efeito visual contínuo
+[1.0.0][2026.07.15] - oque eu fiz
