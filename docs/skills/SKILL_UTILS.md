@@ -16,6 +16,7 @@ Use `utils` sempre que precisar de:
 - criação/edição de JSONs temporários (`JsonUtil`)
 - arquivos de projeto `.mtl` (`ProjectUtil`)
 - catálogos de extensões e dicionários padronizados (`DictManager`)
+- identidade central do software: nome (`StringUtils.APP_NAME`), slug de arquivos (`StringUtils.APP_SLUG`) e ID interno (`StringUtils.APP_ID`)
 - cores consistentes para logs, tools e classes (`ColorProvider`)
 - metadados de arquivos (`BasicExtractor`)
 - extração de markdown de DoclingDocument (`MdManager`)
@@ -168,7 +169,9 @@ md = MdManager.export_by_columns(doc, page_no=0, manual_columns=0)
 
 ### `utils.Preferences`
 
-Gerencia preferências de ferramentas em `config/preferences.json`.
+Gerencia preferências de ferramentas em `config/<APP_SLUG>_preferences.json`
+(ver `StringUtils.APP_SLUG`). O arquivo legado `config/preferences.json` é
+migrado automaticamente na primeira leitura.
 
 ```python
 from utils.Preferences import Preferences
@@ -360,6 +363,24 @@ Leitura de metadados de rasters GeoTIFF (placeholder).
 from utils.raster.RasterLayerSource import RasterLayerSource
 meta = RasterLayerSource.read_metadata("imagem.tif", tool_key=ToolKey.MEU_PLUGIN.value)
 ```
+
+### `utils.StringUtils`
+
+Fonte única da **identidade da aplicação**. Para renomear o software, altere
+apenas estas constantes — UI, logs e arquivos derivam todas delas:
+
+```python
+from utils.StringUtils import StringUtils
+
+StringUtils.APP_NAME   # "Aetheris ToolBox"  → nome exibido na UI
+StringUtils.APP_SLUG   # "AetherisToolBox"   → nome de arquivos (log, prefs...)
+StringUtils.APP_ID     # "aetheris"          → identificador interno (dirs temp)
+```
+
+Também reúne catálogos de extensões (`LAS_EXTENSIONS`, `VECTOR_EXTENSIONS`,
+`RASTER_EXTENSIONS`, `DOCUMENT_EXTENSIONS`) e os helpers `get_extensions_list()`
+e `get_extensions_filter()`.
+
 
 ## ✅ Regras de uso
 

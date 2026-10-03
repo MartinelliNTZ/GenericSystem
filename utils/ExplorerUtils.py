@@ -274,7 +274,7 @@ class ExplorerUtils(BaseUtil):
         Se vazio, retorna o temp root.
 
         Args:
-            subfolder: Subpasta opcional (ex: "aetheris/football").
+            subfolder: Subpasta opcional (ex: "<APP_ID>/football").
             tool_key: Chave da ferramenta para logging.
 
         Returns:

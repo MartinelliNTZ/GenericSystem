@@ -18,13 +18,14 @@ from core.model.WeatherModel import WeatherData
 from ..BaseTask import BaseTask
 from utils.ExplorerUtils import ExplorerUtils
 from utils.JsonUtil import JsonUtil
+from utils.StringUtils import StringUtils
 
 
 class WeatherFetchTask(BaseTask):
     """
     Task that fetches weather data from WeatherStack API.
 
-    Cache: saves raw JSON to temp/aetheris/weather/weather_YYYYMMDD.json.
+    Cache: saves raw JSON to temp/<APP_ID>/weather/weather_YYYYMMDD.json.
     If today's file exists, reads cache instead of calling API.
     """
 
@@ -34,7 +35,7 @@ class WeatherFetchTask(BaseTask):
     def __init__(self):
         super().__init__(description="Weather data fetch")
         self._output_dir = ExplorerUtils.get_system_temp_dir(
-            subfolder="aetheris/weather",
+            subfolder=f"{StringUtils.APP_ID}/weather",
             tool_key="WeatherFetch",
         )
 

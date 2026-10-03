@@ -9,7 +9,7 @@ and manages old file cleanup.
 Uses only ExplorerUtils (for dirs) and JsonUtil (for JSON I/O).
 No direct os/tempfile/shutil calls.
 
-Output files in system temp aetheris/football/:
+Output files in system temp <APP_ID>/football/:
     - response_{today_yyyymmdd}.json         — Raw today response
     - response_{yesterday_yyyymmdd}_final.json — Raw yesterday response
     - response_{today_yyyymmdd}_filtrado.json — Filtered today
@@ -30,6 +30,7 @@ from ..BaseTask import BaseTask
 from utils.DictManager import DictManager
 from utils.ExplorerUtils import ExplorerUtils
 from utils.JsonUtil import JsonUtil
+from utils.StringUtils import StringUtils
 
 
 class FootballFetchTask(BaseTask):
@@ -38,7 +39,7 @@ class FootballFetchTask(BaseTask):
     based on DictManager clubs/competitions, and cleans old files.
 
     Uses Windows system TEMP folder via ExplorerUtils:
-        C:\\Users\\<user>\\AppData\\Local\\Temp\\aetheris\\football\\
+        C:\\Users\\<user>\\AppData\\Local\\Temp\\<APP_ID>\\football\\
     """
 
     # API base URL
@@ -49,7 +50,7 @@ class FootballFetchTask(BaseTask):
         super().__init__(description="Football fixtures fetch & filter")
         # Resolve output dir via ExplorerUtils (the only class allowed to use os)
         self._output_dir = ExplorerUtils.get_system_temp_dir(
-            subfolder="aetheris/football",
+            subfolder=f"{StringUtils.APP_ID}/football",
             tool_key="FootballFetch",
         )
 

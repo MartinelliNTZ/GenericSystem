@@ -29,6 +29,7 @@ from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleLabel import SimpleLabel
 from resources.widgets.simple.SimpleThemeButton import SimpleThemeButton
 from utils.JsonUtil import JsonUtil
+from utils.StringUtils import StringUtils
 
 
 class HomePlugin(BasePlugin):
@@ -60,7 +61,7 @@ class HomePlugin(BasePlugin):
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # === HEADER ===
-        header = SimpleLabel("Aetheris ToolBox")
+        header = SimpleLabel(StringUtils.APP_NAME)
         header.setObjectName("header_title")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(header)

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QHBoxLayout, QPushButton
 
 from core.dialogs.BaseDialog import BaseDialog
 from resources.styles.AppStyles import AppStyles
+from utils.StringUtils import StringUtils
 
 
 class AboutDialog(BaseDialog):
@@ -16,7 +17,7 @@ class AboutDialog(BaseDialog):
     def __init__(self, parent=None):
         super().__init__(
             parent=parent,
-            title="Sobre o Aetheris ToolBox",
+            title=f"Sobre o {StringUtils.APP_NAME}",
             object_name="about_dialog",
             fixed_size=(380, 240),
             modal=True,
@@ -25,7 +26,7 @@ class AboutDialog(BaseDialog):
 
     def _build_ui(self):
         self._add_title(
-            "Aetheris ToolBox", object_name="about_title"
+            StringUtils.APP_NAME, object_name="about_title"
         )
         self._add_centered_text(
             "Versão 1.0.0", object_name="about_version"
@@ -39,7 +40,7 @@ class AboutDialog(BaseDialog):
         )
         self.main_layout.addSpacing(4)
         self._add_centered_text(
-            "© 2026 Aetheris ToolBox", object_name="about_copyright"
+            f"© 2026 {StringUtils.APP_NAME}", object_name="about_copyright"
         )
 
         self.main_layout.addStretch()

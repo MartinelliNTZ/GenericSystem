@@ -5,6 +5,10 @@ StringUtils — Catálogo de dicionários de extensões e utilitários de string
 Fornece dicionários padronizados de extensões de arquivo para uso em
 widgets como SimpleComboBox, GridCheckBox, etc.
 
+Também centraliza a IDENTIDADE DA APLICAÇÃO (nome exibido, slug de arquivos e
+identificador interno). Altere apenas os atributos APP_NAME / APP_SLUG / APP_ID
+abaixo para renomear o software em toda a aplicação (UI, logs, config, temp...).
+
 Cada entrada tem:
     label       → texto exibido
     description → tooltip/dica
@@ -25,6 +29,12 @@ class StringUtils:
     Dicionários de extensões de arquivo organizados por categoria.
     Cada dict tem formato {extensão: {"label": str, "description": str}}.
     """
+
+    # ── Identidade da aplicação (FONTE ÚNICA) ──────────────────────
+    # Renomeie o software alterando APENAS estas constantes.
+    APP_NAME: str = "HogHover"   # Nome exibido na UI
+    APP_SLUG: str = "AetherisToolBox"    # Nome para arquivos (sem espaços)
+    APP_ID: str = "aetheris"             # Identificador interno (pastas/temp)
 
     # ── LAS / LAZ ──────────────────────────────────────────────────
     LAS_EXTENSIONS: Dict[str, Dict[str, Any]] = {

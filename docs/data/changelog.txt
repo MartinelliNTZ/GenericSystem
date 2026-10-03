@@ -1,3 +1,18 @@
+[1.3.1][2026.10.03][16:54] - Centralização do nome da aplicação em StringUtils (fonte única de identidade)
+  - utils/StringUtils.py: novas constantes APP_NAME, APP_SLUG e APP_ID (fonte única do nome do software)
+  - Todos os usos do nome do software passam a referenciar StringUtils.APP_NAME/APP_SLUG/APP_ID:
+    ui_main.py (título da janela + mensagem no console), app_bar.py, AboutDialog.py, HomePlugin.py,
+    main.py (erros fatais), ToolRegistry.py (tooltip), MenuManager.py (_MTL_FILTER),
+    ThemeManager.py (author) e CheckWidgets.py (relatório de stylesheets)
+  - LogUtils.py: nome do arquivo de log usa StringUtils.APP_SLUG
+    e a env var de IPC passa a ser derivada de StringUtils.APP_ID (valor idêntico hoje)
+  - FootballFetchTask / WeatherFetchTask / TileManager: pastas temporárias usam StringUtils.APP_ID
+  - SaveProjectPlugin.py: filtro _MTL_FILTER usa StringUtils.APP_NAME
+  - utils/Preferences.py: arquivo de preferências nomeado com APP_SLUG (config/<APP_SLUG>_preferences.json)
+    + migração automática do antigo config/preferences.json (evita arquivos duplicados)
+  - Changelog atualizado
+
+
 [1.3.0][2026.10.03][16:42] - Refatoração: remoção das ferramentas de domínio Vetor/Agricultura/Raster/LAS (arquitetura genérica)
   - Removidos 10 plugins de ferramenta: tensorflow_classifier, mrk_substitutor, las_black_filter,
     las_check, las_reprojection, las_tiler, las_vector_converter, point_boundary, scan_angle_filter,

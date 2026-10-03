@@ -26,6 +26,7 @@ from plugins.BasePlugin import BasePlugin
 from utils.ExplorerUtils import ExplorerUtils
 from utils.MessageBox import MessageBox
 from utils.ProjectUtil import ProjectUtil
+from utils.StringUtils import StringUtils
 
 
 class SaveProjectPlugin(BasePlugin):
@@ -34,7 +35,7 @@ class SaveProjectPlugin(BasePlugin):
     Usa o diálogo nativo "Salvar como" do Windows em uma única etapa.
     """
 
-    _MTL_FILTER = "Projeto Aetheris (*.mtl)"
+    _MTL_FILTER = f"Projeto {StringUtils.APP_NAME} (*.mtl)"
 
     def __init__(self, parent=None):
         # sys_prefs=True carrega self.sys_preferences (seção System)

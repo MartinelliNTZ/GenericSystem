@@ -3,7 +3,7 @@
 Preferences — Gerenciador de preferências por ferramenta
 =========================================================
 Métodos estáticos para salvar/carregar preferências de cada
-ferramenta no arquivo config/preferences.json.
+ferramenta no arquivo config/<APP_SLUG>_preferences.json (ver StringUtils.APP_SLUG).
 
 Uso:
     from utils.Preferences import Preferences
@@ -25,6 +25,7 @@ from typing import Any, Dict
 
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
+from utils.StringUtils import StringUtils
 
 
 class _PreferencesWriteHelper:
@@ -80,7 +81,9 @@ class Preferences(BaseUtil):
     Não instancie esta classe.
     """
 
-    _DEFAULT_PATH: Path = Path(__file__).resolve().parent.parent / "config" / "preferences.json"
+    _CONFIG_DIR: Path = Path(__file__).resolve().parent.parent / "config"
+    _LEGACY_PATH: Path = _CONFIG_DIR / "preferences.json"
+    _DEFAULT_PATH: Path = _CONFIG_DIR / f"{StringUtils.APP_SLUG}_preferences.json"
     _cache: Dict[str, Any] = {}           # Cache em memória (fix #5)
     _cache_loaded: bool = False           # Flag: cache já foi populado?
     _write_helper: _PreferencesWriteHelper = _PreferencesWriteHelper()  # Singleton helper
@@ -89,9 +92,33 @@ class Preferences(BaseUtil):
     def _ensure_cache(cls) -> Dict[str, Any]:
         """Garante que o cache em memória está populado (lê do disco uma vez)."""
         if not cls._cache_loaded:
+            cls._migrate_legacy_file()
             cls._cache = cls._load_from_disk()
             cls._cache_loaded = True
         return cls._cache
+
+    @classmethod
+    def _migrate_legacy_file(cls) -> None:
+        """
+        Renomeia o arquivo legado ``preferences.json`` para o nome atual
+        (derivado do nome da aplicação), evitando arquivos duplicados.
+        """
+        if cls._DEFAULT_PATH.is_file() or not cls._LEGACY_PATH.is_file():
+            return
+        try:
+            cls._LEGACY_PATH.replace(cls._DEFAULT_PATH)
+            cls._get_logger(ToolKey.SYSTEM.value).info(
+                "Arquivo de preferências legado migrado",
+                code="PREFS_MIGRATED",
+                old_path=str(cls._LEGACY_PATH),
+                new_path=str(cls._DEFAULT_PATH),
+            )
+        except OSError as e:
+            cls._get_logger(ToolKey.SYSTEM.value).error(
+                "Falha ao migrar arquivo de preferências legado",
+                code="PREFS_MIGRATE_ERR",
+                error=str(e),
+            )
 
     @classmethod
     def _schedule_write(cls) -> None:

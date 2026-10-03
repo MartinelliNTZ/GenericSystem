@@ -24,6 +24,7 @@ from core.enum.MenuCategory import MenuCategory
 from core.enum.ToolKey import ToolKey
 from core.enum.ToolType import ToolType
 from core.model.Tool import Tool
+from utils.StringUtils import StringUtils
 
 
 def _make_factory(module_path: str, class_name: str) -> Callable[[], QWidget]:
@@ -78,7 +79,7 @@ class ToolRegistry:
             widget_factory=_make_factory(
                 "plugins.home.HomePlugin", "HomePlugin"
             ),
-            tooltip="Pagina inicial do Aetheris ToolBox",
+            tooltip=f"Pagina inicial do {StringUtils.APP_NAME}",
             tool_type=ToolType.SYSTEM,
             category=CategoryTool.CENTRAL,
         ),

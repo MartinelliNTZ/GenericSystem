@@ -45,6 +45,7 @@ from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
 from utils.ProjectUtil import ProjectUtil
 from utils.RecentProjectsManager import RecentProjectsManager
+from utils.StringUtils import StringUtils
 
 
 class MenuManager(QObject):
@@ -64,7 +65,7 @@ class MenuManager(QObject):
 
     tool_activated = Signal(str)  # nome da ferramenta selecionada
 
-    _MTL_FILTER = "Projeto Aetheris (*.mtl)"
+    _MTL_FILTER = f"Projeto {StringUtils.APP_NAME} (*.mtl)"
 
     def __init__(self, parent=None):
         super().__init__(parent)

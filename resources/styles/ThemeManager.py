@@ -34,6 +34,7 @@ Uso:
 from __future__ import annotations
 
 from resources.styles.BaseTheme import BaseTheme
+from utils.StringUtils import StringUtils
 
 
 THEMES: dict[str, dict] = {
@@ -67,7 +68,7 @@ THEMES: dict[str, dict] = {
                        "glow estruturado, sombras numéricas discretas, fonte "
                        "display serifada e badge outline habilitado. Demonstra "
                        "todos os novos tokens de estilo premium.",
-        "author":      "Aetheris ToolBox",
+        "author":      StringUtils.APP_NAME,
         "version":     "1.0.0",
     },
     "neon_accent": {

@@ -11,7 +11,7 @@ escrevem no MESMO arquivo que o processo principal, usando
 append mode + formato JSONL (um JSON por linha).
 
 O arquivo e criado no primeiro `log()` / `info()` / etc. chamado.
-O nome segue o formato: ``YYYYMMDD-HHMMSS_AetherisToolBox.json``
+O nome segue o formato: ``YYYYMMDD-HHMMSS_<APP_SLUG>.json``
 
 Uso:
     from core.config.LogUtils import LogUtils
@@ -28,6 +28,8 @@ import os as _os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
+
+from utils.StringUtils import StringUtils
 
 
 class LogUtils:
@@ -63,7 +65,7 @@ class LogUtils:
     _session_path: ClassVar[Path | None] = None
     _session_events: ClassVar[list[dict]] = []
     _session_started: ClassVar[bool] = False
-    _LOG_FILE_ENV: ClassVar[str] = "_AETHERIS_LOG_FILE"
+    _LOG_FILE_ENV: ClassVar[str] = f"_{StringUtils.APP_ID.upper()}_LOG_FILE"
 
     def __new__(cls, *, tool: str, class_name: str, level: str | None = None) -> "LogUtils":
         instance = super().__new__(cls)
@@ -138,7 +140,7 @@ class LogUtils:
             else:
                 cls._LOG_DIR.mkdir(parents=True, exist_ok=True)
                 ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-                cls._session_path = cls._LOG_DIR / f"{ts}_AetherisToolBox.json"
+                cls._session_path = cls._LOG_DIR / f"{ts}_{StringUtils.APP_SLUG}.json"
                 _os.environ[cls._LOG_FILE_ENV] = str(cls._session_path)
             cls._session_started = True
             cls._session_events = []

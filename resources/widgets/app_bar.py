@@ -19,6 +19,9 @@ from PySide6.QtWidgets import (
 )
 
 
+from utils.StringUtils import StringUtils
+
+
 class AppBar(QWidget):
     """
     AppBar reutilizável com suporte a arrasto e toolbar.
@@ -54,7 +57,7 @@ class AppBar(QWidget):
             layout.addWidget(self._icon_label)
 
         # --- Window title ---
-        self.lbl_window_title = QLabel("Aetheris ToolBox")
+        self.lbl_window_title = QLabel(StringUtils.APP_NAME)
         self.lbl_window_title.setObjectName("window_title")
         layout.addWidget(self.lbl_window_title)
 

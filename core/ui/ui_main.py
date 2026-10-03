@@ -29,6 +29,7 @@ from core.model.Tool import Tool
 from core.enum.ResizeMode import ResizeMode
 from resources.widgets.app_bar import AppBar
 from utils.ProjectUtil import ProjectUtil
+from utils.StringUtils import StringUtils
 from core.config.MenuManager import MenuManager
 from core.config.WorkspaceManager import WorkspaceManager
 from core.dialogs.AboutDialog import AboutDialog
@@ -53,7 +54,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, tools: List[Tool]):
         super().__init__()
-        self.setWindowTitle("Aetheris ToolBox")
+        self.setWindowTitle(StringUtils.APP_NAME)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setMinimumSize(1000, 650)
         self.resize(1100, 700)
@@ -300,7 +301,7 @@ class MainWindow(QMainWindow):
         signals = SignalManager.instance()
         signals.app_startup.emit()
         signals.console_html.emit(
-            '<b style="color:#10B981;">Aetheris ToolBox</b> '
+            f'<b style="color:#10B981;">{StringUtils.APP_NAME}</b> '
             '<span style="color:#78716C;">iniciado — console pronto.</span>'
         )
         signals.console_message.emit(

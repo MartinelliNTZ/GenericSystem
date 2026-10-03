@@ -20,6 +20,7 @@ from PySide6.QtGui import QPixmap
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
 from utils.ExplorerUtils import ExplorerUtils
+from utils.StringUtils import StringUtils
 
 
 # ── Constantes ─────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ class TileManager(QObject):
 
         # Cache em disco
         self._disk_cache_dir = ExplorerUtils.get_system_temp_dir(
-            "aetheris/map_viewer/tiles", tool_key=tool_key
+            f"{StringUtils.APP_ID}/map_viewer/tiles", tool_key=tool_key
         )
 
         # Downloaders ativos

@@ -31,6 +31,8 @@ from typing import Any, Dict, List, Optional, Type
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QWidget, QStyle
 
+from utils.StringUtils import StringUtils
+
 
 class CheckWidgets:
     """
@@ -269,7 +271,7 @@ class CheckWidgets:
         """Formata os resultados em relatório textual com stylesheets."""
         lines: list[str] = []
         lines.append("=" * 100)
-        lines.append("  RELATÓRIO DE STYLESHEETS — Aetheris ToolBox Widgets")
+        lines.append(f"  RELATÓRIO DE STYLESHEETS — {StringUtils.APP_NAME} Widgets")
         lines.append("=" * 100)
         lines.append(f"  Diretório: {self.widgets_dir}")
         lines.append(f"  Data: {self._get_timestamp()}")

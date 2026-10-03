@@ -22,6 +22,8 @@ def main():
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
+    from utils.StringUtils import StringUtils
+
     try:
         from core.config.BootStrap import BootStrap
         BootStrap().run()
@@ -46,7 +48,7 @@ def main():
 
         # Mensagem no console
         print("=" * 60, file=sys.stderr)
-        print("  AETHERIS TOOLBOX — ERRO FATAL NA INICIALIZAÇÃO", file=sys.stderr)
+        print(f"  {StringUtils.APP_NAME.upper()} — ERRO FATAL NA INICIALIZAÇÃO", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
         print(f"\nTipo: {type(exc).__name__}", file=sys.stderr)
         print(f"Erro: {exc}", file=sys.stderr)
@@ -60,7 +62,7 @@ def main():
             from utils.MessageBox import MessageBox
             MessageBox.show_critical(
                 text=(
-                    f"Não foi possível iniciar o Aetheris ToolBox.\n\n"
+                    f"Não foi possível iniciar o {StringUtils.APP_NAME}.\n\n"
                     f"Tipo: {type(exc).__name__}\n"
                     f"Erro: {exc}\n\n"
                     f"Verifique os logs para mais detalhes."
