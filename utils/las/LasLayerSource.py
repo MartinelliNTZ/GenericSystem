@@ -651,7 +651,7 @@ class LasLayerSource(BaseUtil):
             }
 
     # ══════════════════════════════════════════════════════════════════
-    # API — Extração de Coordenadas (PointBoundaryPlugin)
+    # API — Extração de Coordenadas
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod

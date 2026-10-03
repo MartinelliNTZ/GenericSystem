@@ -54,7 +54,7 @@ class VectorToLasTask(BaseTask):
         self._csv_z_field = csv_z_field
         self._signals = SignalManager.instance()
         self._logger = BaseUtil._get_logger(
-            ToolKey.LAS_VECTOR_CONVERTER.value, "VectorToLasTask"
+            ToolKey.UNTRACEABLE.value, "VectorToLasTask"
         )
 
     def _run(self) -> bool:

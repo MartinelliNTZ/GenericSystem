@@ -86,7 +86,7 @@ class RasterLayerProcessing(BaseUtil):
         """
         Compõe múltiplos GeoTIFFs single-band em um raster multibanda.
 
-        Usado pelo IdwInterpolatorPlugin para gerar:
+        Exemplo de uso (mosaico multibanda):
         - mosaico_rgb.tif (3 bandas: R, G, B)
         - mosaico_rgbz.tif (4 bandas: R, G, B, Z)
 

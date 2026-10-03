@@ -1,4 +1,17 @@
-[1.2.13][2026.07.22][10:36] - Correção: LasVectorConverter não transferia atributos entre LAS↔Vetor em ambas direções
+[1.3.0][2026.10.03][16:42] - Refatoração: remoção das ferramentas de domínio Vetor/Agricultura/Raster/LAS (arquitetura genérica)
+  - Removidos 10 plugins de ferramenta: tensorflow_classifier, mrk_substitutor, las_black_filter,
+    las_check, las_reprojection, las_tiler, las_vector_converter, point_boundary, scan_angle_filter,
+    idw_interpolator
+  - core/config/ToolRegistry.py: entradas _TOOLS dessas 10 ferramentas removidas
+  - core/enum/ToolKey.py: removidas as chaves correspondentes + placeholders de domínio não implementados
+    (LAS_*, RASTER_*, IBGE_*, JOHN_DEERE_ORGANIZER, CUT_BY_TRAJECTORY)
+  - Mantidas as classes de manipulação: core/papeline/step + core/papeline/task (BaseStep/BaseTask)
+    e utils/las, utils/raster, utils/vector
+  - Comentários de utilidades atualizados (removidas referências a plugins eliminados)
+  - Mantidas ferramentas genéricas (ico_converter, image_converter, map_viewer)
+  - Changelog atualizado
+
+
   - LasVectorConverterPlugin.py: _aplicar_ui_da_direcao() agora chama set_output_extension("Saída", "las") no modo vector_to_las
   - LasToVectorTask.py: agora lê TODAS as dimensões do LAS (incluindo extra dimensions) em vez de apenas 6 campos fixos
   - LasToVectorTask.py: itera sobre las.point_format.dimensions para capturar qualquer atributo personalizado

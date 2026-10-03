@@ -15,8 +15,8 @@
 ### core/enum/
 | Classe | Descrição |
 |---|---|
-| `ToolKey` | Enum com chaves padronizadas das ferramentas (HOME, CONSOLE, LOG_VIEWER, TENSORFLOW_CLASSIFIER) |
-| `ToolType` | Enum com categorias visuais das ferramentas (SYSTEM, RASTER, VECTOR, CLASSIFIER) |
+| `ToolKey` | Enum com chaves padronizadas das ferramentas (HOME, CONSOLE, LOGVIEWER, FILE_MANAGER, ...) |
+| `ToolType` | Enum com categorias visuais das ferramentas (SYSTEM, LAYOUTS, FOLDER, VECTOR, AGRICULTURE, RASTER, IMAGE, POINTS) |
 
 ### core/manager/
 | Classe | Descrição |
@@ -61,24 +61,6 @@
 | Classe | Descrição |
 |---|---|
 | `LogViewerTool` | Visualizador de logs do sistema com filtros e busca |
-
-### plugins/tensorflow_classifier/
-| Classe | Descrição |
-|---|---|
-| `ClassificationTool` | Ferramenta principal de classificação de imagens com TensorFlow |
-| `ClassifierPipeline` | Pipeline completo de classificação (pré-processamento → extração → treino → avaliação → predição) |
-| `DatasetSplitter` | Utilitário para divisão de datasets em treino/validação/teste |
-| `Evaluator` | Avaliador de modelos treinados (métricas, matriz de confusão, relatórios) |
-| `FeatureExtractor` | Extrator de características de imagens/raster para treinamento |
-| `HardwareManager` | Gerenciador de detecção de hardware disponível (CPU/GPU) |
-| `MainController` | Controlador principal que orquestra a lógica de negócio da classificação |
-| `ModelFactory` | Fábrica de criação de modelos TensorFlow/Keras |
-| `PipelineConfig` | Configuração e parâmetros do pipeline de classificação |
-| `RasterPredictor` | Preditor para arquivos raster completos (GeoTIFF) |
-| `RasterSource` | Fonte de dados raster para leitura e processamento de GeoTIFF |
-| `ShapefileDataset` | Dataset a partir de shapefiles para classificação |
-| `Trainer` | Treinador de modelos com callbacks e logging |
-| `UIFieldSpecs` | Especificações dos campos da interface do classificador |
 
 ---
 

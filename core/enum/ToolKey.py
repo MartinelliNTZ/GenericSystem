@@ -17,7 +17,6 @@ class ToolKey(str, Enum):
 
     HOME = "Home"
     CONSOLE = "Console"
-    CLASSIFIER = "Classifier"
     LOGVIEWER = "LogViewer"
     HOTKEY_PLUGIN = "HotkeyPlugin"
     PREFERENCES = "Preferences"
@@ -30,36 +29,13 @@ class ToolKey(str, Enum):
     ICO_CONVERTER = "IcoConverter"
     IMAGE_CONVERTER = "ImageConverter"
     DOCLING = "Docling"
-    MRK_SUBSTITUTOR = "MrkSubstitutor"
-    LAS_BLACK_FILTER = "LasBlackFilter"
-    LAS_CHECK = "LasCheck"
     STATISTICS = "Statistics"
-    POINT_BOUNDARY = "PointBoundary"
-    IDW_INTERPOLATOR = "IdwInterpolator"
-    LAS_TILER = "LasTiler"
     SYSTEM_MONITOR = "SystemMonitor"
-    LAS_VECTOR_CONVERTER = "LasVectorConverter"
-    LAS_REPROJECTION = "LasReprojection"
     FOOTBALL_FETCH = "FootballFetch"
     WEATHER_FETCH = "WeatherFetch"
-    SCAN_ANGLE_FILTER = "ScanAngleFilter"
     MAP_VIEWER = "MapViewer"
 
-    CUT_BY_TRAJECTORY = "CutByTrajectory"  # Ainda não implementado
-    IBGE_HNOR_ORGANIZER = "IBGEHnorOrganizer"  # Ainda não implementado
-    IBGE_PPP_CONVERTER = "IBGEPPPConverter"  # Ainda não implementado
-    JOHN_DEERE_ORGANIZER = "JohnDeereOrganizer"  # Ainda não implementado
-    LAS_LAZ_CONVERT = "LasLazConvert"  # Ainda não implementado
-    LAS_MERGE = "LasMerge"  # Ainda não implementado
     PYTHON_LIBRARY_MANAGER = "PythonLibraryManager"  # Ainda não implementado
-    RASTER_CHECK = "RasterCheck"  # Ainda não implementado
-    RASTER_FREE = "RasterFree"  # Ainda não implementado
-    RASTER_FREE_2 = "RasterFree (2)"  # Ainda não implementado
-    RASTER_MERGE = "RasterMerge"  # Ainda não implementado
-    RASTER_MERGE_2 = "RasterMerge2"  # Ainda não implementado
-    RASTER_TO_LAS = "RasterToLas"  # Ainda não implementado
-    RASTER_TO_LAS_2 = "RasterToLas2"  # Ainda não implementado
-    RASTER_VISION_CLASSIFIER = "RasterVisionClassifier"  # Ainda não implementado
 
     # ── Método utilitário ──────────────────────────────────────────────
 

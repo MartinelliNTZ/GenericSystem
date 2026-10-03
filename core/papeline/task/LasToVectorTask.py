@@ -48,7 +48,7 @@ class LasToVectorTask(BaseTask):
         self._crs_str = crs_str
         self._signals = SignalManager.instance()
         self._logger = BaseUtil._get_logger(
-            ToolKey.LAS_VECTOR_CONVERTER.value, "LasToVectorTask"
+            ToolKey.UNTRACEABLE.value, "LasToVectorTask"
         )
 
     def _run(self) -> bool:

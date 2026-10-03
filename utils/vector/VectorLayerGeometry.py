@@ -323,7 +323,7 @@ class VectorLayerGeometry(BaseUtil):
         return False
 
     # ══════════════════════════════════════════════════════════════════
-    # API — Boundary / Concave Hull (PointBoundaryPlugin)
+    # API — Boundary / Concave Hull
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod

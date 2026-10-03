@@ -394,7 +394,7 @@ class VectorLayerSource(BaseUtil):
         return rows
 
     # ══════════════════════════════════════════════════════════════════
-    # API — Extração de Coordenadas (PointBoundaryPlugin)
+    # API — Extração de Coordenadas
     # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
