@@ -20,7 +20,6 @@ class Farm(BaseModel):
     city: str = ""
     state: str = ""
     country: str = ""
-    total_area: float = 0.0
     registration: str = ""
     fields: list[Field] = field(default_factory=list)
 
@@ -29,6 +28,6 @@ class Farm(BaseModel):
         self.fields.append(new_field)
         self.touch()
 
-    def fields_area(self) -> float:
-        """Retorna a soma da área de todos os talhões da fazenda."""
-        return sum(talhao.area for talhao in self.fields)
+    def area(self) -> float:
+        """Retorna a área da fazenda: soma da área de todos os talhões."""
+        return sum(new_field.area for new_field in self.fields)

@@ -52,6 +52,10 @@ class WorkOrder(BaseModel):
         self.clients.append(new_client)
         self.touch()
 
+    def area(self) -> float:
+        """Retorna a área da ordem de serviço: soma da área de todos os clientes."""
+        return sum(new_client.area() for new_client in self.clients)
+
     def finish(self, by: str = "") -> None:
         """Marca a ordem de serviço como concluída."""
         self.status = WorkOrderStatus.DONE

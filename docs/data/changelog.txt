@@ -1,3 +1,12 @@
+[1.3.3][2026.10.04][11:10] - Área calculada em cascata nos models de domínio (método, não atributo)
+  - core/model/FarmModel.py: removido atributo total_area; área da fazenda agora é o método area()
+    (soma da área dos talhões)
+  - core/model/ClientModel.py: novo método area() (soma da área das fazendas)
+  - core/model/WorkOrderModel.py: novo método area() (soma da área dos clientes)
+  - Field.area permanece como atributo (talhão tem área definida)
+  - Changelog atualizado
+
+
 [1.3.2][2026.10.04][10:30] - Novos models de domínio (BaseModel, Fazenda, Cliente, Talhão, Ordem de Serviço)
   - core/model/BaseModel.py: novo model base (pai de todos os models) com id, nome, descrição,
     flag active e auditoria (created_at/created_by, updated_at/updated_by) + touch() e to_dict()
