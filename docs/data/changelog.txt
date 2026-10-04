@@ -1,3 +1,15 @@
+[1.3.2][2026.10.04][10:30] - Novos models de domínio (BaseModel, Fazenda, Cliente, Talhão, Ordem de Serviço)
+  - core/model/BaseModel.py: novo model base (pai de todos os models) com id, nome, descrição,
+    flag active e auditoria (created_at/created_by, updated_at/updated_by) + touch() e to_dict()
+  - core/model/FieldModel.py: model Field (talhão) herdando de BaseModel
+  - core/model/FarmModel.py: model Farm (fazenda) com lista de talhões (Field)
+  - core/model/ClientModel.py: model Client (cliente) com lista de fazendas (Farm)
+  - core/model/WorkOrderModel.py: model WorkOrder (ordem de serviço) com lista de clientes (Client)
+    + enums WorkOrderStatus e WorkOrderPriority
+  - docs/skills/CatalogoClasses.md: seção core/model/ atualizada com os novos models
+  - Changelog atualizado
+
+
 [1.3.1][2026.10.03][16:54] - Centralização do nome da aplicação em StringUtils (fonte única de identidade)
   - utils/StringUtils.py: novas constantes APP_NAME, APP_SLUG e APP_ID (fonte única do nome do software)
   - Todos os usos do nome do software passam a referenciar StringUtils.APP_NAME/APP_SLUG/APP_ID:

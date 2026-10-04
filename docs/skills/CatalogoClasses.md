@@ -29,6 +29,11 @@
 |---|---|
 | `BasePlugin` | Classe base para todos os plugins/ferramentas. Fornece logger automático, métodos load/save de preferências e emite sinais de tool_opened/tool_closed |
 | `Tool` | Modelo de ferramenta com lazy loading: só instancia o widget QWidget sob demanda via factory |
+| `BaseModel` | Modelo base do sistema, pai de todos os models (id, nome, descrição e auditoria de criação/modificação) |
+| `Field` | Modelo de talhão de uma fazenda |
+| `Farm` | Modelo de fazenda, que possui vários talhões (Field) |
+| `Client` | Modelo de cliente, que possui várias fazendas (Farm) |
+| `WorkOrder` | Modelo de ordem de serviço, que pode envolver um ou mais clientes (Client) |
 
 ### core/ui/
 | Classe | Descrição |
