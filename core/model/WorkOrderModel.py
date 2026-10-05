@@ -42,18 +42,25 @@ class WorkOrder(BaseModel):
     status: str = WorkOrderStatus.OPEN
     priority: str = WorkOrderPriority.NORMAL
     responsible: str = ""
-    start_date: Optional[datetime] = None
+    opened_at: Optional[datetime] = None
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    contract_area: float = 0.0
     clients: list[Client] = field(default_factory=list)
+
+    def open(self, contract_area: float = 0.0, by: str = "") -> None:
+        """Abre a ordem de serviço, fixando a área de contrato na data de abertura."""
+        self.opened_at = datetime.now()
+        self.contract_area = contract_area
+        self.touch(by)
 
     def add_client(self, new_client: Client) -> None:
         """Adiciona um cliente à ordem de serviço."""
         self.clients.append(new_client)
         self.touch()
 
-    def area(self) -> float:
-        """Retorna a área da ordem de serviço: soma da área de todos os clientes."""
+    def real_area(self) -> float:
+        """Retorna a área real: soma da área de todos os clientes (baseada nos talhões)."""
         return sum(new_client.area() for new_client in self.clients)
 
     def finish(self, by: str = "") -> None:
