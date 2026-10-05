@@ -23,36 +23,23 @@ from PySide6.QtCore import QObject, QRunnable, Signal
 from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
 from utils.FormatUtils import FormatUtils
+from utils.ProjectStructureUtil import (
+    DEFAULT_PROJECT_FOLDERS,
+    DEFAULT_YEARS,
+    DOCUMENT_YEARS_FOLDER,
+    PROJECT_PREFIX,
+    discover_projects,
+    is_year_folder,
+)
 
 
-# Pastas esperadas na raiz de cada projeto (configuração local da ferramenta).
-DEFAULT_PROJECT_FOLDERS: List[str] = [
-    "01_Acessos_Plataforma_IA_AGLIBS",
-    "02_Acompanhamento_de_Projeto_Reuniões",
-    "03_ENVIO_DE_DOCUMENTOS",
-    "04_ATIVIDADES_ATRIBUIDAS",
-    "05_ASA",
-    "06_CAR",
-    "07_MATRICULA",
-    "08_LIMITES",
-    "09_HISTORICO_COBERTURA_SOLO",
-    "10_VERRA",
-    "11_AGROROBOTICA",
-    "12_FOTOS_INICIO_PROJETO",
-    "13_ZONAS_DE_MANEJO",
-]
-
-PROJECT_PREFIX = "OS_"
+# Pastas/anos, prefixo e descoberta são definidos em utils/ProjectStructureUtil
+# (compartilhados com o Banco de Dados — Contrato 7) e re-exportados no topo
+# deste módulo para manter a API pública usada pelo ProjectStructurePlugin.
 
 STATUS_CORRECT = "CORRETA"
 STATUS_INCORRECT = "INCOERENTE"
 STATUS_MISSING = "AUSENTE"
-
-# Pasta do projeto que agrupa as pastas de ano (cada uma com o template).
-DOCUMENT_YEARS_FOLDER = "03_ENVIO_DE_DOCUMENTOS"
-
-# Anos oferecidos por padrão no diálogo de criação de pastas de ano.
-DEFAULT_YEARS: List[int] = list(range(2019, 2028))
 
 # Template completo criado (e validado) dentro de cada pasta de ano.
 # ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas.
@@ -120,27 +107,6 @@ class StructureNode:
     children: List["StructureNode"] = field(default_factory=list)
 
 
-def discover_projects(mother: Path) -> List[Path]:
-    """Retorna as pastas de projeto (prefixo OS_) ordenadas por nome."""
-    logger = _logger()
-    try:
-        projects = [
-            path
-            for path in mother.iterdir()
-            if path.is_dir() and path.name.upper().startswith(PROJECT_PREFIX)
-        ]
-    except (PermissionError, FileNotFoundError, OSError) as e:
-        logger.error(
-            "Falha ao ler a pasta-mãe",
-            code="PSM_SCAN_ERR",
-            error=str(e),
-            path=str(mother),
-        )
-        return []
-    projects.sort(key=lambda path: path.name.lower())
-    return projects
-
-
 def scan_project(project: Path, expected: List[str]) -> ProjectStructure:
     """Inspeciona um projeto: pastas presentes, incoerentes e ausentes."""
     result = ProjectStructure(name=project.name, path=project)
@@ -180,11 +146,6 @@ def scan_project(project: Path, expected: List[str]) -> ProjectStructure:
             )
 
     return result
-
-
-def is_year_folder(name: str) -> bool:
-    """Indica se ``name`` é uma pasta de ano (4 dígitos numéricos)."""
-    return name.isdigit() and len(name) == 4
 
 
 def _list_subdirs(path: Path) -> List[Path]:
@@ -421,7 +382,9 @@ class ScanWorker(QRunnable):
     def run(self) -> None:
         """Executa a varredura e emite o resultado."""
         try:
-            projects = discover_projects(Path(self.mother))
+            projects = discover_projects(
+                Path(self.mother), tool_key=ToolKey.PROJECT_STRUCTURE.value
+            )
             total = max(len(projects), 1)
             result = ScanResult()
             self.signals.progress.emit(self.generation, 0, total)

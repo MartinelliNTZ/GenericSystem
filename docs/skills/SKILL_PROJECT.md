@@ -279,3 +279,75 @@ O sinal `recent_projects_changed` (definido em `SignalCatalog`) atualiza o subme
 8. **O status visual do projeto** na AppBar é atualizado via `project_changed` — não atualize manualmente.
 9. **Ao criar novo projeto**, sempre zere `current_project` e `root_folder` nas preferências.
 10. **Ao abrir/salvar**, sempre atualize `last_modified` via `ProjectUtil.update_last_modified()`.
+
+## Banco de Dados de Projetos (`ProjectDatabase`)
+
+Ferramenta **CENTRAL** (`ToolKey.PROJECT_DATABASE`) que mantém um **banco de
+dados local em JSON** com o estado das pastas dos projetos (OS) de uma
+pasta-mãe, além de um **backup diário** desse banco. **Não substitui** a
+varredura do Gerenciador de Estrutura: persiste um retrato dos dados para
+consulta rápida.
+
+### Arquivos
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS, prefs, backup e varredura assíncrona |
+| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta registros por OS + banco consolidado + `ProjectDatabaseWorker` |
+| `plugins/project_database_manager/ProjectDatabaseStore.py` | Leitura/escrita dos JSONs em `.BancoDados` (gravação atômica) |
+| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_client_name`, `collect_created_data`) |
+| `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
+
+### Estrutura em disco
+
+```
+<pasta-mãe>/.BancoDados/
+├── banco_dados.json          ← consolidado (todas as OS)
+└── <numero_os>.json           ← um JSON independente por OS
+```
+
+### Chave da OS
+
+O nome da pasta segue `OS_<numero>_<resto...>` (ex.: `OS_039_Bunge`,
+`OS_181_RENNER_A_Grupo JCN - Faz Clateia`). O **número** é o primeiro campo
+após `OS_`. A chave (`os`) — que também dá nome ao arquivo — segue a regra:
+
+- **Número único** → apenas o número (ex.: `068` → `068.json`).
+- **Número repetido** → número + resto do nome, para desambiguar
+  (ex.: `181_RENNER_A`, `181_RENNER_B`, `181_RENNER_C`).
+
+O **nome do cliente** (último campo) é salvo à parte em `client`, e o nome
+completo em `name`.
+
+```json
+{
+  "os": "181_RENNER_A",
+  "name": "OS_181_RENNER_A_Grupo JCN - Faz Clateia",
+  "client": "Grupo JCN - Faz Clateia",
+  "path": "C:/.../OS_181_RENNER_A_Grupo JCN - Faz Clateia",
+  "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
+  "years": ["2023", "2024"],
+  "updated_at": "2026-10-05T17:15:36"
+}
+```
+
+- `folders`: **apenas** as pastas **padrão** presentes em disco (nunca as fora
+  de padrão).
+- `years`: **apenas** as pastas de ano presentes em `03_ENVIO_DE_DOCUMENTOS`.
+- Ao clicar em ATUALIZAR DADOS, JSONs órfãos (de chaves antigas) são removidos
+  automaticamente, mantendo o `.BancoDados` enxuto.
+
+### Regras
+
+1. **Abrir a ferramenta NÃO recalcula nem grava** — apenas lê o consolidado.
+2. Os dados só são recalculados/gravados ao clicar em **ATUALIZAR DADOS**
+   (varredura em background + gravação atômica).
+3. A **pasta-mãe** é a mesma do Gerenciador de Estrutura (fonte única — seção
+   `ProjectStructure`), exibida **somente leitura**.
+4. O **backup diário** é `zipfile` (stdlib), gravado em
+   `<backup_dir>/<YYYYMMDDHHMMSS>.BancoDados.zip` (default
+   `~/Documents/Backups/VerraData`), no máximo **1x/dia**, disparado ao iniciar
+   **esta ferramenta ou** o Gerenciador de Estrutura
+   (`ProjectDatabaseBackup.ensure_daily_backup`).
+5. Código compartilhado vive em `utils/` (Contrato 7) — nenhum plugin importa
+   outro plugin.

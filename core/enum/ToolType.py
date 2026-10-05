@@ -21,3 +21,4 @@ class ToolType(str, Enum):
     RASTER = "Raster"
     IMAGE = "Image"
     POINTS = "Points"
+    VERRA = "Verra"

@@ -35,6 +35,7 @@ class ToolKey(str, Enum):
     WEATHER_FETCH = "WeatherFetch"
     MAP_VIEWER = "MapViewer"
     PROJECT_STRUCTURE = "ProjectStructure"
+    PROJECT_DATABASE = "ProjectDatabase"
 
     PYTHON_LIBRARY_MANAGER = "PythonLibraryManager"  # Ainda não implementado
 

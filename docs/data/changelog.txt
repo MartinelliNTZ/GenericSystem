@@ -1,3 +1,33 @@
+[1.3.9][2026.10.05][18:00] - Banco de Dados de Projetos (ProjectDatabase) — ferramenta CENTRAL
+  - utils/ProjectStructureUtil.py: NOVO — constantes da estrutura (PROJECT_PREFIX,
+    DEFAULT_PROJECT_FOLDERS, DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS) + discover_projects,
+    is_year_folder, extract_os_number, extract_client_name e collect_created_data
+    (promovidos do ProjectStructureScanner — Contrato 7)
+  - plugins/project_structure_manager/ProjectStructureScanner.py: passa a importar/
+    re-exportar a estrutura compartilhada de utils.ProjectStructureUtil (sem regressão)
+  - utils/ProjectDatabaseBackup.py: NOVO — ensure_daily_backup (ZIP stdlib, 1x/dia),
+    disparado ao iniciar o Banco de Dados OU o Gerenciador de Estrutura
+  - plugins/project_database_manager/: NOVO pacote (CENTRAL) com ProjectDatabasePlugin
+    (UI: cards, árvore OS/Cliente/Pastas/Anos/Caminho, pasta-mãe somente leitura, pasta de
+    backup, ATUALIZAR DADOS), ProjectDatabaseService (+ ProjectDatabaseWorker assíncrono)
+    e ProjectDatabaseStore (JSON por OS + consolidado em <pasta-mãe>/.BancoDados, gravação
+    atômica tmp+os.replace)
+  - Chave da OS = número (primeiro campo após "OS_") quando único (ex.: "OS_068_SANTO_ANTONIO"
+    -> "068"); quando o número se repete, usa número + resto do nome para desambiguar
+    (ex.: "OS_181_RENNER_A_Grupo JCN - Faz Clateia" -> "181_RENNER_A"); nome do cliente
+    (último campo) salvo à parte em client e nome completo em name
+  - ProjectDatabaseStore: prune_projects remove JSONs órfãos de OS no ATUALIZAR DADOS
+    (mantém <chave>.json + banco_dados.json)
+  - Abrir a ferramenta apenas LÊ o consolidado; os dados só são recalculados/gravados em
+    ATUALIZAR DADOS (apenas pastas padrão criadas + anos de 03_ENVIO_DE_DOCUMENTOS)
+  - core/enum/ToolKey.py: + PROJECT_DATABASE
+  - core/enum/ToolType.py: + VERRA (novo grupo "Verra" na toolbar)
+  - core/config/ToolRegistry.py: registro lazy da ferramenta (CENTRAL, toolbar);
+    Gerenciador de Estrutura e Banco de Dados classificados como ToolType.VERRA
+  - docs/skills/SKILL_PROJECT.md: documentação da nova ferramenta + backup
+  - Changelog atualizado
+
+
 [1.3.8][2026.10.05][17:30] - Gerenciador de Estrutura: varredura única + refresh por projeto (sem HUD)
   - ProjectStructurePlugin.py: removido TODO o uso de HUD/overlay (hud_show/hud_update/
     hud_hide e execution_started/finished/cancelled) — o progresso aparece SOMENTE na
