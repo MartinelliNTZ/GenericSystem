@@ -1,3 +1,20 @@
+[1.3.6][2026.10.05][15:10] - Gerenciador de Estrutura: pastas de ano em 03_ENVIO_DE_DOCUMENTOS
+  - ProjectStructureScanner.py: novos DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS (2019-2027),
+    DOCUMENT_TEMPLATE (esqueleto completo de documentos), is_year_folder, StructureNode,
+    scan_document_years (valida apenas os anos existentes; pastas que não são ano = incoerentes;
+    anos ausentes não são reportados) e scan_template (validação recursiva do template)
+  - FolderOperations.py: create_template (cria a subárvore) e create_document_year
+    (cria a pasta do ano já com o template completo)
+  - ProjectStructurePlugin.py: renderização recursiva dos anos/template na árvore, botão
+    "+ Anos" na linha do 03 (abre diálogo de checkboxes), ação "+ Criar" para recriar a
+    subárvore ausente, cards passam a contar os novos nós e watcher monitora o 03
+  - resources/widgets/dialogs/CheckBoxSelectDialog.py: novo widget (diálogo genérico de
+    seleção múltipla por checkboxes, via GridCheckBox)
+  - docs/skills/SKILL_WIDGETS.md: CheckBoxSelectDialog adicionado ao catálogo
+  - docs/skills/CatalogoClasses.md: seção project_structure_manager e catálogo de widgets atualizados
+  - Changelog atualizado
+
+
 [1.3.5][2026.10.05][10:44] - Nova ferramenta: Gerenciador de Estrutura de Projetos
   - core/enum/ToolKey.py: nova chave PROJECT_STRUCTURE = "ProjectStructure"
   - core/config/ToolRegistry.py: registro da ferramenta (CENTRAL, ToolType.FOLDER)

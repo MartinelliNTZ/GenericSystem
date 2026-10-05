@@ -70,9 +70,9 @@
 ### plugins/project_structure_manager/
 | Classe | Descrição |
 |---|---|
-| `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta |
-| `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação das pastas esperadas e estatísticas; `StatisticsWorker` calcula em background |
-| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + abertura no explorer; `RenameFolderWorker` |
+| `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes |
+| `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano e o template completo de documentos) e estatísticas; `StatisticsWorker` calcula em background |
+| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + templates de ano (`create_template`, `create_document_year`) + abertura no explorer; `RenameFolderWorker` |
 
 ---
 
@@ -102,6 +102,7 @@
 | `GridTree` | Árvore multicoluna genérica (indexada por chave) com cores por célula e widgets de ação por linha |
 | `GridActionCell` | Container horizontal genérico para widgets de ação em uma célula de tabela/árvore |
 | `SimpleMenuButton` | Botão com popup de menu (dropdown) configurável por Dict |
+| `CheckBoxSelectDialog` | Diálogo genérico de seleção múltipla por checkboxes (usa GridCheckBox), com `selected_keys` |
 | `WorkspaceTab` | Aba customizada com fundo preto, canto superior direito arredondado e texto dourado centralizado |
 
 ### resources/

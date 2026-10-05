@@ -13,12 +13,15 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
 from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
+from plugins.project_structure_manager.ProjectStructureScanner import (
+    DOCUMENT_TEMPLATE,
+)
 
 
 def _logger() -> LogUtils:
@@ -33,6 +36,30 @@ def create_folder(project: Path, name: str) -> Path:
     destination.mkdir()
     _logger().info(f"Pasta criada: {destination}")
     return destination
+
+
+def create_template(root: Path, template: Dict[str, Any]) -> Path:
+    """Cria recursivamente o template de pastas dentro de ``root``.
+
+    Pastas já existentes são preservadas (idempotente). Levanta OSError em
+    falha de filesystem.
+    """
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    for name, subtree in template.items():
+        child = root / name
+        child.mkdir(exist_ok=True)
+        if subtree:
+            create_template(child, subtree)
+    return root
+
+
+def create_document_year(envio: Path, year: int) -> Path:
+    """Cria a pasta do ``year`` com o template completo de documentos."""
+    year_path = Path(envio) / str(year)
+    create_template(year_path, DOCUMENT_TEMPLATE)
+    _logger().info(f"Pasta de ano criada: {year_path}")
+    return year_path
 
 
 def destination_exists(origin: Path, new_name: str) -> bool:

@@ -28,6 +28,7 @@ from plugins.BasePlugin import BasePlugin
 from plugins.project_structure_manager import FolderOperations as FsOps
 from plugins.project_structure_manager import ProjectStructureScanner as Scanner
 from resources.styles.AppStyles import AppStyles
+from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
 from resources.widgets.grid.GridActionCell import GridActionCell
 from resources.widgets.grid.GridCardView import GridCardView
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
@@ -314,16 +315,16 @@ class ProjectStructurePlugin(BasePlugin):
 
         structure = Scanner.scan_project(project, Scanner.DEFAULT_PROJECT_FOLDERS)
         for folder in structure.folders:
-            self._render_folder(project, folder)
-        totals["correct"] += structure.n_correct
-        totals["incorrect"] += structure.n_incorrect
-        totals["missing"] += structure.n_missing
+            self._render_folder(project, folder, totals)
 
-    def _render_folder(self, project: Path, folder: Scanner.FolderStatus) -> None:
+    def _render_folder(
+        self, project: Path, folder: Scanner.FolderStatus, totals: Dict[str, int]
+    ) -> None:
         """Cria o nó de uma pasta (correta, incoerente ou ausente)."""
         key = str(folder.path)
         color = _status_color(folder.status)
         missing = folder.status == Scanner.STATUS_MISSING
+        self._count_status(folder.status, totals)
         texts = {
             self._COL_NAME: folder.name,
             self._COL_STATUS: folder.status,
@@ -348,9 +349,75 @@ class ProjectStructurePlugin(BasePlugin):
         self._tree.set_cell_widget(
             key,
             self._COL_ACTIONS,
-            self._build_folder_actions(folder.path),
+            self._build_folder_actions(folder.path, folder.name),
         )
         self._request_statistics(key, folder.path)
+        if folder.name == Scanner.DOCUMENT_YEARS_FOLDER:
+            self._render_document_years(folder.path, key, totals)
+
+    def _render_document_years(
+        self, envio: Path, parent_key: str, totals: Dict[str, int]
+    ) -> None:
+        """Renderiza as pastas de ano (e seu template) dentro do 03."""
+        expected = [str(year) for year in Scanner.DEFAULT_YEARS]
+        for node in Scanner.scan_document_years(envio):
+            self._render_structure_node(node, parent_key, totals, expected, True)
+
+    def _render_structure_node(
+        self,
+        node: Scanner.StructureNode,
+        parent_key: str,
+        totals: Dict[str, int],
+        expected: List[str],
+        is_year: bool = False,
+    ) -> None:
+        """Renderiza recursivamente um nó estrutural (ano ou pasta do template)."""
+        key = str(node.path)
+        color = _status_color(node.status)
+        missing = node.status == Scanner.STATUS_MISSING
+        self._count_status(node.status, totals)
+        pending = "..." if (is_year and not missing) else "—"
+        texts = {
+            self._COL_NAME: node.name,
+            self._COL_STATUS: node.status,
+            self._COL_FILES: pending,
+            self._COL_DIRS: pending,
+            self._COL_SIZE: pending,
+        }
+        self._tree.add_node(
+            key,
+            texts,
+            parent_key=parent_key,
+            colors={self._COL_NAME: color, self._COL_STATUS: color},
+            kind="folder",
+        )
+        if missing:
+            self._tree.set_cell_widget(
+                key,
+                self._COL_ACTIONS,
+                self._build_structure_missing_actions(node),
+            )
+            return
+        self._tree.set_cell_widget(
+            key,
+            self._COL_ACTIONS,
+            self._build_structure_actions(node.path, expected),
+        )
+        if is_year:
+            self._request_statistics(key, node.path)
+        child_expected = list(node.subtree.keys()) if node.subtree else []
+        for child in node.children:
+            self._render_structure_node(child, key, totals, child_expected, False)
+
+    @staticmethod
+    def _count_status(status: str, totals: Dict[str, int]) -> None:
+        """Acumula a contagem de um status nos totais dos cards."""
+        if status == Scanner.STATUS_CORRECT:
+            totals["correct"] += 1
+        elif status == Scanner.STATUS_INCORRECT:
+            totals["incorrect"] += 1
+        else:
+            totals["missing"] += 1
 
     # ── Estatísticas ─────────────────────────────────────────────────
 
@@ -439,8 +506,12 @@ class ProjectStructurePlugin(BasePlugin):
             if self._mother_folder and self._mother_folder.exists():
                 paths.append(str(self._mother_folder))
             for project in projects:
-                if project.exists():
-                    paths.append(str(project))
+                if not project.exists():
+                    continue
+                paths.append(str(project))
+                envio = project / Scanner.DOCUMENT_YEARS_FOLDER
+                if envio.exists():
+                    paths.append(str(envio))
             if paths:
                 self._watcher.addPaths(paths)
         except Exception as e:
@@ -480,12 +551,23 @@ class ProjectStructurePlugin(BasePlugin):
         )
         return GridActionCell(btn_open, menu)
 
-    def _build_folder_actions(self, folder_path: Path) -> GridActionCell:
-        """Célula de ações de uma pasta existente: Abrir + Padronizar."""
+    def _build_folder_actions(
+        self, folder_path: Path, folder_name: str = ""
+    ) -> GridActionCell:
+        """Célula de ações de uma pasta existente.
+
+        No 03_ENVIO_DE_DOCUMENTOS troca o "Padronizar" por "+ Anos".
+        """
         btn_open = SimpleSecondaryButton("Abrir")
         btn_open.clicked.connect(
             lambda _=False: FsOps.open_in_explorer(folder_path)
         )
+        if folder_name == Scanner.DOCUMENT_YEARS_FOLDER:
+            btn_years = SimpleSecondaryButton("+ Anos")
+            btn_years.clicked.connect(
+                lambda _=False, path=folder_path: self._on_add_years(path)
+            )
+            return GridActionCell(btn_open, btn_years)
         menu = SimpleMenuButton(
             {name: name for name in Scanner.DEFAULT_PROJECT_FOLDERS},
             text="Padronizar",
@@ -494,6 +576,32 @@ class ProjectStructurePlugin(BasePlugin):
             lambda name, origin=folder_path: self._rename_folder(origin, name)
         )
         return GridActionCell(btn_open, menu)
+
+    def _build_structure_actions(
+        self, folder_path: Path, expected: List[str]
+    ) -> GridActionCell:
+        """Célula de ações de um nó estrutural existente: Abrir (+ Padronizar)."""
+        btn_open = SimpleSecondaryButton("Abrir")
+        btn_open.clicked.connect(
+            lambda _=False: FsOps.open_in_explorer(folder_path)
+        )
+        if not expected:
+            return GridActionCell(btn_open)
+        menu = SimpleMenuButton(
+            {name: name for name in expected}, text="Padronizar"
+        )
+        menu.item_selected.connect(
+            lambda name, origin=folder_path: self._rename_folder(origin, name)
+        )
+        return GridActionCell(btn_open, menu)
+
+    def _build_structure_missing_actions(
+        self, node: Scanner.StructureNode
+    ) -> GridActionCell:
+        """Célula de ações de um nó estrutural ausente: cria a subárvore."""
+        btn = SimpleSecondaryButton("+ Criar")
+        btn.clicked.connect(lambda _=False, n=node: self._create_structure(n))
+        return GridActionCell(btn)
 
     def _build_missing_actions(self, project: Path, name: str) -> GridActionCell:
         """Célula de ações de uma pasta ausente: Criar."""
@@ -528,6 +636,74 @@ class ProjectStructurePlugin(BasePlugin):
         SignalManager.instance().console_message.emit(f"Pasta criada: {name}")
         MessageBox.show_toast(f"Pasta criada: {name}", parent=self)
         self._suspend_watcher(0.8)
+        self._load_projects(show_toast=False)
+
+    def _create_structure(self, node: Scanner.StructureNode) -> None:
+        """Cria a pasta ausente e todo o template abaixo dela."""
+        try:
+            FsOps.create_template(node.path, node.subtree or {})
+        except Exception as e:
+            self.logger.error(
+                "Falha ao criar estrutura",
+                code="PSM_CREATE_STRUCT_ERR",
+                error=str(e),
+                path=str(node.path),
+            )
+            MessageBox.show_toast(
+                f"Erro ao criar estrutura: {e}", is_error=True, parent=self
+            )
+            return
+        SignalManager.instance().console_message.emit(
+            f"Estrutura criada: {node.name}"
+        )
+        MessageBox.show_toast(f"Estrutura criada: {node.name}", parent=self)
+        self._suspend_watcher(0.8)
+        self._load_projects(show_toast=False)
+
+    def _on_add_years(self, envio_path: Path) -> None:
+        """Abre o diálogo de seleção de anos para o 03_ENVIO_DE_DOCUMENTOS."""
+        config = {
+            str(year): {"label": str(year), "default": False}
+            for year in Scanner.DEFAULT_YEARS
+        }
+        dialog = CheckBoxSelectDialog(
+            config,
+            title="Pastas de ano — 03_ENVIO_DE_DOCUMENTOS",
+            num_columns=3,
+            parent=self,
+        )
+        if not dialog.exec():
+            return
+        years = sorted(dialog.selected_keys)
+        if years:
+            self._create_years(envio_path, years)
+
+    def _create_years(self, envio_path: Path, years: List[str]) -> None:
+        """Cria as pastas de ano selecionadas com o template completo."""
+        created = 0
+        for year in years:
+            try:
+                FsOps.create_document_year(envio_path, int(year))
+                created += 1
+            except (ValueError, OSError) as e:
+                self.logger.error(
+                    "Falha ao criar pasta de ano",
+                    code="PSM_CREATE_YEAR_ERR",
+                    error=str(e),
+                    year=year,
+                    path=str(envio_path),
+                )
+                MessageBox.show_toast(
+                    f"Erro ao criar {year}: {e}", is_error=True, parent=self
+                )
+        if created:
+            SignalManager.instance().console_message.emit(
+                f"Pastas de ano criadas: {created}"
+            )
+            MessageBox.show_toast(
+                f"{created} pasta(s) de ano criada(s).", parent=self
+            )
+        self._suspend_watcher(1.0)
         self._load_projects(show_toast=False)
 
     def _rename_folder(self, origin: Path, new_name: str) -> None:

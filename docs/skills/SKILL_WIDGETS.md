@@ -1219,6 +1219,36 @@ if dialog.exec():
 
 ---
 
+### `CheckBoxSelectDialog` — `dialogs/CheckBoxSelectDialog.py`
+Diálogo genérico de seleção múltipla via checkboxes. Herda de `BaseDialog` (AppBar no topo) e monta a grade de checkboxes reutilizando `GridCheckBox`. O consumidor informa os itens no mesmo dicionário aceito pelo `GridCheckBox` e recebe as chaves marcadas por `selected_keys`.
+
+```python
+from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
+
+dialog = CheckBoxSelectDialog(
+    config={
+        "2019": {"label": "2019", "default": False},
+        "2020": {"label": "2020", "default": False},
+    },
+    title="Selecionar anos",
+    num_columns=3,
+    parent=self,
+)
+if dialog.exec():
+    selecionados = dialog.selected_keys  # ["2020", ...]
+```
+
+**Parâmetros do construtor:**
+- `config: Dict[str, Dict]` — itens no formato do `GridCheckBox` (`label`, `description`, `default`)
+- `title: str = "Seleção"` — título da janela e da AppBar
+- `num_columns: int = 3` — número de colunas da grade de checkboxes
+- `parent: QWidget | None = None`
+
+**Propriedades:**
+- `selected_keys` → `list[str]` — chaves marcadas após `exec()` retornar True (exige ao menos 1; sem seleção o OK não fecha)
+
+---
+
 
 ### `ComplexSelector` — `complex/ComplexSelector.py` (DEPRECATED)
 > ⚠️ **DEPRECATED** — Este widget está obsoleto. **Use `GridComplexSelector`** de `resources/widgets/complex/GridComplexSelector.py` em todas as novas ferramentas. `ComplexSelector` só deve ser usado internamente pelo grid — nunca diretamente por plugins.

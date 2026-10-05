@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
@@ -48,6 +48,34 @@ STATUS_CORRECT = "CORRETA"
 STATUS_INCORRECT = "INCOERENTE"
 STATUS_MISSING = "AUSENTE"
 
+# Pasta do projeto que agrupa as pastas de ano (cada uma com o template).
+DOCUMENT_YEARS_FOLDER = "03_ENVIO_DE_DOCUMENTOS"
+
+# Anos oferecidos por padrão no diálogo de criação de pastas de ano.
+DEFAULT_YEARS: List[int] = list(range(2019, 2028))
+
+# Template completo criado (e validado) dentro de cada pasta de ano.
+# ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas.
+DOCUMENT_TEMPLATE: Dict[str, Any] = {
+    "01_DADOS_OPERACIONAIS": {
+        "COMBUSTIVEL": None,
+        "DEFENSIVOS": {"ALGODAO": None, "MILHO": None, "SOJA": None},
+        "FERTILIZANTES": {"ALGODAO": None, "MILHO": None, "SOJA": None},
+        "PRODUTIVIDADE": None,
+    },
+    "02_ANALISES_SOLO": None,
+    "03_NOTAS_FISCAIS": {
+        "NF_ANIMAIS": {"FICHA_VACINACAO": None, "GTA_ANIMAL": None},
+        "NF_COMBUSTIVEL": None,
+        "NF_ENERGIA": None,
+        "NF_FERTILIZANTE": {"CALCARIO": None, "KCL": None, "MAP": None},
+        "NF_RACOES": None,
+        "NF_SEMENTES": None,
+    },
+    "04_TICKETS_PESSAGEM_BALANCA": None,
+    "05_ANEXOS_TREINAMENTOS": None,
+}
+
 
 def _logger() -> LogUtils:
     return LogUtils(
@@ -75,6 +103,21 @@ class ProjectStructure:
     n_correct: int = 0
     n_incorrect: int = 0
     n_missing: int = 0
+
+
+@dataclass
+class StructureNode:
+    """Nó recursivo de uma estrutura esperada (template) de um projeto.
+
+    ``subtree`` guarda a estrutura esperada DENTRO deste nó (usada para criar
+    toda a árvore de uma vez quando o nó está ausente).
+    """
+
+    name: str
+    path: Optional[Path]
+    status: str
+    subtree: Optional[Dict[str, Any]] = None
+    children: List["StructureNode"] = field(default_factory=list)
 
 
 def discover_projects(mother: Path) -> List[Path]:
@@ -137,6 +180,78 @@ def scan_project(project: Path, expected: List[str]) -> ProjectStructure:
             )
 
     return result
+
+
+def is_year_folder(name: str) -> bool:
+    """Indica se ``name`` é uma pasta de ano (4 dígitos numéricos)."""
+    return name.isdigit() and len(name) == 4
+
+
+def _list_subdirs(path: Path) -> List[Path]:
+    """Lista as subpastas de ``path`` ordenadas por nome (vazio em falha)."""
+    try:
+        return sorted(
+            [item for item in path.iterdir() if item.is_dir()],
+            key=lambda item: item.name.lower(),
+        )
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        _logger().error(
+            "Falha ao listar subpastas",
+            code="PSM_LIST_ERR",
+            error=str(e),
+            path=str(path),
+        )
+        return []
+
+
+def scan_document_years(envio: Path) -> List[StructureNode]:
+    """Inspeciona as pastas de ano dentro de ``03_ENVIO_DE_DOCUMENTOS``.
+
+    Pastas que não são anos são marcadas como incoerentes. Anos ausentes NÃO
+    são reportados (nem toda OS usa todos os anos), validamos apenas os anos
+    que já existem em disco.
+    """
+    nodes: List[StructureNode] = []
+    for path in _list_subdirs(envio):
+        if not is_year_folder(path.name):
+            nodes.append(StructureNode(path.name, path, STATUS_INCORRECT))
+            continue
+        nodes.append(
+            StructureNode(
+                path.name,
+                path,
+                STATUS_CORRECT,
+                subtree=DOCUMENT_TEMPLATE,
+                children=scan_template(path, DOCUMENT_TEMPLATE),
+            )
+        )
+    return nodes
+
+
+def scan_template(root: Path, template: Dict[str, Any]) -> List[StructureNode]:
+    """Compara as subpastas de ``root`` com ``template`` recursivamente.
+
+    Presente e esperado → CORRETA (recursivo); ausente → AUSENTE; presente e
+    não esperado → INCOERENTE.
+    """
+    existing = {path.name: path for path in _list_subdirs(root)}
+    nodes: List[StructureNode] = []
+    for name, subtree in template.items():
+        path = existing.pop(name, None)
+        if path is None:
+            nodes.append(
+                StructureNode(name, root / name, STATUS_MISSING, subtree=subtree)
+            )
+            continue
+        children = scan_template(path, subtree) if subtree else []
+        nodes.append(
+            StructureNode(
+                name, path, STATUS_CORRECT, subtree=subtree, children=children
+            )
+        )
+    for name, path in existing.items():
+        nodes.append(StructureNode(name, path, STATUS_INCORRECT))
+    return nodes
 
 
 def folder_statistics(path: Path) -> tuple[int, int, int]:
