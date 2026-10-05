@@ -42,22 +42,22 @@ class SimpleMenuButton(QToolButton):
         items: Dict[str, str],
         text: str = "Ações",
         parent: Optional[QWidget] = None,
+        lazy: bool = False,
     ) -> None:
         super().__init__(parent)
         theme = AppStyles.current_theme
+
+        self._items = dict(items)
+        self._lazy = lazy
+        self._menu: Optional[QMenu] = None
 
         self.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setText(text)
 
-        self._menu = QMenu(self)
-        for key, label in items.items():
-            action = self._menu.addAction(str(label))
-            action.triggered.connect(
-                lambda checked=False, k=key: self.item_selected.emit(k)
-            )
-        self.setMenu(self._menu)
+        if not lazy:
+            self._ensure_menu()
 
         self.setStyleSheet(
             f"QToolButton {{"
@@ -74,3 +74,28 @@ class SimpleMenuButton(QToolButton):
             f"}}"
             f"QToolButton::menu-indicator {{ image: none; }}"
         )
+
+    # ── Menu sob demanda (lazy) ──────────────────────────────────────
+
+    def _ensure_menu(self) -> None:
+        """Cria o menu apenas quando necessário (evita custo por botão)."""
+        if self._menu is not None:
+            return
+        self._menu = QMenu(self)
+        for key, label in self._items.items():
+            action = self._menu.addAction(str(label))
+            action.triggered.connect(
+                lambda checked=False, k=key: self.item_selected.emit(k)
+            )
+        self.setMenu(self._menu)
+
+    def showMenu(self) -> None:  # type: ignore[override]
+        """Garante o menu construído antes de exibi-lo."""
+        self._ensure_menu()
+        super().showMenu()
+
+    def mousePressEvent(self, event) -> None:  # type: ignore[override]
+        """Garante o menu construído antes do primeiro clique."""
+        if self._lazy:
+            self._ensure_menu()
+        super().mousePressEvent(event)

@@ -1,3 +1,52 @@
+[1.3.8][2026.10.05][17:30] - Gerenciador de Estrutura: varredura única + refresh por projeto (sem HUD)
+  - ProjectStructurePlugin.py: removido TODO o uso de HUD/overlay (hud_show/hud_update/
+    hud_hide e execution_started/finished/cancelled) — o progresso aparece SOMENTE na
+    ProgressBar central; recargas deixam de cobrir a tela e não afetam a aba ativa
+  - ProjectStructurePlugin.py: a varredura COMPLETA agora roda 1 única vez (abrir,
+    trocar pasta-mãe ou ATUALIZAR). Depois disso, só o projeto afetado é re-escaneado
+    (refresh incremental), nunca a árvore inteira
+  - ProjectStructurePlugin.py: watcher roteia a mudança para o projeto dono do caminho
+    (_resolve_project) e re-escaneia apenas esse ramo; mudanças na pasta-mãe (novo/removido
+    projeto) fazem recarga completa silenciosa
+  - ProjectStructurePlugin.py: operações de pasta (criar, template, anos, renomear, mesclar)
+    reconstroem apenas o ramo do projeto afetado (_refresh_project) — nada de recarregar tudo
+  - ProjectStructurePlugin.py: abrir um projeto (expandir) re-escaneia só ele, com janela
+    anti-repetição (_EXPAND_REFRESH_INTERVAL)
+  - ProjectStructurePlugin.py: cards de resumo calculados a partir de contagens por projeto
+    (_project_counts), permitindo atualização parcial correta
+  - ProjectStructureScanner.py: novos scan_project_full, project_status_counts e
+    ProjectScanWorker (varredura de um único projeto em background)
+  - resources/widgets/grid/GridTree.py: novo sinal node_expanded e método remove_children
+    (reconstrução de um ramo sem rebuild total)
+  - docs/skills/SKILL_WIDGETS.md: GridTree atualizado (node_expanded, remove_children)
+  - Changelog atualizado
+
+
+[1.3.7][2026.10.05][16:00] - Gerenciador de Estrutura: carregamento assíncrono e incremental (performance)
+  - ProjectStructureScanner.py: novo ScanWorker (QRunnable) + ScanResult + _ScanSignals —
+    a varredura da pasta-mãe (projetos, pastas e anos) roda em thread secundária e
+    emite progresso por projeto; folder_statistics agora usa os.scandir (metadados em cache)
+  - ProjectStructurePlugin.py: carregamento em 2 fases com progresso via SignalManager
+    (varredura 0→40%, render 40→100%); render da árvore em lotes (QTimer) para não travar
+    a UI; pools dedicados (scan/work) em vez do pool global; coalescência de recargas
+    (_loading/_reload_pending) — elimina rebuilds duplicados; HUD/ProgressBar opcionais
+    (recargas do watcher são silenciosas); métodos de render deixam de ser recursivos
+    (fila plana pai-antes-de-filho)
+  - ProjectStructurePlugin.py: operações de pasta (criar, template, anos, renomear e
+    mesclar) executadas em worker via FolderOperations.FolderTaskWorker — a UI não trava
+    mais ao criar pasta; menus de ação "Padronizar/Adicionar pasta" criados sob demanda
+    (lazy) e botões de grade sem glow
+  - FolderOperations.py: novo FolderTaskWorker + FolderTaskSignals (operações genéricas
+    de filesystem em background)
+  - resources/widgets/simple/SimpleMenuButton.py: parâmetro lazy (menu construído apenas
+    no primeiro clique) — evita milhares de QAction na montagem
+  - resources/widgets/simple/SimpleSecondaryButton.py: parâmetro glow (default True) para
+    desativar o QGraphicsDropShadowEffect em botões criados em massa
+  - docs/plans/PLAN_PROJECT_STRUCTURE_PERFORMANCE.md: plano de otimização
+  - docs/skills/SKILL_WIDGETS.md: parâmetros lazy (SimpleMenuButton) e glow (SimpleSecondaryButton)
+  - Changelog atualizado
+
+
 [1.3.6][2026.10.05][15:10] - Gerenciador de Estrutura: pastas de ano em 03_ENVIO_DE_DOCUMENTOS
   - ProjectStructureScanner.py: novos DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS (2019-2027),
     DOCUMENT_TEMPLATE (esqueleto completo de documentos), is_year_folder, StructureNode,

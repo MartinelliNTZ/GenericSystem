@@ -126,6 +126,16 @@ from resources.widgets.SimpleSecondaryButton import SimpleSecondaryButton
 btn = SimpleSecondaryButton("Salvar Config")
 ```
 
+**Parâmetro `glow` (bool, padrão `True`):** quando `False`, não aplica o
+`QGraphicsDropShadowEffect`. Use `glow=False` em botões criados em grande
+quantidade (ex.: células de ação de árvores/tabelas) — o efeito de glow por
+botão é caro e degrada a performance.
+
+```python
+# Grade com muitas linhas: botão leve, sem glow
+btn = SimpleSecondaryButton("Abrir", glow=False)
+```
+
 ---
 
 ### `SimpleLabel` — `SimpleLabel.py`
@@ -1741,9 +1751,9 @@ tree.set_cell_widget(str(folder), 2, meu_widget)
 tree.node_activated.connect(self._on_double_click)
 ```
 
-**Sinais:** `node_activated(key: str)` — emitido no duplo clique de um nó
+**Sinais:** `node_activated(key: str)` — emitido no duplo clique de um nó; `node_expanded(key: str)` — emitido quando um nó é expandido
 
-**API pública:** `clear_nodes()`, `add_node(key, texts, *, parent_key, colors, bold, kind)`, `node(key)`, `node_kind(key)`, `set_cell_text(key, col, text)`, `set_cell_color(key, col, color)`, `set_cell_widget(key, col, widget)`, `remove_node(key)`, `set_node_hidden(key, hidden)`, `set_node_expanded(key, expanded)`, `is_node_expanded(key)`, `has_node(key)`, `keys()`
+**API pública:** `clear_nodes()`, `add_node(key, texts, *, parent_key, colors, bold, kind)`, `node(key)`, `node_kind(key)`, `set_cell_text(key, col, text)`, `set_cell_color(key, col, color)`, `set_cell_widget(key, col, widget)`, `remove_node(key)`, `remove_children(key)` (remove todos os descendentes de um nó, mantendo-o — útil para reconstruir apenas um ramo), `set_node_hidden(key, hidden)`, `set_node_expanded(key, expanded)`, `is_node_expanded(key)`, `has_node(key)`, `keys()`
 
 ---
 
@@ -1770,6 +1780,15 @@ from resources.widgets.simple.SimpleMenuButton import SimpleMenuButton
 btn = SimpleMenuButton(items={"05_ASA": "05_ASA", "06_CAR": "06_CAR"},
                        text="Padronizar")
 btn.item_selected.connect(self._on_item_selected)
+```
+
+**Parâmetro `lazy` (bool, padrão `False`):** quando `True`, o `QMenu` (e seus
+`QAction`) só é construído no primeiro clique/exibição. Use `lazy=True` quando
+o botão for criado em grande quantidade (ex.: um por linha de árvore) — evita
+milhares de `QAction` durante a montagem da UI.
+
+```python
+btn = SimpleMenuButton(items=todos_padroes, text="Padronizar", lazy=True)
 ```
 
 **Sinais:** `item_selected(key: str)` — emitido quando um item do menu é acionado

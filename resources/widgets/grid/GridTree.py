@@ -10,6 +10,7 @@ chave e atualiza textos/cores/widgets via API pública.
 
 Sinais:
     node_activated(key: str) — emitido no duplo clique de um nó
+    node_expanded(key: str)  — emitido quando um nó é expandido
 
 Uso:
     from resources.widgets.grid.GridTree import GridTree
@@ -31,6 +32,7 @@ Uso:
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import Qt, Signal
@@ -50,6 +52,7 @@ class GridTree(QTreeWidget):
     """Árvore multicoluna genérica, indexada por chave de nó."""
 
     node_activated = Signal(str)
+    node_expanded = Signal(str)
 
     def __init__(
         self,
@@ -85,6 +88,7 @@ class GridTree(QTreeWidget):
                 )
 
         self.itemDoubleClicked.connect(self._on_double_clicked)
+        self.itemExpanded.connect(self._on_item_expanded)
 
     # ── API pública ──────────────────────────────────────────────────
 
@@ -183,6 +187,19 @@ class GridTree(QTreeWidget):
         else:
             parent.removeChild(item)
 
+    def remove_children(self, parent_key: str) -> None:
+        """Remove todos os descendentes de ``parent_key`` (mantém o nó).
+
+        Útil para reconstruir apenas um ramo da árvore (refresh incremental).
+        """
+        item = self._nodes.get(parent_key)
+        if item is None:
+            return
+        prefix = parent_key + os.sep
+        for key in [k for k in self._nodes if k.startswith(prefix)]:
+            self._nodes.pop(key, None)
+        item.takeChildren()
+
     def set_node_hidden(self, key: str, hidden: bool) -> None:
         """Esconde/exibe um nó."""
         item = self._nodes.get(key)
@@ -215,3 +232,9 @@ class GridTree(QTreeWidget):
         key = item.data(0, _KEY_ROLE)
         if key:
             self.node_activated.emit(str(key))
+
+    def _on_item_expanded(self, item: QTreeWidgetItem) -> None:
+        """Emite node_expanded com a chave do nó expandido."""
+        key = item.data(0, _KEY_ROLE)
+        if key:
+            self.node_expanded.emit(str(key))

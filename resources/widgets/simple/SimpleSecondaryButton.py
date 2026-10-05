@@ -22,12 +22,13 @@ class SimpleSecondaryButton(QPushButton):
     Glow opcional controlado pelo token GLOW_BUTTON_ENABLED do tema.
     """
 
-    def __init__(self, text: str = "Ação", parent=None):
+    def __init__(self, text: str = "Ação", parent=None, glow: bool = True):
         super().__init__(text, parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(AppStyles.btn_secondary_style())
         self.setMinimumHeight(32)
-        self._apply_glow()
+        if glow:
+            self._apply_glow()
 
     # ──────────────────────────────────────────────────────────────────
     # GLOW (efeito de brilho) via QGraphicsDropShadowEffect

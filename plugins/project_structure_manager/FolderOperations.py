@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
@@ -143,6 +143,41 @@ class FolderOperationSignals(QObject):
 
     success = Signal(str, str, str)
     error = Signal(str, str)
+
+
+class FolderTaskSignals(QObject):
+    """Sinais do worker genérico de operações de pasta."""
+
+    success = Signal(str, str)   # (op, resultado como string)
+    error = Signal(str, str)     # (op, mensagem de erro)
+
+
+class FolderTaskWorker(QRunnable):
+    """Executa uma operação de filesystem em background (não toca em widgets).
+
+    A ``operation`` é um callable sem argumentos que realiza a criação/mesclagem
+    e retorna um valor (convertido em string para o sinal de sucesso).
+    """
+
+    def __init__(self, op: str, operation: Callable[[], Any]) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.op = op
+        self._operation = operation
+        self.signals = FolderTaskSignals()
+
+    def run(self) -> None:
+        """Executa a operação e emite sucesso/erro."""
+        try:
+            value = self._operation()
+            self.signals.success.emit(self.op, str(value))
+        except Exception as e:
+            _logger().error(
+                f"Falha na operação de pasta '{self.op}'",
+                code="PSM_TASK_ERR",
+                error=str(e),
+            )
+            self.signals.error.emit(self.op, str(e))
 
 
 class RenameFolderWorker(QRunnable):

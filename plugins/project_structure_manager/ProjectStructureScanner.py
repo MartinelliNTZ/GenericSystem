@@ -228,6 +228,57 @@ def scan_document_years(envio: Path) -> List[StructureNode]:
     return nodes
 
 
+def scan_project_full(
+    project: Path,
+) -> tuple[ProjectStructure, Dict[str, List[StructureNode]]]:
+    """Inspeciona um projeto por completo.
+
+    Retorna a estrutura das pastas esperadas e as pastas de ano do
+    ``03_ENVIO_DE_DOCUMENTOS`` (mapeadas por caminho).
+    """
+    structure = scan_project(project, DEFAULT_PROJECT_FOLDERS)
+    years: Dict[str, List[StructureNode]] = {}
+    for folder in structure.folders:
+        if (
+            folder.name == DOCUMENT_YEARS_FOLDER
+            and folder.path is not None
+            and folder.status != STATUS_MISSING
+        ):
+            years[str(folder.path)] = scan_document_years(folder.path)
+    return structure, years
+
+
+def project_status_counts(
+    structure: ProjectStructure,
+    years: Dict[str, List[StructureNode]],
+) -> Dict[str, int]:
+    """Conta os status (correta/incoerente/ausente) de um projeto.
+
+    Soma as pastas de topo do projeto e todos os nós da subárvore das pastas
+    de ano (anos + template).
+    """
+    totals = {"correct": 0, "incorrect": 0, "missing": 0}
+
+    def _bump(status: str) -> None:
+        if status == STATUS_CORRECT:
+            totals["correct"] += 1
+        elif status == STATUS_INCORRECT:
+            totals["incorrect"] += 1
+        else:
+            totals["missing"] += 1
+
+    def _walk(nodes: List[StructureNode]) -> None:
+        for node in nodes:
+            _bump(node.status)
+            _walk(node.children)
+
+    for folder in structure.folders:
+        _bump(folder.status)
+    for year_nodes in years.values():
+        _walk(year_nodes)
+    return totals
+
+
 def scan_template(root: Path, template: Dict[str, Any]) -> List[StructureNode]:
     """Compara as subpastas de ``root`` com ``template`` recursivamente.
 
@@ -255,21 +306,31 @@ def scan_template(root: Path, template: Dict[str, Any]) -> List[StructureNode]:
 
 
 def folder_statistics(path: Path) -> tuple[int, int, int]:
-    """Retorna (n_arquivos, n_subpastas, tamanho_bytes) recursivamente."""
+    """Retorna (n_arquivos, n_subpastas, tamanho_bytes) recursivamente.
+
+    Usa ``os.scandir`` para aproveitar o cache de metadados do sistema de
+    arquivos (evita ``Path.stat()`` redundante de ``os.walk``).
+    """
     n_files = 0
     n_dirs = 0
     total = 0
-    try:
-        for root, dirs, files in os.walk(path):
-            n_dirs += len(dirs)
-            n_files += len(files)
-            for name in files:
-                try:
-                    total += (Path(root) / name).stat().st_size
-                except OSError:
-                    continue
-    except OSError:
-        pass
+    stack = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            n_dirs += 1
+                            stack.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            n_files += 1
+                            total += entry.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        continue
+        except OSError:
+            continue
     return n_files, n_dirs, total
 
 
@@ -319,3 +380,109 @@ class StatisticsWorker(QRunnable):
                 error=str(e),
                 path=self.path,
             )
+
+
+@dataclass
+class ScanResult:
+    """Resultado completo de uma varredura da pasta-mãe (dados puros)."""
+
+    projects: List[ProjectStructure] = field(default_factory=list)
+    years: Dict[str, List[StructureNode]] = field(default_factory=dict)
+
+
+class _ScanSignals(QObject):
+    """Sinais do worker de varredura."""
+
+    progress = Signal(int, int, int)   # (generation, feitos, total)
+    finished = Signal(int, object)   # (generation, ScanResult)
+    failed = Signal(int, str)        # (generation, mensagem)
+
+
+class ScanWorker(QRunnable):
+    """Varre a pasta-mãe em background (não toca em widgets).
+
+    Descobre os projetos, inspeciona a estrutura de cada um e coleta as pastas
+    de ano do ``03_ENVIO_DE_DOCUMENTOS``. Emite progresso por projeto para
+    alimentar a barra central (Contrato 20).
+    """
+
+    def __init__(self, generation: int, mother: str) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.generation = generation
+        self.mother = mother
+        self.signals = _ScanSignals()
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        """Solicita o cancelamento cooperativo da varredura."""
+        self._cancelled = True
+
+    def run(self) -> None:
+        """Executa a varredura e emite o resultado."""
+        try:
+            projects = discover_projects(Path(self.mother))
+            total = max(len(projects), 1)
+            result = ScanResult()
+            self.signals.progress.emit(self.generation, 0, total)
+            for index, project in enumerate(projects, start=1):
+                if self._cancelled:
+                    return
+                structure, years = scan_project_full(project)
+                result.projects.append(structure)
+                result.years.update(years)
+                self.signals.progress.emit(self.generation, index, total)
+            if self._cancelled:
+                return
+            self.signals.finished.emit(self.generation, result)
+        except Exception as e:
+            _logger().error(
+                "Falha na varredura em background",
+                code="PSM_SCAN_WORKER_ERR",
+                error=str(e),
+                path=self.mother,
+            )
+            self.signals.failed.emit(self.generation, str(e))
+
+
+@dataclass
+class ProjectScanResult:
+    """Resultado da varredura de um único projeto (refresh incremental)."""
+
+    path: str
+    structure: ProjectStructure
+    years: Dict[str, List[StructureNode]] = field(default_factory=dict)
+
+
+class _ProjectScanSignals(QObject):
+    """Sinais do worker de varredura de um projeto."""
+
+    finished = Signal(int, object)   # (generation, ProjectScanResult)
+    failed = Signal(int, str)        # (generation, mensagem)
+
+
+class ProjectScanWorker(QRunnable):
+    """Re-escaneia um único projeto em background (não toca em widgets)."""
+
+    def __init__(self, generation: int, project: str) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.generation = generation
+        self.project = project
+        self.signals = _ProjectScanSignals()
+
+    def run(self) -> None:
+        """Executa a varredura do projeto e emite o resultado."""
+        try:
+            structure, years = scan_project_full(Path(self.project))
+            self.signals.finished.emit(
+                self.generation,
+                ProjectScanResult(self.project, structure, years),
+            )
+        except Exception as e:
+            _logger().error(
+                f"Falha ao re-escanear projeto: {self.project}",
+                code="PSM_PROJ_SCAN_ERR",
+                error=str(e),
+            )
+            self.signals.failed.emit(self.generation, str(e))
