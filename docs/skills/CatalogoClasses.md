@@ -67,6 +67,13 @@
 |---|---|
 | `LogViewerTool` | Visualizador de logs do sistema com filtros e busca |
 
+### plugins/project_structure_manager/
+| Classe | Descrição |
+|---|---|
+| `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta |
+| `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação das pastas esperadas e estatísticas; `StatisticsWorker` calcula em background |
+| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + abertura no explorer; `RenameFolderWorker` |
+
 ---
 
 ## resources/ — Recursos Visuais
@@ -92,6 +99,9 @@
 | `SimpleRemoveButton` | Botão de remover com hover vermelho |
 | `ToolGroup` | Grupo horizontal de ferramentas na toolbar, com botões de ícone + separador |
 | `ToolSeparator` | Separador decorativo slim com fade dourado entre ToolGroups |
+| `GridTree` | Árvore multicoluna genérica (indexada por chave) com cores por célula e widgets de ação por linha |
+| `GridActionCell` | Container horizontal genérico para widgets de ação em uma célula de tabela/árvore |
+| `SimpleMenuButton` | Botão com popup de menu (dropdown) configurável por Dict |
 | `WorkspaceTab` | Aba customizada com fundo preto, canto superior direito arredondado e texto dourado centralizado |
 
 ### resources/

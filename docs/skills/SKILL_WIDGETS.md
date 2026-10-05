@@ -1692,6 +1692,61 @@ infos.clear_coords()
 
 ---
 
+### `GridTree` — `grid/GridTree.py`
+Árvore multicoluna genérica que encapsula um `QTreeWidget`, indexando nós por chave. Suporta cores por célula, negrito, hierarquia (nó pai por chave) e widgets de ação por linha. Não contém lógica de negócio.
+
+```python
+from resources.widgets.grid.GridTree import GridTree
+
+tree = GridTree(columns=[
+    {"header": "Projeto / Pasta", "stretch": True},
+    {"header": "Status", "width": 120},
+    {"header": "Ações", "width": 300},
+])
+tree.add_node(str(project), {0: "OS_1", 1: "PROJETO"}, bold=True, kind="project")
+tree.add_node(str(folder), {0: "05_ASA", 1: "CORRETA"}, parent_key=str(project),
+              colors={0: "#61C975", 1: "#61C975"}, kind="folder")
+tree.set_cell_text(str(folder), 2, "1.234")
+tree.set_cell_widget(str(folder), 2, meu_widget)
+tree.node_activated.connect(self._on_double_click)
+```
+
+**Sinais:** `node_activated(key: str)` — emitido no duplo clique de um nó
+
+**API pública:** `clear_nodes()`, `add_node(key, texts, *, parent_key, colors, bold, kind)`, `node(key)`, `node_kind(key)`, `set_cell_text(key, col, text)`, `set_cell_color(key, col, color)`, `set_cell_widget(key, col, widget)`, `remove_node(key)`, `set_node_hidden(key, hidden)`, `set_node_expanded(key, expanded)`, `is_node_expanded(key)`, `has_node(key)`, `keys()`
+
+---
+
+### `GridActionCell` — `grid/GridActionCell.py`
+Container horizontal genérico para empacotar widgets de ação (botões, menu buttons) em uma única célula de tabela/árvore, evitando `QHBoxLayout` solto nos plugins.
+
+```python
+from resources.widgets.grid.GridActionCell import GridActionCell
+
+cell = GridActionCell(btn_abrir, menu_button)
+tree.set_cell_widget(key, 5, cell)
+```
+
+**API pública:** `add_widget(widget)` — adiciona um widget antes do stretch final.
+
+---
+
+### `SimpleMenuButton` — `simple/SimpleMenuButton.py`
+Botão com popup de menu (dropdown) configurável via `Dict {valor_interno: texto_exibido}`, encapsulando `QToolButton` + `QMenu`.
+
+```python
+from resources.widgets.simple.SimpleMenuButton import SimpleMenuButton
+
+btn = SimpleMenuButton(items={"05_ASA": "05_ASA", "06_CAR": "06_CAR"},
+                       text="Padronizar")
+btn.item_selected.connect(self._on_item_selected)
+```
+
+**Sinais:** `item_selected(key: str)` — emitido quando um item do menu é acionado
+
+---
+
+
 ## ✅ Checklist ao criar/alterar UI
 
 - [ ] Consultei o catálogo acima antes de importar de `PySide6.QtWidgets`?

@@ -1,23 +1,55 @@
-# Análise e Correção de Contratos — COMPLETED
+# TODO — Integração do Gerenciador de Estrutura de Projetos
 
-## Resumo Final
+Rastreamento da execução do `plano de acao.md` (integração do `org.py` como
+ferramenta registrada no Aetheris ToolBox).
 
-### 22 arquivos analisados ✅
-### 6 correções diretas aplicadas ✅
-### Refatoração arquitetural: MrkWorkerTask removido ✅
+## Fase 1 — Contratos e pontos de integração
 
-## Correções Aplicadas
+- [x] Confirmar instruções de criação de ferramenta (`SKILL_CREATE_TOOL.md`) e contratos (`SKILL_PLUGIN_CONTRACT.md`).
+- [x] Confirmar comportamento de `BasePlugin` (página, prefs, ciclo de vida).
+- [x] Confirmar opções de `CategoryTool`, `ToolType`, `MenuCategory`.
+- [x] Consultar widgets/utilitários existentes antes de criar equivalentes.
+- [x] Esclarecer referência a `docs/ia/contracts.md` — o arquivo não existe; os contratos vivem em `docs/skills/SKILL_PLUGIN_CONTRACT.md`.
 
-| Arquivo | Problema | Solução |
-|---------|----------|---------|
-| `core/task/MrkWorkerTask.py` | Dead code (nunca instanciado) | Substituído por placeholder — lógica moveu para MrkSingleTask |
-| `core/task/MrkBatchWorker.py` | Dead import MrkWorkerTask + MrkSingleTask inútil em run() + _process_single duplicado + sem Logger no BatchWorker | Adicionado Logger em ambos, removido import morto, removida instanciação inútil de MrkSingleTask no loop, _process_single delega para MrkSingleTask._process_mrk(emit_console=False) |
-| `plugins/mrk_substitutor/MrkSubstitutorPlugin.py` | Docstring desatualizada + force_save_prefs() redundante + str() em find_files | Atualizada docstring, removidas redundâncias |
-| `core/ui/ui_main.py` | Trailing `#` | Removido |
-| `core/config/MenuManager.py` | Import não usado | Removido |
-| `core/menus/FileMenuItem.py` | 3 imports não usados | Removidos |
+## Fase 2 — Estrutura inicial do plugin
 
-## Separação de Responsabilidades (Refatoração)
-- **MrkSingleTask**: Responsável por processar 1 MRK (parse → substituir → salvar). Possui signals próprios.
-- **MrkBatchWorker**: Orquestra N MRKs. Delega processamento individual ao MrkSingleTask. Possui signals próprios + hud_update.
-- **MrkWorkerTask**: Removido — classe duplicada que nunca era usada.
+- [x] Criar pacote `plugins/project_structure_manager/`.
+- [x] `ProjectStructureScanner.py` — descoberta de projetos, verificação de pastas esperadas, estatísticas.
+- [x] `FolderOperations.py` — criação, renomeação e mesclagem de pastas + conflitos.
+- [x] `ProjectStructurePlugin.py` — interface (herda de `BasePlugin`).
+- [x] Criar widget reutilizável `resources/widgets/grid/GridTree.py` (Contrato 11).
+- [x] Criar widget reutilizável `resources/widgets/simple/SimpleMenuButton.py` (Contrato 11).
+
+## Fase 3 — Migração da lógica de `org.py`
+
+- [x] Inventariar funções/estado de `GerenciadorPastas`.
+- [x] Migrar regras de filesystem e estatísticas para os componentes de lógica.
+- [x] Adaptar a interface para página do workspace (não `QMainWindow`).
+- [x] Remover `QApplication`/janela principal/`main()` próprios.
+- [x] Preservar atualização assíncrona + debounce do `QFileSystemWatcher` (sem tocar widgets em workers).
+- [x] Tratar erros de filesystem explicitamente e reportar pelos mecanismos padrão.
+
+## Fase 4 — Configuração e preferências
+
+- [x] Remover caminho pessoal embutido (`PASTA_MAE_PADRAO`).
+- [x] Permitir selecionar a pasta-mãe (com padrão seguro quando não salvo).
+- [x] Implementar `load_prefs()` / `save_prefs()` (pasta-mãe).
+- [x] Manter pastas padrão como configuração local da ferramenta.
+
+## Fase 5 — Registro da ferramenta
+
+- [x] Adicionar `ToolKey.PROJECT_STRUCTURE`.
+- [x] Registrar factory em `ToolRegistry`.
+- [x] Definir título, tooltip, tipo, categoria e visibilidade na toolbar.
+- [x] Garantir mesma chave no registro e em `BasePlugin(tool_key=...)`.
+- [x] Garantir import lazy (factory por caminho de módulo).
+
+## Fase 6 — Validação
+
+- [x] Verificação sintática (`py_compile`) dos arquivos criados/alterados.
+- [x] Conferir que não há `QMessageBox`/`QFileDialog` diretos, imports mortos ou `except` sem log.
+
+## Documentação
+
+- [x] Atualizar `docs/skills/SKILL_WIDGETS.md` (novos widgets).
+- [x] Atualizar `docs/data/changelog.txt`.

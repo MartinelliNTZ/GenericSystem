@@ -176,6 +176,18 @@ class ToolRegistry:
             category=CategoryTool.LEFT_SIDE,
             show_in_toolbar=True,
         ),
+        ToolKey.PROJECT_STRUCTURE.value: Tool(
+            name=ToolKey.PROJECT_STRUCTURE.value,
+            title="Gerenciador de Estrutura",
+            widget_factory=_make_factory(
+                "plugins.project_structure_manager.ProjectStructurePlugin",
+                "ProjectStructurePlugin",
+            ),
+            tooltip="Confere e padroniza a estrutura de pastas dos projetos",
+            tool_type=ToolType.FOLDER,
+            category=CategoryTool.CENTRAL,
+            show_in_toolbar=True,
+        ),
         ToolKey.ICO_CONVERTER.value: Tool(
             name=ToolKey.ICO_CONVERTER.value,
             title="Conversor ICO",
