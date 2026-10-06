@@ -117,7 +117,7 @@
 
 | Classe | Descrição |
 |---|---|
-| `ColorProvider` | Provedor de cores utilitário para geração de cores em gradientes e paletas dinâmicas |
+| `ColorProvider` | Provedor de cores utilitário: níveis de log, tools, classes e pastas de estrutura (`folder_color`, `shade`) + paletas dinâmicas |
 | `Preferences` | Gerenciador de preferências do usuário com persistência em `config/<APP_SLUG>_preferences.json` |
 | `StringUtils` | Fonte única da identidade da aplicação (`APP_NAME`, `APP_SLUG`, `APP_ID`) e catálogo de extensões |
 

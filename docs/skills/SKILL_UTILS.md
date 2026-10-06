@@ -136,7 +136,7 @@ all_extensions = DictManager.file_extensions()
 
 ### `utils.ColorProvider`
 
-Use para cores consistentes em logs, tools e classes.
+Use para cores consistentes em logs, tools, classes e pastas de estrutura.
 
 ```python
 from utils.ColorProvider import ColorProvider
@@ -144,6 +144,8 @@ from utils.ColorProvider import ColorProvider
 color = ColorProvider.level_color("INFO")
 tool_color = ColorProvider.tool_color("Console")
 class_color = ColorProvider.class_color("MainWindow")
+folder_color = ColorProvider.folder_color("05_ASA")   # cor única por pasta de estrutura
+tone = ColorProvider.shade(folder_color, 0.30)        # tom mais claro (ex: por profundidade)
 ```
 
 ### `utils.BasicExtractor`

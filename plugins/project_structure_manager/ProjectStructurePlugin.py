@@ -14,6 +14,8 @@ Recursos preservados:
 - Ações: abrir, criar pasta, renomear/padronizar e mesclar pastas.
 - Navegação de arquivos: subpastas e arquivos reais são carregados sob
   demanda ao expandir um nó, com abertura no programa padrão (duplo clique).
+- Cores por pasta: cada pasta de topo tem cor própria (ColorProvider),
+  propagada à ramificação em tons mais claros; o status mantém a cor de status.
 
 Performance (assíncrono + refresh incremental):
 - A varredura COMPLETA roda em thread secundária apenas 1 vez (abrir/ATUALIZAR).
@@ -54,6 +56,7 @@ from resources.widgets.GroupPainel import GroupPainel
 from resources.widgets.simple.SimpleMenuButton import SimpleMenuButton
 from resources.widgets.simple.SimpleSecondaryButton import SimpleSecondaryButton
 from resources.widgets.simple.SimpleSelector import SimpleSelector
+from utils.ColorProvider import ColorProvider
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
 from utils.ProjectDatabaseBackup import ProjectDatabaseBackup
@@ -630,6 +633,34 @@ class ProjectStructurePlugin(BasePlugin):
         self._content_timer.stop()
         self._update_cards()
 
+    def _folder_name_color(self, path: Path) -> Optional[str]:
+        """Cor da pasta de topo que contém ``path``, clareada pela profundidade.
+
+        Retorna ``None`` para o nó do projeto (sem pasta de topo) ou quando o
+        caminho não está sob a pasta-mãe.
+        """
+        if self._mother_folder is None:
+            return None
+        try:
+            rel = path.relative_to(self._mother_folder)
+        except ValueError as e:
+            self.logger.warning(
+                f"Nao foi possivel calcular a cor da pasta: {path}",
+                code="PSM_FOLDER_COLOR_ERR",
+                error=str(e),
+            )
+            return None
+        parts = rel.parts
+        if len(parts) < 2:
+            return None
+        base = ColorProvider.folder_color(parts[1], tool_key=self.tool_key)
+        depth = len(parts) - 2
+        if depth <= 0:
+            return base
+        return ColorProvider.shade(
+            base, min(0.15 * depth, 0.6), tool_key=self.tool_key
+        )
+
     def _render_project(self, structure: Scanner.ProjectStructure) -> None:
         """Cria o nó do projeto e agenda suas estatísticas."""
         theme = AppStyles.current_theme
@@ -659,7 +690,8 @@ class ProjectStructurePlugin(BasePlugin):
     def _render_folder(self, project: Path, folder: Scanner.FolderStatus) -> None:
         """Cria o nó de uma pasta (correta, incoerente ou ausente)."""
         key = str(folder.path)
-        color = _status_color(folder.status)
+        status_color = _status_color(folder.status)
+        name_color = self._folder_name_color(Path(key)) or status_color
         missing = folder.status == Scanner.STATUS_MISSING
         texts = {
             self._COL_NAME: folder.name,
@@ -672,7 +704,7 @@ class ProjectStructurePlugin(BasePlugin):
             key,
             texts,
             parent_key=str(project),
-            colors={self._COL_NAME: color, self._COL_STATUS: color},
+            colors={self._COL_NAME: name_color, self._COL_STATUS: status_color},
             kind="folder",
         )
         self._apply_icon(key, Path(key), True)
@@ -699,7 +731,8 @@ class ProjectStructurePlugin(BasePlugin):
     ) -> None:
         """Renderiza um nó estrutural (ano ou pasta do template)."""
         key = str(node.path)
-        color = _status_color(node.status)
+        status_color = _status_color(node.status)
+        name_color = self._folder_name_color(Path(key)) or status_color
         missing = node.status == Scanner.STATUS_MISSING
         pending = "..." if (is_year and not missing) else "—"
         texts = {
@@ -713,7 +746,7 @@ class ProjectStructurePlugin(BasePlugin):
             key,
             texts,
             parent_key=parent_key,
-            colors={self._COL_NAME: color, self._COL_STATUS: color},
+            colors={self._COL_NAME: name_color, self._COL_STATUS: status_color},
             kind="folder",
         )
         self._apply_icon(key, Path(key), True)
@@ -795,6 +828,7 @@ class ProjectStructurePlugin(BasePlugin):
         if self._tree.has_node(key):
             return
         theme = AppStyles.current_theme
+        name_color = self._folder_name_color(path) or theme.TEXT_MEDIUM
         self._tree.add_node(
             key,
             {
@@ -806,7 +840,7 @@ class ProjectStructurePlugin(BasePlugin):
             },
             parent_key=parent_key,
             colors={
-                self._COL_NAME: theme.TEXT_MEDIUM,
+                self._COL_NAME: name_color,
                 self._COL_STATUS: theme.TEXT_LOW,
             },
             kind="subfolder",
@@ -823,6 +857,7 @@ class ProjectStructurePlugin(BasePlugin):
         if self._tree.has_node(key):
             return
         theme = AppStyles.current_theme
+        name_color = self._folder_name_color(path) or theme.TEXT_MEDIUM
         self._tree.add_node(
             key,
             {
@@ -834,7 +869,7 @@ class ProjectStructurePlugin(BasePlugin):
             },
             parent_key=parent_key,
             colors={
-                self._COL_NAME: theme.TEXT_MEDIUM,
+                self._COL_NAME: name_color,
                 self._COL_STATUS: theme.TEXT_LOW,
             },
             kind="file",

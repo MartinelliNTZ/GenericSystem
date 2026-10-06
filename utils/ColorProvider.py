@@ -73,9 +73,29 @@ class ColorProvider(BaseUtil):
         "#FCA5A5",  # salmao
     ]
 
+    # ── Paleta para pastas de estrutura de projeto ──────────────────
+    # Cores distintas e legíveis em fundo escuro (>= DEFAULT_PROJECT_FOLDERS).
+    _FOLDER_PALETTE: List[str] = [
+        "#F87171",  # vermelho suave
+        "#FB923C",  # laranja
+        "#FBBF24",  # amarelo
+        "#A3E635",  # lima
+        "#4ADE80",  # verde
+        "#34D399",  # esmeralda
+        "#22D3EE",  # ciano
+        "#60A5FA",  # azul
+        "#818CF8",  # indigo
+        "#A78BFA",  # violeta
+        "#E879F9",  # magenta
+        "#F472B6",  # rosa
+        "#FCA5A5",  # salmao
+        "#FCD34D",  # amarelo claro
+    ]
+
     # ── Caches ──────────────────────────────────────────────────────
     _tool_cache: Dict[str, str] = {}
     _class_cache: Dict[str, str] = {}
+    _folder_cache: Dict[str, str] = {}
 
     # ── API ─────────────────────────────────────────────────────────
     @staticmethod
@@ -173,6 +193,78 @@ class ColorProvider(BaseUtil):
             logger.debug("Nova cor de classe gerada", code="CLASS_COLOR_NEW", cls=class_name, color=cls._class_cache[class_name])
 
         return cls._class_cache[class_name]
+
+    @classmethod
+    def folder_color(
+        cls,
+        folder_name: str,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """Retorna uma cor unica e consistente para uma pasta de estrutura.
+
+        As pastas padrao (``DEFAULT_PROJECT_FOLDERS``) recebem cores distintas
+        pela posicao na lista; nomes fora do padrao usam hash consistente.
+
+        Args:
+            folder_name: Nome da pasta (ex: "05_ASA").
+            tool_key: Chave da ferramenta para logging.
+        """
+        logger = cls._get_logger(tool_key)
+        if not folder_name:
+            logger.debug(
+                "Nome de pasta vazio, retornando cor padrao",
+                code="FOLDER_COLOR_EMPTY",
+            )
+            return "#DCDCDC"
+
+        if folder_name not in cls._folder_cache:
+            from utils.ProjectStructureUtil import DEFAULT_PROJECT_FOLDERS
+
+            if folder_name in DEFAULT_PROJECT_FOLDERS:
+                idx = DEFAULT_PROJECT_FOLDERS.index(folder_name)
+            else:
+                idx = cls._hash_name(folder_name, len(cls._FOLDER_PALETTE))
+            idx %= len(cls._FOLDER_PALETTE)
+            cls._folder_cache[folder_name] = cls._FOLDER_PALETTE[idx]
+            logger.debug(
+                "Nova cor de pasta gerada",
+                code="FOLDER_COLOR_NEW",
+                folder=folder_name,
+                color=cls._folder_cache[folder_name],
+            )
+
+        return cls._folder_cache[folder_name]
+
+    @staticmethod
+    def shade(
+        hex_color: str,
+        factor: float,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """Clareia uma cor HEX misturando com branco (factor 0..1).
+
+        Usado para gerar tons mais claros conforme a profundidade na arvore.
+        """
+        logger = BaseUtil._get_logger(tool_key, "ColorProvider")
+        clean = hex_color.lstrip("#")
+        factor = max(0.0, min(1.0, factor))
+
+        r = int(clean[0:2], 16)
+        g = int(clean[2:4], 16)
+        b = int(clean[4:6], 16)
+        r = int(r + (255 - r) * factor)
+        g = int(g + (255 - g) * factor)
+        b = int(b + (255 - b) * factor)
+
+        result = f"#{r:02X}{g:02X}{b:02X}"
+        logger.debug(
+            "Cor clareada gerada",
+            code="SHADE_OK",
+            base=clean,
+            factor=factor,
+            color=result,
+        )
+        return result
 
     @classmethod
     def text_primary(

@@ -1,3 +1,8 @@
+[1.4.8][2026.10.06][10:00] - Gerenciador de Estrutura: cor por pasta de topo propagada à ramificação
+  - utils/ColorProvider.py: novos folder_color(name) (paleta curada pela posição em DEFAULT_PROJECT_FOLDERS + hash para nomes fora do padrão, com cache) e shade(hex, factor) (clareia misturando com branco)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: o nome de cada nó usa a cor da pasta de topo (via _folder_name_color), clareada pela profundidade — subpastas, anos e arquivos em tons mais claros; a coluna Status mantém a cor de status
+  - docs/skills/SKILL_UTILS.md e CatalogoClasses.md: ColorProvider documentado (folder_color, shade)
+
 [1.4.7][2026.10.06][09:30] - Gerenciador de Estrutura: ícones nativos do Windows na árvore
   - resources/IconManager.py: novo system_icon(path, is_dir) — ícone nativo via QFileIconProvider (cache: 1 para pastas + 1 por extensão), fallback estático (folder.ico/file1.ico) e log ICON_SYS_ERR
   - resources/widgets/grid/GridTree.py: novos set_cell_icon(key, col, icon) e clear_cell_icon(key, col), parâmetro opcional icons em add_node e setIconSize(16x16)
