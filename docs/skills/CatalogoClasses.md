@@ -92,7 +92,7 @@
 | Classe | Descrição |
 |---|---|
 | `ProjectDatabasePlugin` | Ferramenta CENTRAL do banco de dados: cards, árvore OS/Cliente/Pastas/Anos, ATUALIZAR DADOS (push para o Firestore) e SINCRONIZAR NUVEM (pull) |
-| `ProjectDatabaseService` (módulo) | Monta os registros por OS + banco consolidado e o `ProjectDatabaseWorker` (varredura em background); preserva a chave `sub_os` já gravada |
+| `ProjectDatabaseService` (módulo) | Monta UM registro por OS (agrupando as pastas/SubOS pelo número) + banco consolidado e o `ProjectDatabaseWorker` (varredura em background); preserva a categorização `sub_os` |
 | `ProjectDatabaseStore` (módulo) | Leitura/escrita atômica dos JSONs em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) |
 
 ### plugins/os_tracker/

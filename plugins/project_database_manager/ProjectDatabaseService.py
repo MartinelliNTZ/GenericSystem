@@ -4,16 +4,17 @@ ProjectDatabaseService — Lógica do Banco de Dados de Projetos (OS)
 =================================================================
 Lógica pura (sem widgets Qt):
 
-- ``build_project_record`` monta o registro de uma OS (número, cliente,
-  pastas padrão criadas e anos criados).
-- ``build_database`` percorre a pasta-mãe e monta o banco consolidado.
+- ``build_os_record`` monta o registro de UMA OS, agrupando todas as suas
+  pastas (uma por SubOS; o cliente/nome comercial/CNPJ são associados pelo
+  seed via a chave ``sub_os``).
+- ``build_database`` percorre a pasta-mãe, agrupa as pastas pelo NÚMERO de OS
+  e monta o banco consolidado.
 - ``ProjectDatabaseWorker`` (QRunnable) executa a varredura em background,
   emitindo progresso por OS (Contrato 20).
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -29,62 +30,102 @@ _TOOL_KEY = ToolKey.PROJECT_DATABASE.value
 
 
 class ProjectDatabaseService(BaseUtil):
-    """Monta os registros do banco de dados a partir do disco."""
+    """Monta os registros do banco de dados a partir do disco.
+
+    Uma OS pode ter VÁRIAS pastas (uma por SubOS). Todas as pastas com o mesmo
+    NÚMERO de OS são agrupadas em UM único registro e a SubOS de cada pasta é
+    lida do próprio nome da pasta (``ProjectStructureUtil.extract_sub_os``).
+    """
 
     @classmethod
-    def build_project_record(
+    def build_os_record(
         cls,
-        project: Path,
-        os_key: str,
-        mother: Optional[Path] = None,
+        mother: Path,
+        os_number: str,
+        project_paths: list,
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Monta o registro de uma OS (pastas padrão + anos criados).
+        """Monta o registro de UMA OS, agrupando todas as suas pastas (SubOS).
 
-        Preserva a categorização de SubOS já gravada em disco (seja pelo
-        script de dev ou por edição manual), para que uma nova varredura
-        não a apague.
+        Preserva a categorização (cliente/nome comercial/CNPJ) já gravada em
+        disco para cada SubOS, para que uma nova varredura não a apague.
         """
-        data = ProjectStructureUtil.collect_created_data(project, tool_key=tool_key)
-        record = {
-            "os": os_key,
-            "name": project.name,
-            "client": ProjectStructureUtil.extract_client_name(project.name),
-            "path": str(project),
-            "folders": data["folders"],
-            "years": data["years"],
+        previous = cls._load_existing_record(mother, os_number, tool_key=tool_key)
+        previous_sub = {
+            str(entry.get("sub_os", "")): entry
+            for entry in previous.get("sub_os", [])
+            if isinstance(entry, dict)
+        }
+
+        all_folders: list = []
+        all_years: list = []
+        sub_os_entries: list = []
+        used_letters: set = set()
+
+        letters = ProjectStructureUtil.assign_sub_os_letters(project_paths)
+        for project in project_paths:
+            data = ProjectStructureUtil.collect_created_data(
+                project, tool_key=tool_key
+            )
+            cls._extend_unique(all_folders, data["folders"])
+            cls._extend_unique(all_years, data["years"])
+            letter = letters.get(project, "")
+            used_letters.add(letter)
+            prev = previous_sub.get(letter, {})
+            sub_os_entries.append({
+                "sub_os": letter,
+                "path": str(project),
+                "folders": data["folders"],
+                "years": data["years"],
+                "client": prev.get("client", ""),
+                "commercial_name": prev.get("commercial_name", ""),
+                "cnpj": prev.get("cnpj", ""),
+            })
+
+        # Mantém SubOS que existem no banco mas não têm pasta criada.
+        for letter, prev in previous_sub.items():
+            if letter not in used_letters:
+                sub_os_entries.append(prev)
+
+        sub_os_entries.sort(key=lambda entry: str(entry.get("sub_os", "")))
+        ordered_folders = [
+            name for name in ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS
+            if name in all_folders
+        ]
+        ordered_paths = [
+            str(path) for path in
+            sorted(project_paths, key=lambda path: path.name.lower())
+        ]
+        return {
+            "os": os_number,
+            "name": "",
+            "client": "",
+            "path": ordered_paths[0] if ordered_paths else "",
+            "paths": ordered_paths,
+            "folders": ordered_folders,
+            "years": all_years,
+            "sub_os": sub_os_entries,
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }
-        sub_os = cls._load_existing_sub_os(mother, os_key, tool_key=tool_key)
-        if sub_os:
-            record["sub_os"] = sub_os
-        return record
+
+    @staticmethod
+    def _extend_unique(target: list, values) -> None:
+        """Adiciona a ``target`` os itens de ``values`` que ainda não existem."""
+        for value in values:
+            if value not in target:
+                target.append(value)
 
     @classmethod
-    def _load_existing_sub_os(
+    def _load_existing_record(
         cls,
         mother: Optional[Path],
-        os_key: str,
+        os_number: str,
         tool_key: str = _TOOL_KEY,
-    ) -> list:
-        """Lê a lista ``sub_os`` já gravada no JSON da OS. Retorna ``[]`` se não houver."""
+    ) -> Dict[str, Any]:
+        """Lê o JSON individual de uma OS (``<numero>.json``). ``{}`` se não houver."""
         if mother is None:
-            return []
-        existing = ProjectDatabaseStore.load_project(mother, os_key, tool_key=tool_key)
-        sub_os = existing.get("sub_os")
-        return sub_os if isinstance(sub_os, list) else []
-
-    @classmethod
-    def resolve_os_key(cls, project: Path, number_counts: Dict[str, int]) -> str:
-        """Define a chave da OS (nome do arquivo em ``.BancoDados``).
-
-        - Número único → apenas o número (ex.: ``068``).
-        - Número repetido → número + resto do nome (ex.: ``181_RENNER_A``).
-        """
-        number = ProjectStructureUtil.extract_os_number(project.name)
-        if number_counts.get(number, 0) > 1:
-            return ProjectStructureUtil.extract_os_identifier(project.name)
-        return number
+            return {}
+        return ProjectDatabaseStore.load_project(mother, os_number, tool_key=tool_key)
 
     @classmethod
     def build_database(
@@ -93,19 +134,19 @@ class ProjectDatabaseService(BaseUtil):
         progress_cb: Optional[Callable[[int, int], None]] = None,
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Percorre a pasta-mãe e monta o banco consolidado."""
+        """Percorre a pasta-mãe e monta o banco consolidado (agrupado por OS)."""
         projects = ProjectStructureUtil.discover_projects(mother, tool_key=tool_key)
-        total = len(projects)
-        numbers = [
-            ProjectStructureUtil.extract_os_number(p.name) for p in projects
-        ]
-        counts = dict(Counter(numbers))
+        groups = ProjectStructureUtil.group_projects_by_os(projects)
+        total = len(groups)
+        ordered_numbers = sorted(
+            groups,
+            key=lambda key: (not key.isdigit(), int(key) if key.isdigit() else key),
+        )
         records = []
-        for index, project in enumerate(projects, start=1):
-            os_key = cls.resolve_os_key(project, counts)
+        for index, number in enumerate(ordered_numbers, start=1):
             records.append(
-                cls.build_project_record(
-                    project, os_key, mother=mother, tool_key=tool_key
+                cls.build_os_record(
+                    mother, number, groups[number], tool_key=tool_key
                 )
             )
             if progress_cb is not None:

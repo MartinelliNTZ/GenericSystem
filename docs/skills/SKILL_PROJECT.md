@@ -293,9 +293,9 @@ consulta rápida.
 | Arquivo | Responsabilidade |
 |---|---|
 | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS, prefs, backup e varredura assíncrona |
-| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta registros por OS + banco consolidado + `ProjectDatabaseWorker` |
+| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta UM registro por OS (agrupando as pastas/SubOS pelo número) + banco consolidado + `ProjectDatabaseWorker` |
 | `plugins/project_database_manager/ProjectDatabaseStore.py` | Leitura/escrita dos JSONs em `.BancoDados` (gravação atômica) |
-| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_client_name`, `collect_created_data`) |
+| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
 ### Estrutura em disco

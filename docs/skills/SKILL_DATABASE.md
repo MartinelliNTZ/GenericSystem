@@ -53,32 +53,46 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 
 ## Registro de OS (schema)
 
-Cada registro da lista `projects` do consolidado (e cada `*.json`) tem a forma:
+Cada registro da lista `projects` do consolidado (e cada `*.json`) representa
+**UMA OS** — todas as pastas com o mesmo número (uma por SubOS) são agrupadas
+aqui. A forma é:
 
 ```json
 {
-  "os": "068",
-  "name": "OS_068_...",
-  "client": "...",
-  "path": "C:/.../OS_068_...",
+  "os": "181",
+  "name": "",
+  "client": "Capricornio Renner",
+  "path": "C:/.../OS_181_RENNER_A_...",
+  "paths": [
+    "C:/.../OS_181_RENNER_A_...",
+    "C:/.../OS_181_RENNER_B_...",
+    "C:/.../OS_181_RENNER_C_..."
+  ],
   "folders": ["05_ASA", "06_CAR"],
   "years": ["2024", "2025"],
-  "updated_at": "2026-10-06T16:30:00",
+  "updated_at": "2026-10-06T16:40:00",
   "sub_os": [
-    {"sub_os": "A", "client": "...", "commercial_name": "...", "cnpj": "..."}
+    {"sub_os": "A", "path": "C:/.../OS_181_RENNER_A_...", "folders": ["05_ASA"], "years": [],
+     "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""}
   ]
 }
 ```
 
+- **`os`** é o número **normalizado** (``039`` → ``39``).
+- **`paths`** lista uma pasta por SubOS; **`path`** repete a primeira (compat.).
 - A chave **`sub_os`** guarda a categorização **OS → SubOS → cliente / nome
-  comercial / CNPJ**. Ela convive com os demais campos e **não** é sobrescrita
-  por uma nova varredura: `ProjectDatabaseService.build_project_record` relê o
-  JSON individual (`ProjectDatabaseStore.load_project`) e preserva o `sub_os`
-  existente.
-- **Seed de desenvolvimento:** o script `add_data/seed_sub_os.py` popula o
-  `sub_os` a partir de uma tabela fixa (resolução da pasta-mãe por `--mother`,
-  env `AETHERIS_MOTHER_FOLDER` ou preferência `ProjectStructure.mother_folder`).
-  O seed grava **apenas local**; use `--push` para espelhar no Firestore
+  comercial / CNPJ** (uma entrada por SubOS, com a sua própria pasta/``folders``).
+- A letra da **SubOS** vem do **nome da pasta** quando todas as pastas da OS têm
+  letra (ex.: ``OS_181_RENNER_A_...`` → ``"A"``); senão é atribuída por **ordem**
+  (`ProjectStructureUtil.assign_sub_os_letters`): 1ª pasta → ``A`` (uma pasta
+  única fica sempre em ``A``) e, com várias pastas do mesmo número, a OS é
+  subdividida em ``A``, ``B``, ``C``…
+- A **OS não guarda cliente** (`client` vazio): cliente / nome comercial / CNPJ
+  ficam **em cada `sub_os`**.
+- O **cliente não** é mais derivado do nome da pasta: é **associado** pelo seed
+  (`add_data/seed_sub_os.py`) via a letra da SubOS. O refresh preserva essa
+  categorização (`ProjectDatabaseService.build_os_record`).
+- O seed grava **apenas local**; use `--push` para espelhar no Firestore
   (coleção `banco_dados`).
 
 > A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse

@@ -129,31 +129,57 @@ class ProjectStructureUtil(BaseUtil):
         return parts[0] if parts else core
 
     @classmethod
-    def extract_client_name(cls, name: str) -> str:
-        """Extrai o nome do cliente — o ÚLTIMO campo (pode conter espaços).
+    def extract_sub_os(cls, name: str) -> str:
+        """Extrai a SUBOS do nome da pasta — a letra única após o número.
 
-            "OS_234_Cliente"                      → "Cliente"
-            "OS_181_RENNER_A_Grupo JCN - Faz X"   → "Grupo JCN - Faz X"
-            "OS_234"                              → ""
+            "OS_181_RENNER_A_Grupo JCN - Faz X"   → "A"
+            "OS_189_Thiago_Fabris"                 → ""
+            "OS_169_SLC"                           → ""
         """
         core = cls._strip_prefix(name)
         parts = core.split("_")
-        return parts[-1] if len(parts) > 1 else ""
+        for token in parts[1:]:
+            if len(token) == 1 and token.isascii() and token.isalpha():
+                return token.upper()
+        return ""
 
     @classmethod
-    def extract_os_identifier(cls, name: str) -> str:
-        """Identificador completo da OS (nome sem o prefixo e sem o cliente).
+    def assign_sub_os_letters(cls, project_paths: List[Path]) -> Dict[Path, str]:
+        """Atribui uma letra de SubOS a cada pasta de uma OS.
 
-        Usado para desambiguar arquivos quando o NÚMERO da OS se repete:
+        - Se TODAS as pastas tiverem uma letra no nome (ex.: ``OS_181_RENNER_A_...``),
+          usa a letra do próprio nome.
+        - Caso contrário, subdivide por ORDEM: 1ª pasta → ``A``, 2ª → ``B``, ...
+          (uma pasta única fica sempre em ``A``).
 
-            "OS_181_RENNER_A_Grupo JCN - Faz X"   → "181_RENNER_A"
-            "OS_068_SANTO_ANTONIO"                → "068_SANTO"
+        Returns:
+            ``{Path: "A", ...}``.
         """
-        core = cls._strip_prefix(name)
-        parts = core.split("_")
-        if len(parts) <= 1:
-            return core
-        return "_".join(parts[:-1])
+        ordered = sorted(project_paths, key=lambda path: path.name.lower())
+        letters = [cls.extract_sub_os(path.name) for path in ordered]
+        if all(letters) and len(set(letters)) == len(letters):
+            return {path: letter for path, letter in zip(ordered, letters)}
+        return {path: chr(ord("A") + index) for index, path in enumerate(ordered)}
+
+    @classmethod
+    def group_projects_by_os(cls, projects: List[Path]) -> Dict[str, List[Path]]:
+        """Agrupa as pastas de projeto pelo NÚMERO da OS (normalizado).
+
+        Uma OS dividida em várias pastas (uma por SubOS) vira UMA entrada:
+
+            {"181": [OS_181_RENNER_A..., OS_181_RENNER_B..., OS_181_RENNER_C...]}
+        """
+        groups: Dict[str, List[Path]] = {}
+        for path in projects:
+            number = cls.normalize_os(cls.extract_os_number(path.name))
+            groups.setdefault(number, []).append(path)
+        return groups
+
+    @staticmethod
+    def normalize_os(number: str) -> str:
+        """Normaliza o número da OS — remove zeros à esquerda (``"039"`` → ``"39"``)."""
+        text = str(number).strip()
+        return str(int(text)) if text.isdigit() else text
 
     # ── Dados já criados (adaptador para o Banco de Dados) ──────────
 

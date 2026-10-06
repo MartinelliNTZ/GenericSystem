@@ -38,13 +38,14 @@ python add_data/seed_sub_os.py --push
 
 ### Comportamento
 
-- Faz **merge** com o consolidado existente: se a OS já existe no banco, apenas
-  atualiza a chave `sub_os`; senão, cria um registro mínimo.
-- Casa o número da OS tanto pela chave exata (`068`) quanto por chave prefixada
-  (`068_SANTO_ANTONIO`), preservando o nome do arquivo já existente.
-- Preserva os demais campos (`folders`, `years`, `path`, ...).
-- O refresh do plugin **Banco de Dados** preserva a chave `sub_os` (ver
-  `ProjectDatabaseService.build_project_record`).
+- Agrupa por **número de OS** (normalizado, `039` → `39`): todas as pastas de
+  uma OS ficam em um **único registro**.
+- Mescla a categorização por **letra da SubOS**: preenche `client`,
+  `commercial_name` e `cnpj` **sem apagar** `path`/`folders`/`years`.
+- Varre a pasta-mãe e **anexa a pasta de cada SubOS** (a letra é lida do nome da
+  pasta — ex.: `OS_181_RENNER_A_...` → `A`).
+- O refresh do plugin **Banco de Dados** preserva a categorização (ver
+  `ProjectDatabaseService.build_os_record`).
 
 > O formulário gravado por linha é:
 > `{"sub_os": "A", "client": "...", "commercial_name": "...", "cnpj": "..."}`.

@@ -1,3 +1,16 @@
+[1.7.1][2026.10.06][17:05] - OS/SubOS: SubOS "A" por padrão, subdivisão ABC e OS sem cliente
+  - utils/ProjectStructureUtil.py: NOVO assign_sub_os_letters — usa a letra do nome da pasta quando todas têm letra (ex.: OS_181_RENNER_A_...), senão atribui por ORDEM (1ª → A; com várias pastas do mesmo número a OS é subdividida em A, B, C…) e uma pasta única fica sempre em A
+  - plugins/project_database_manager/ProjectDatabaseService.py e add_data/seed_sub_os.py: a pasta única passa a ser SubOS "A" (não mais sub_os ""); o registro da OS deixa de ter "client" (o cliente fica em cada sub_os); a pasta é anexada à SubOS correspondente
+  - docs/skills/SKILL_DATABASE.md e SKILL_PROJECT.md: regra da letra da SubOS e "OS sem cliente" documentados
+
+
+[1.7.0][2026.10.06][17:00] - Estrutura OS/SubOS: agrupar pastas por número + SubOS lida do nome da pasta
+  - utils/ProjectStructureUtil.py: NOVO extract_sub_os (lê a letra da SubOS do nome da pasta — ex.: OS_181_RENNER_A_... → "A"), group_projects_by_os (agrupa pastas pelo número de OS) e normalize_os (039 → 39); REMOVIDOS extract_client_name e extract_os_identifier (o cliente não é mais derivado do nome da pasta)
+  - plugins/project_database_manager/ProjectDatabaseService.py: build_database agora agrupa as pastas pelo NÚMERO de OS (uma OS = um registro) e monta build_os_record — cada pasta vira uma entrada em sub_os (com path/folders/years), o cliente é associado a partir do que já existe e há novo campo "paths" (uma por pasta)
+  - add_data/seed_sub_os.py: mescla a categorização por LETRA da SubOS (sem sobrescrever path/folders/years), varre a pasta-mãe para anexar a pasta de cada SubOS e normaliza o número da OS; flag --push funcional (espelha no Firestore)
+  - docs/skills/SKILL_DATABASE.md, SKILL_PROJECT.md e CatalogoClasses.md: schema do registro (paths + sub_os por pasta) e API do ProjectStructureUtil atualizados
+
+
 [1.6.1][2026.10.06][17:10] - Acompanhamento de OS: apresentação em dados gerais (sem planilha) + push do seed ao Firebase
   - plugins/os_tracker/OsTrackerPlugin.py: removida a GridTree (formato planilha) e adicionados os painéis "Dados Gerais" (GridLabel: OS, pastas criadas, anos criados e caminho) e "SubOS" (GridCardView — um card por SubOS com código, cliente, nome comercial e CNPJ)
   - add_data/seed_sub_os.py: novo flag --push espelha o .BancoDados na coleção Firestore banco_dados (CloudDatabaseSync + FirebaseTokenProvider); o seed continua 100% local por padrão
