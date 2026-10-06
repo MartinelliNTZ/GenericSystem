@@ -33,8 +33,8 @@
 | `Culture` | Modelo de cultura plantada em um talhão (ciclo, safra, área plantada e colheita) |
 | `Field` | Modelo de talhão de uma fazenda, que possui várias culturas (Culture); a área do talhão permanece definida nele |
 | `Farm` | Modelo de fazenda, que possui vários talhões (Field) |
-| `Client` | Modelo de cliente, que possui várias fazendas (Farm) |
-| `WorkOrder` | Modelo de ordem de serviço, que pode envolver um ou mais clientes (Client) |
+| `SubOS` | Modelo de SubOS (subordem de serviço, ex.: A/B/C/D): nome de cliente, nome comercial, CNPJ e várias fazendas (Farm) |
+| `WorkOrder` | Modelo de ordem de serviço (OS), com uma ou mais SubOS (SubOS) |
 
 ### core/ui/
 | Classe | Descrição |
@@ -92,8 +92,14 @@
 | Classe | Descrição |
 |---|---|
 | `ProjectDatabasePlugin` | Ferramenta CENTRAL do banco de dados: cards, árvore OS/Cliente/Pastas/Anos, ATUALIZAR DADOS (push para o Firestore) e SINCRONIZAR NUVEM (pull) |
-| `ProjectDatabaseService` (módulo) | Monta os registros por OS + banco consolidado e o `ProjectDatabaseWorker` (varredura em background) |
-| `ProjectDatabaseStore` (módulo) | Leitura/escrita atômica dos JSONs em `<pasta-mãe>/.BancoDados` |
+| `ProjectDatabaseService` (módulo) | Monta os registros por OS + banco consolidado e o `ProjectDatabaseWorker` (varredura em background); preserva a chave `sub_os` já gravada |
+| `ProjectDatabaseStore` (módulo) | Leitura/escrita atômica dos JSONs em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) |
+
+### plugins/os_tracker/
+| Classe | Descrição |
+|---|---|
+| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: escolhe uma OS e exibe as SubOS (cliente, nome comercial e CNPJ) a partir do banco `.BancoDados` |
+| `OsTrackerService` (módulo) | Lê os registros de OS do banco consolidado e monta os modelos `SubOS` (`load_orders`, `build_sub_os`, `order_label`) |
 
 ---
 

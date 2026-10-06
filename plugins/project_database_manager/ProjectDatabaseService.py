@@ -36,11 +36,17 @@ class ProjectDatabaseService(BaseUtil):
         cls,
         project: Path,
         os_key: str,
+        mother: Optional[Path] = None,
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Monta o registro de uma OS (pastas padrão + anos criados)."""
+        """Monta o registro de uma OS (pastas padrão + anos criados).
+
+        Preserva a categorização de SubOS já gravada em disco (seja pelo
+        script de dev ou por edição manual), para que uma nova varredura
+        não a apague.
+        """
         data = ProjectStructureUtil.collect_created_data(project, tool_key=tool_key)
-        return {
+        record = {
             "os": os_key,
             "name": project.name,
             "client": ProjectStructureUtil.extract_client_name(project.name),
@@ -49,6 +55,24 @@ class ProjectDatabaseService(BaseUtil):
             "years": data["years"],
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }
+        sub_os = cls._load_existing_sub_os(mother, os_key, tool_key=tool_key)
+        if sub_os:
+            record["sub_os"] = sub_os
+        return record
+
+    @classmethod
+    def _load_existing_sub_os(
+        cls,
+        mother: Optional[Path],
+        os_key: str,
+        tool_key: str = _TOOL_KEY,
+    ) -> list:
+        """Lê a lista ``sub_os`` já gravada no JSON da OS. Retorna ``[]`` se não houver."""
+        if mother is None:
+            return []
+        existing = ProjectDatabaseStore.load_project(mother, os_key, tool_key=tool_key)
+        sub_os = existing.get("sub_os")
+        return sub_os if isinstance(sub_os, list) else []
 
     @classmethod
     def resolve_os_key(cls, project: Path, number_counts: Dict[str, int]) -> str:
@@ -80,7 +104,9 @@ class ProjectDatabaseService(BaseUtil):
         for index, project in enumerate(projects, start=1):
             os_key = cls.resolve_os_key(project, counts)
             records.append(
-                cls.build_project_record(project, os_key, tool_key=tool_key)
+                cls.build_project_record(
+                    project, os_key, mother=mother, tool_key=tool_key
+                )
             )
             if progress_cb is not None:
                 progress_cb(index, total)

@@ -200,6 +200,18 @@ class ToolRegistry:
             category=CategoryTool.CENTRAL,
             show_in_toolbar=True,
         ),
+        ToolKey.OS_TRACKER.value: Tool(
+            name=ToolKey.OS_TRACKER.value,
+            title="Acompanhamento de OS",
+            widget_factory=_make_factory(
+                "plugins.os_tracker.OsTrackerPlugin",
+                "OsTrackerPlugin",
+            ),
+            tooltip="Escolha uma OS e visualize seus dados (SubOS, cliente, CNPJ)",
+            tool_type=ToolType.VERRA,
+            category=CategoryTool.CENTRAL,
+            show_in_toolbar=True,
+        ),
         ToolKey.ICO_CONVERTER.value: Tool(
             name=ToolKey.ICO_CONVERTER.value,
             title="Conversor ICO",

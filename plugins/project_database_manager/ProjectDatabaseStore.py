@@ -92,6 +92,20 @@ class ProjectDatabaseStore(BaseUtil):
         return JsonUtil.read_json(str(path), tool_key=tool_key)
 
     @classmethod
+    def load_project(
+        cls,
+        mother_folder: str | Path,
+        os_number: str,
+        tool_key: str = ToolKey.PROJECT_DATABASE.value,
+    ) -> Dict[str, Any]:
+        """Lê o JSON individual de uma OS (``<numero_os>.json``).
+
+        Retorna ``{}`` se o arquivo não existir.
+        """
+        path = cls.db_dir(mother_folder) / (cls._safe_filename(os_number) + ".json")
+        return JsonUtil.read_json(str(path), tool_key=tool_key)
+
+    @classmethod
     def prune_projects(
         cls,
         mother_folder: str | Path,

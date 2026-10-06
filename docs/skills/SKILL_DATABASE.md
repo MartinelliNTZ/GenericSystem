@@ -51,6 +51,39 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 - A gravação é **atômica** (`<arquivo>.tmp` + `os.replace`) em `ProjectDatabaseStore`
   e em `CloudDatabaseSync`.
 
+## Registro de OS (schema)
+
+Cada registro da lista `projects` do consolidado (e cada `*.json`) tem a forma:
+
+```json
+{
+  "os": "068",
+  "name": "OS_068_...",
+  "client": "...",
+  "path": "C:/.../OS_068_...",
+  "folders": ["05_ASA", "06_CAR"],
+  "years": ["2024", "2025"],
+  "updated_at": "2026-10-06T16:30:00",
+  "sub_os": [
+    {"sub_os": "A", "client": "...", "commercial_name": "...", "cnpj": "..."}
+  ]
+}
+```
+
+- A chave **`sub_os`** guarda a categorização **OS → SubOS → cliente / nome
+  comercial / CNPJ**. Ela convive com os demais campos e **não** é sobrescrita
+  por uma nova varredura: `ProjectDatabaseService.build_project_record` relê o
+  JSON individual (`ProjectDatabaseStore.load_project`) e preserva o `sub_os`
+  existente.
+- **Seed de desenvolvimento:** o script `add_data/seed_sub_os.py` popula o
+  `sub_os` a partir de uma tabela fixa (resolução da pasta-mãe por `--mother`,
+  env `AETHERIS_MOTHER_FOLDER` ou preferência `ProjectStructure.mother_folder`).
+  O seed grava **apenas local**; use `--push` para espelhar no Firestore
+  (coleção `banco_dados`).
+
+> A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse
+> registro para exibir as SubOS de uma OS selecionada.
+
 ## Autenticação
 
 A ordem de prioridade na resolução do token (``Bearer``) é definida pelo

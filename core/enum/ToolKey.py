@@ -36,6 +36,7 @@ class ToolKey(str, Enum):
     MAP_VIEWER = "MapViewer"
     PROJECT_STRUCTURE = "ProjectStructure"
     PROJECT_DATABASE = "ProjectDatabase"
+    OS_TRACKER = "OsTracker"
     FIREBASE = "Firebase"
 
     PYTHON_LIBRARY_MANAGER = "PythonLibraryManager"  # Ainda não implementado

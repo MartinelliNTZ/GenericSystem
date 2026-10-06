@@ -2,7 +2,12 @@
 """
 WorkOrderModel — Modelo de ordem de serviço
 ===========================================
-Representa uma ordem de serviço, que pode envolver um ou mais clientes.
+Representa uma ordem de serviço (OS), que pode envolver uma ou mais
+SubOS (subordens de serviço: A, B, C, D...). Cada SubOS carrega o
+cliente, o nome comercial, o CNPJ e as fazendas.
+
+Hierarquia de domínio:
+    WorkOrder (OS) → SubOS → Farm (fazenda) → Field (talhão) → Culture
 """
 
 from __future__ import annotations
@@ -13,7 +18,7 @@ from enum import Enum
 from typing import Optional
 
 from core.model.BaseModel import BaseModel
-from core.model.ClientModel import Client
+from core.model.SubOSModel import SubOS
 
 
 class WorkOrderStatus(str, Enum):
@@ -36,7 +41,7 @@ class WorkOrderPriority(str, Enum):
 
 @dataclass
 class WorkOrder(BaseModel):
-    """Representa uma ordem de serviço com um ou mais clientes."""
+    """Representa uma ordem de serviço com uma ou mais SubOS."""
 
     number: str = ""
     status: str = WorkOrderStatus.OPEN
@@ -46,7 +51,7 @@ class WorkOrder(BaseModel):
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     contract_area: float = 0.0
-    clients: list[Client] = field(default_factory=list)
+    sub_os: list[SubOS] = field(default_factory=list)
 
     def open(self, contract_area: float = 0.0, by: str = "") -> None:
         """Abre a ordem de serviço, fixando a área de contrato na data de abertura."""
@@ -54,14 +59,14 @@ class WorkOrder(BaseModel):
         self.contract_area = contract_area
         self.touch(by)
 
-    def add_client(self, new_client: Client) -> None:
-        """Adiciona um cliente à ordem de serviço."""
-        self.clients.append(new_client)
+    def add_sub_os(self, new_sub_os: SubOS) -> None:
+        """Adiciona uma SubOS à ordem de serviço."""
+        self.sub_os.append(new_sub_os)
         self.touch()
 
     def real_area(self) -> float:
-        """Retorna a área real: soma da área de todos os clientes (baseada nos talhões)."""
-        return sum(new_client.area() for new_client in self.clients)
+        """Retorna a área real: soma da área de todas as SubOS (baseada nos talhões)."""
+        return sum(new_sub_os.area() for new_sub_os in self.sub_os)
 
     def finish(self, by: str = "") -> None:
         """Marca a ordem de serviço como concluída."""
