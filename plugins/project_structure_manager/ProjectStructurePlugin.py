@@ -894,15 +894,20 @@ class ProjectStructurePlugin(BasePlugin):
         return GridActionCell(btn_open)
 
     def _apply_icon(self, key: str, path: Path, is_dir: bool) -> None:
-        """Aplica (ou limpa) o ícone do sistema na coluna de nome do nó."""
+        """Aplica (ou limpa) o ícone do sistema na coluna de nome do nó.
+
+        Pastas usam o ícone nativo tingido com a cor da pasta de topo;
+        arquivos usam o ícone nativo do sistema.
+        """
         if not self._show_icons:
             self._tree.clear_cell_icon(key, self._COL_NAME)
             return
-        self._tree.set_cell_icon(
-            key,
-            self._COL_NAME,
-            IconManager.system_icon(str(path), is_dir=is_dir),
-        )
+        color = self._folder_name_color(path) if is_dir else None
+        if color:
+            icon = IconManager.folder_icon(color)
+        else:
+            icon = IconManager.system_icon(str(path), is_dir=is_dir)
+        self._tree.set_cell_icon(key, self._COL_NAME, icon)
 
     def _on_icons_toggled(self) -> None:
         """Alterna a exibição dos ícones e reaplica nos nós já renderizados."""

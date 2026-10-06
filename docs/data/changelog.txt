@@ -1,3 +1,8 @@
+[1.4.9][2026.10.06][10:30] - Gerenciador de Estrutura: ícone de pasta colorido pela cor da pasta
+  - resources/IconManager.py: novos folder_icon(color), colorized(icon, color, size) e _tint(pixmap, color) — tinge o ícone nativo da pasta por luminância (cinza + multiplicar), preservando o sombreado 3D e o alpha; cache por (cor, tamanho)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: _apply_icon passa a tingir o ícone de pasta com a cor da pasta de topo (mesma cor do nome, propagada por profundidade); arquivos mantêm o ícone nativo
+  - docs/skills/CatalogoClasses.md: IconManager atualizado (folder_icon, colorized)
+
 [1.4.8][2026.10.06][10:00] - Gerenciador de Estrutura: cor por pasta de topo propagada à ramificação
   - utils/ColorProvider.py: novos folder_color(name) (paleta curada pela posição em DEFAULT_PROJECT_FOLDERS + hash para nomes fora do padrão, com cache) e shade(hex, factor) (clareia misturando com branco)
   - plugins/project_structure_manager/ProjectStructurePlugin.py: o nome de cada nó usa a cor da pasta de topo (via _folder_name_color), clareada pela profundidade — subpastas, anos e arquivos em tons mais claros; a coluna Status mantém a cor de status

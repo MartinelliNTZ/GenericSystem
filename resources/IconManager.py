@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QColor, QIcon, QImage, QPixmap
 
 
 class IconManager:
@@ -121,3 +121,63 @@ class IconManager:
                 error=str(e),
             )
         return cls.get("folder.ico" if is_dir else "file1.ico")
+
+    # ── Ícones de pasta coloridos (tint do ícone nativo) ─────────────
+
+    _folder_icon_cache: dict = {}
+
+    @classmethod
+    def folder_icon(cls, color: str, size: int = 16) -> QIcon:
+        """Ícone de pasta nativo tingido com ``color`` (sombreado preservado).
+
+        Parte do ícone nativo de pasta e aplica um tint por luminância,
+        mantendo o sombreado 3D. O resultado é cacheado por (cor, tamanho).
+        """
+        key = (str(color).lower(), int(size))
+        cached = cls._folder_icon_cache.get(key)
+        if cached is not None:
+            return cached
+        base = cls.system_icon("", is_dir=True)
+        icon = cls.colorized(base, color, size)
+        cls._folder_icon_cache[key] = icon
+        return icon
+
+    @classmethod
+    def colorized(cls, icon: QIcon, color: str, size: int = 16) -> QIcon:
+        """Retorna ``icon`` tingido com ``color`` no tamanho informado."""
+        pixmap = icon.pixmap(int(size), int(size))
+        if pixmap.isNull():
+            return icon
+        return QIcon(cls._tint(pixmap, color))
+
+    @staticmethod
+    def _tint(pixmap: QPixmap, color: str) -> QPixmap:
+        """Tinge um pixmap: desatura por luminância e multiplica pela cor.
+
+        Preserva o canal alpha, de modo que o sombreado 3D do ícone nativo
+        continua visível apenas recolorido.
+        """
+        target = QColor(color)
+        if not target.isValid():
+            return pixmap
+        image = pixmap.toImage().convertToFormat(
+            QImage.Format.Format_ARGB32
+        )
+        cr, cg, cb = target.red(), target.green(), target.blue()
+        for y in range(image.height()):
+            for x in range(image.width()):
+                pixel = int(image.pixel(x, y))
+                alpha = (pixel >> 24) & 0xFF
+                if alpha == 0:
+                    continue
+                r = (pixel >> 16) & 0xFF
+                g = (pixel >> 8) & 0xFF
+                b = pixel & 0xFF
+                lum = (299 * r + 587 * g + 114 * b) // 1000
+                nr = (lum * cr) // 255
+                ng = (lum * cg) // 255
+                nb = (lum * cb) // 255
+                image.setPixel(
+                    x, y, (alpha << 24) | (nr << 16) | (ng << 8) | nb
+                )
+        return QPixmap.fromImage(image)
