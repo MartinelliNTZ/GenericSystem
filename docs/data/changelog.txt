@@ -1,3 +1,10 @@
+[1.4.6][2026.10.06][09:00] - Gerenciador de Estrutura: navegação de arquivos na árvore
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: a árvore agora exibe subpastas e ARQUIVOS reais de cada pasta, carregados sob demanda ao expandir o nó (kinds "subfolder"/"file"); nós já validados pelo template são preservados (duplicados ignorados via has_node)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: novos _load_folder_contents, _on_folder_contents e _render_content_batch (render em lotes via QTimer) + célula de ação "Abrir" por arquivo/subpasta; duplo clique abre o arquivo no programa padrão e a pasta no explorer
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: _clear_contents_loaded e _load_contents_for_expanded mantêm o conteúdo coerente após refresh incremental e recarga completa
+  - plugins/project_structure_manager/ProjectStructureScanner.py: novos FileEntry, list_contents() e worker FolderContentWorker (listagem assíncrona, sem tocar em widgets)
+  - plugins/project_structure_manager/FolderOperations.py: extraído _launch() e adicionado open_path() (abre arquivo no app padrão / pasta no explorer); open_in_explorer delega
+
 [1.4.5][2026.10.06][08:20] - Mesclagem robusta contra lock do OneDrive (WinError 5)
   - plugins/project_structure_manager/FolderOperations.py: a remoção da pasta de origem vazia agora limpa o atributo somente leitura e repete com pequeno atraso (12 tentativas x 0.4s) antes de desistir — evita que o lock transiente do OneDrive ou de um os.scandir concorrente ([WinError 5] Acesso negado) deixe a pasta com nome incoerente no disco
   - plugins/project_structure_manager/FolderOperations.py: novo helper _clear_readonly() e logs PSM_CHMOD_SKIP

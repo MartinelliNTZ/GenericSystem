@@ -166,6 +166,48 @@ def _list_subdirs(path: Path) -> List[Path]:
         return []
 
 
+@dataclass
+class FileEntry:
+    """Arquivo contido diretamente em uma pasta do projeto."""
+
+    name: str
+    path: Path
+    size: int
+
+
+def list_contents(folder: Path) -> tuple[List[Path], List[FileEntry]]:
+    """Lista subpastas e arquivos diretos de ``folder``.
+
+    Retorna ``(subpastas, arquivos)`` ordenados por nome. Em falha de leitura
+    retorna duas listas vazias e registra o erro.
+    """
+    folder = Path(folder)
+    dirs: List[Path] = []
+    files: List[FileEntry] = []
+    try:
+        for item in folder.iterdir():
+            try:
+                if item.is_dir():
+                    dirs.append(item)
+                elif item.is_file():
+                    files.append(
+                        FileEntry(item.name, item, item.stat().st_size)
+                    )
+            except OSError:
+                continue
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        _logger().error(
+            "Falha ao listar conteúdo da pasta",
+            code="PSM_CONTENT_ERR",
+            error=str(e),
+            path=str(folder),
+        )
+        return [], []
+    dirs.sort(key=lambda item: item.name.lower())
+    files.sort(key=lambda entry: entry.name.lower())
+    return dirs, files
+
+
 def scan_document_years(envio: Path) -> List[StructureNode]:
     """Inspeciona as pastas de ano dentro de ``03_ENVIO_DE_DOCUMENTOS``.
 
@@ -450,3 +492,34 @@ class ProjectScanWorker(QRunnable):
                 error=str(e),
             )
             self.signals.failed.emit(self.generation, str(e))
+
+
+class _FolderContentSignals(QObject):
+    """Sinais do worker de listagem de conteúdo de pasta."""
+
+    finished = Signal(int, str, object, object)   # (geração, pasta, dirs, files)
+
+
+class FolderContentWorker(QRunnable):
+    """Lista subpastas e arquivos de uma pasta (não toca em widgets)."""
+
+    def __init__(self, generation: int, path: str) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.generation = generation
+        self.path = path
+        self.signals = _FolderContentSignals()
+
+    def run(self) -> None:
+        """Lista o conteúdo da pasta e emite o resultado."""
+        try:
+            dirs, files = list_contents(Path(self.path))
+            self.signals.finished.emit(
+                self.generation, self.path, dirs, files
+            )
+        except Exception as e:
+            _logger().error(
+                f"Falha ao listar conteúdo: {self.path}",
+                code="PSM_CONTENT_WORKER_ERR",
+                error=str(e),
+            )

@@ -12,6 +12,8 @@ Recursos preservados:
 - Filtro por nome de projeto.
 - Atualização automática via QFileSystemWatcher (com debounce).
 - Ações: abrir, criar pasta, renomear/padronizar e mesclar pastas.
+- Navegação de arquivos: subpastas e arquivos reais são carregados sob
+  demanda ao expandir um nó, com abertura no programa padrão (duplo clique).
 
 Performance (assíncrono + refresh incremental):
 - A varredura COMPLETA roda em thread secundária apenas 1 vez (abrir/ATUALIZAR).
@@ -29,7 +31,7 @@ import time
 from collections import deque
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Deque, Dict, List, Optional, Set
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
 
 from PySide6.QtCore import QFileSystemWatcher, QThreadPool, QTimer
 
@@ -151,6 +153,10 @@ class ProjectStructurePlugin(BasePlugin):
         self._refresh_pending: Set[str] = set()
         self._refreshed_at: Dict[str, float] = {}
 
+        # Conteúdo real (subpastas + arquivos) carregado sob demanda por nó.
+        self._contents_loaded: Set[str] = set()
+        self._content_queue: Deque[Tuple[str, Path, bool, int]] = deque()
+
         self._watcher = QFileSystemWatcher(self)
         self._watcher.directoryChanged.connect(self._schedule_auto_refresh)
 
@@ -162,6 +168,10 @@ class ProjectStructurePlugin(BasePlugin):
         self._render_timer = QTimer(self)
         self._render_timer.setSingleShot(True)
         self._render_timer.timeout.connect(self._render_batch)
+
+        self._content_timer = QTimer(self)
+        self._content_timer.setSingleShot(True)
+        self._content_timer.timeout.connect(self._render_content_batch)
 
         self._runtime_ready = True
         QTimer.singleShot(0, lambda: self._load_projects(show_toast=False))
@@ -186,7 +196,9 @@ class ProjectStructurePlugin(BasePlugin):
         """Encerra workers e monitoramento antes de fechar."""
         self._refresh_timer.stop()
         self._render_timer.stop()
+        self._content_timer.stop()
         self._render_queue.clear()
+        self._content_queue.clear()
         if self._scan_worker is not None:
             self._scan_worker.cancel()
         try:
@@ -364,6 +376,9 @@ class ProjectStructurePlugin(BasePlugin):
         self._load_projects_list = []
         self._render_queue.clear()
         self._render_timer.stop()
+        self._contents_loaded.clear()
+        self._content_queue.clear()
+        self._content_timer.stop()
         self._render_total = 0
         self._render_done = 0
 
@@ -560,6 +575,8 @@ class ProjectStructurePlugin(BasePlugin):
         if self._reload_pending:
             self._reload_pending = False
             self._load_projects(show_toast=False, show_progress=False)
+        elif success:
+            self._load_contents_for_expanded()
 
     def _finish_progress(self, success: bool) -> None:
         """Mostra 100% e reseta a barra (só quando há progresso visível)."""
@@ -589,6 +606,9 @@ class ProjectStructurePlugin(BasePlugin):
         self._tree.clear_nodes()
         self._load_projects_list = []
         self._project_counts = {}
+        self._contents_loaded.clear()
+        self._content_queue.clear()
+        self._content_timer.stop()
         self._update_cards()
 
     def _render_project(self, structure: Scanner.ProjectStructure) -> None:
@@ -689,6 +709,147 @@ class ProjectStructurePlugin(BasePlugin):
         )
         if is_year:
             self._request_statistics(key, node.path)
+
+    # ── Conteúdo real (subpastas + arquivos, sob demanda) ────────────
+
+    def _load_folder_contents(self, key: str) -> None:
+        """Lista (sob demanda) subpastas e arquivos de uma pasta ao expandir."""
+        if key in self._contents_loaded:
+            return
+        self._contents_loaded.add(key)
+        if not Path(key).is_dir():
+            return
+        worker = Scanner.FolderContentWorker(self._generation, key)
+        self._workers.add(worker)
+        worker.signals.finished.connect(self._on_folder_contents)
+        worker.signals.finished.connect(lambda *_: self._workers.discard(worker))
+        self._work_pool.start(worker)
+
+    def _on_folder_contents(
+        self,
+        generation: int,
+        folder: str,
+        dirs: List[Path],
+        files: List[Scanner.FileEntry],
+    ) -> None:
+        """Enfileira o conteúdo listado para render em lotes."""
+        if generation != self._generation or not self._tree.has_node(folder):
+            return
+        for path in dirs:
+            self._content_queue.append((folder, path, True, 0))
+        for entry in files:
+            self._content_queue.append((folder, entry.path, False, entry.size))
+        if self._content_queue and not self._content_timer.isActive():
+            self._content_timer.start(self._RENDER_DELAY_MS)
+
+    def _render_content_batch(self) -> None:
+        """Renderiza um lote de itens de conteúdo (mantém a UI responsiva)."""
+        self._tree.setUpdatesEnabled(False)
+        try:
+            processed = 0
+            while self._content_queue and processed < self._RENDER_BATCH:
+                parent_key, path, is_dir, size = self._content_queue.popleft()
+                self._render_content_item(parent_key, path, is_dir, size)
+                processed += 1
+        finally:
+            self._tree.setUpdatesEnabled(True)
+        if self._content_queue:
+            self._content_timer.start(self._RENDER_DELAY_MS)
+
+    def _render_content_item(
+        self, parent_key: str, path: Path, is_dir: bool, size: int
+    ) -> None:
+        """Cria o nó de uma subpasta ou de um arquivo dentro de ``parent_key``."""
+        if not self._tree.has_node(parent_key):
+            return
+        if is_dir:
+            self._render_subfolder(parent_key, path)
+        else:
+            self._render_file(parent_key, path, size)
+
+    def _render_subfolder(self, parent_key: str, path: Path) -> None:
+        """Cria o nó de uma subpasta real (não validada pelo template)."""
+        key = str(path)
+        if self._tree.has_node(key):
+            return
+        theme = AppStyles.current_theme
+        self._tree.add_node(
+            key,
+            {
+                self._COL_NAME: path.name,
+                self._COL_STATUS: "PASTA",
+                self._COL_FILES: "...",
+                self._COL_DIRS: "...",
+                self._COL_SIZE: "...",
+            },
+            parent_key=parent_key,
+            colors={
+                self._COL_NAME: theme.TEXT_MEDIUM,
+                self._COL_STATUS: theme.TEXT_LOW,
+            },
+            kind="subfolder",
+        )
+        self._tree.set_cell_widget(
+            key, self._COL_ACTIONS, self._build_subfolder_actions(path)
+        )
+        self._request_statistics(key, path)
+
+    def _render_file(self, parent_key: str, path: Path, size: int) -> None:
+        """Cria o nó folha de um arquivo dentro da pasta ``parent_key``."""
+        key = str(path)
+        if self._tree.has_node(key):
+            return
+        theme = AppStyles.current_theme
+        self._tree.add_node(
+            key,
+            {
+                self._COL_NAME: path.name,
+                self._COL_STATUS: "ARQUIVO",
+                self._COL_FILES: "—",
+                self._COL_DIRS: "—",
+                self._COL_SIZE: Scanner.format_size(size),
+            },
+            parent_key=parent_key,
+            colors={
+                self._COL_NAME: theme.TEXT_MEDIUM,
+                self._COL_STATUS: theme.TEXT_LOW,
+            },
+            kind="file",
+        )
+        self._tree.set_cell_widget(
+            key, self._COL_ACTIONS, self._build_file_actions(path)
+        )
+
+    def _build_subfolder_actions(self, path: Path) -> GridActionCell:
+        """Célula de ações de uma subpasta: Abrir no gerenciador de arquivos."""
+        btn_open = SimpleSecondaryButton("Abrir", glow=False)
+        btn_open.clicked.connect(
+            lambda _=False: FsOps.open_in_explorer(path)
+        )
+        return GridActionCell(btn_open)
+
+    def _build_file_actions(self, path: Path) -> GridActionCell:
+        """Célula de ações de um arquivo: Abrir com o programa padrão."""
+        btn_open = SimpleSecondaryButton("Abrir", glow=False)
+        btn_open.clicked.connect(lambda _=False: FsOps.open_path(path))
+        return GridActionCell(btn_open)
+
+    def _clear_contents_loaded(self, root_key: str) -> None:
+        """Esquece o conteúdo carregado de um ramo (recarrega ao expandir)."""
+        prefix = root_key + os.sep
+        self._contents_loaded.discard(root_key)
+        for key in [k for k in self._contents_loaded if k.startswith(prefix)]:
+            self._contents_loaded.discard(key)
+        self._content_queue = deque(
+            item for item in self._content_queue
+            if not item[0].startswith(prefix)
+        )
+
+    def _load_contents_for_expanded(self) -> None:
+        """Recarrega o conteúdo das pastas que ficaram abertas após um reload."""
+        for key in self._tree.expanded_keys():
+            if self._tree.node_kind(key) in ("project", "folder", "subfolder"):
+                self._load_folder_contents(key)
 
     # ── Estatísticas ─────────────────────────────────────────────────
 
@@ -874,6 +1035,7 @@ class ProjectStructurePlugin(BasePlugin):
         key = scan.path
         expected_years = [str(year) for year in Scanner.DEFAULT_YEARS]
         expanded = self._expanded_branch(key)
+        self._clear_contents_loaded(key)
         self._render_queue.clear()
         self._register_project_counts(key, scan.structure, scan.years)
         self._append_project_children(
@@ -904,9 +1066,17 @@ class ProjectStructurePlugin(BasePlugin):
         )
 
     def _on_node_expanded(self, key: str) -> None:
-        """Atualiza um projeto ao ser aberto (se estiver defasado)."""
-        if self._loading or self._tree.node_kind(key) != "project":
+        """Atualiza o projeto (se defasado) e carrega o conteúdo da pasta."""
+        if self._loading:
             return
+        kind = self._tree.node_kind(key)
+        if kind == "project":
+            self._maybe_refresh_project(key)
+        if kind in ("project", "folder", "subfolder"):
+            self._load_folder_contents(key)
+
+    def _maybe_refresh_project(self, key: str) -> None:
+        """Re-escaneia um projeto ao ser aberto, se estiver defasado."""
         if self._resolve_project(Path(key)) != Path(key):
             return
         if time.monotonic() - self._refreshed_at.get(key, 0.0) < (
@@ -1194,7 +1364,11 @@ class ProjectStructurePlugin(BasePlugin):
         )
 
     def _on_node_activated(self, key: str) -> None:
-        """Abre no explorer o caminho do nó com duplo clique."""
+        """Abre o nó com duplo clique (arquivo no app padrão; pasta no explorer)."""
         path = Path(key)
-        if path.exists():
-            FsOps.open_in_explorer(path)
+        if not path.exists():
+            return
+        if self._tree.node_kind(key) == "file":
+            FsOps.open_path(path)
+            return
+        FsOps.open_in_explorer(path)

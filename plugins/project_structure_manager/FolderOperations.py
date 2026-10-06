@@ -177,9 +177,8 @@ def merge_folders(source: Path, destination: Path) -> List[str]:
     return conflicts
 
 
-def open_in_explorer(path: Path) -> None:
-    """Abre ``path`` no gerenciador de arquivos do sistema."""
-    target = Path(path)
+def _launch(target: Path) -> None:
+    """Abre ``target`` no shell do sistema e registra eventuais falhas."""
     try:
         if sys.platform.startswith("win"):
             os.startfile(str(target))
@@ -189,11 +188,21 @@ def open_in_explorer(path: Path) -> None:
             subprocess.Popen(["xdg-open", str(target)])
     except Exception as e:
         _logger().error(
-            "Falha ao abrir no explorer",
+            "Falha ao abrir caminho",
             code="PSM_OPEN_ERR",
             error=str(e),
             path=str(target),
         )
+
+
+def open_in_explorer(path: Path) -> None:
+    """Abre ``path`` (pasta) no gerenciador de arquivos do sistema."""
+    _launch(Path(path))
+
+
+def open_path(path: Path) -> None:
+    """Abre ``path`` no programa padrão (arquivo) ou no explorer (pasta)."""
+    _launch(Path(path))
 
 
 class FolderOperationSignals(QObject):
