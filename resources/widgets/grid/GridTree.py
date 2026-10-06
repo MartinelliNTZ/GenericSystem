@@ -35,8 +35,8 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QIcon
 from PySide6.QtWidgets import (
     QHeaderView,
     QTreeWidget,
@@ -72,6 +72,7 @@ class GridTree(QTreeWidget):
         self.setHeaderLabels([col.get("header", "") for col in self._columns])
         self.setAnimated(True)
         self.setIndentation(20)
+        self.setIconSize(QSize(16, 16))
         self.setRootIsDecorated(True)
         self.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
 
@@ -104,6 +105,7 @@ class GridTree(QTreeWidget):
         *,
         parent_key: Optional[str] = None,
         colors: Optional[Dict[int, str]] = None,
+        icons: Optional[Dict[int, QIcon]] = None,
         bold: bool = False,
         kind: str = "",
     ) -> Optional[QTreeWidgetItem]:
@@ -115,6 +117,7 @@ class GridTree(QTreeWidget):
             texts: Mapa {coluna: texto}.
             parent_key: Chave do nó pai (None = top-level).
             colors: Mapa {coluna: cor} aplicado como foreground.
+            icons: Mapa {coluna: QIcon} aplicado como ícone da célula.
             bold: Se True, aplica negrito na coluna 0.
             kind: Rótulo livre do tipo de nó.
 
@@ -136,6 +139,10 @@ class GridTree(QTreeWidget):
         if colors:
             for col, color in colors.items():
                 item.setForeground(col, QColor(color))
+
+        if icons:
+            for col, icon in icons.items():
+                item.setIcon(col, icon)
 
         if bold:
             font = QFont()
@@ -173,6 +180,18 @@ class GridTree(QTreeWidget):
         item = self._nodes.get(key)
         if item is not None:
             self.setItemWidget(item, col, widget)
+
+    def set_cell_icon(self, key: str, col: int, icon: QIcon) -> None:
+        """Define o ícone de uma célula."""
+        item = self._nodes.get(key)
+        if item is not None:
+            item.setIcon(col, icon)
+
+    def clear_cell_icon(self, key: str, col: int) -> None:
+        """Remove o ícone de uma célula."""
+        item = self._nodes.get(key)
+        if item is not None:
+            item.setIcon(col, QIcon())
 
     def remove_node(self, key: str) -> None:
         """Remove um nó pelo índice (índice e árvore)."""

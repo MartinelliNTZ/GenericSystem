@@ -40,10 +40,12 @@ from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.project_structure_manager import FolderOperations as FsOps
 from plugins.project_structure_manager import ProjectStructureScanner as Scanner
+from resources.IconManager import IconManager
 from resources.styles.AppStyles import AppStyles
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
 from resources.widgets.grid.GridActionCell import GridActionCell
 from resources.widgets.grid.GridCardView import GridCardView
+from resources.widgets.grid.GridCheckBox import GridCheckBox
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
 from resources.widgets.grid.GridLabel import GridLabel
 from resources.widgets.grid.GridLineEdit import GridLineEdit
@@ -216,17 +218,23 @@ class ProjectStructurePlugin(BasePlugin):
         super().closeEvent(event)
 
     def load_prefs(self) -> None:
-        """Carrega a pasta-mãe salva (Contrato 4)."""
+        """Carrega a pasta-mãe e as preferências de exibição (Contrato 4)."""
         saved = self.preferences.get("mother_folder", "")
         self._mother_folder: Optional[Path] = Path(saved) if saved else None
         if saved:
             self._selector.set_path(saved)
+        self._show_icons = bool(self.preferences.get("show_icons", True))
+        if not self._show_icons:
+            self._icons_cb.blockSignals(True)
+            self._icons_cb.set_checked("icons", False)
+            self._icons_cb.blockSignals(False)
 
     def save_prefs(self) -> None:
-        """Persiste a pasta-mãe atual."""
+        """Persiste a pasta-mãe e a preferência de exibição de ícones."""
         self.preferences["mother_folder"] = (
             str(self._mother_folder) if self._mother_folder else ""
         )
+        self.preferences["show_icons"] = self._show_icons
 
     # ── UI ───────────────────────────────────────────────────────────
 
@@ -255,8 +263,19 @@ class ProjectStructurePlugin(BasePlugin):
         grupo_pesquisa = GroupPainel("Pesquisa")
         grupo_pesquisa.group_layout.addWidget(self._filter)
 
+        self._icons_cb = GridCheckBox({
+            "icons": {
+                "label": "Ícones do sistema",
+                "description": "Exibe os ícones nativos do Windows em arquivos e pastas",
+                "default": True,
+            },
+        }, num_columns=1)
+        self._icons_cb.changed.connect(self._on_icons_toggled)
+        grupo_exibicao = GroupPainel("Exibição")
+        grupo_exibicao.group_layout.addWidget(self._icons_cb)
+
         self.main_layout.addWidget(
-            GridGroupPainel(grupo_origem, grupo_pesquisa)
+            GridGroupPainel(grupo_origem, grupo_pesquisa, grupo_exibicao)
         )
         self._build_cards()
         self._build_tree()
@@ -634,6 +653,7 @@ class ProjectStructurePlugin(BasePlugin):
         self._tree.set_cell_widget(
             key, self._COL_ACTIONS, self._build_project_actions(structure.path)
         )
+        self._apply_icon(key, structure.path, True)
         self._request_statistics(key, structure.path)
 
     def _render_folder(self, project: Path, folder: Scanner.FolderStatus) -> None:
@@ -655,6 +675,7 @@ class ProjectStructurePlugin(BasePlugin):
             colors={self._COL_NAME: color, self._COL_STATUS: color},
             kind="folder",
         )
+        self._apply_icon(key, Path(key), True)
         if missing:
             self._tree.set_cell_widget(
                 key,
@@ -695,6 +716,7 @@ class ProjectStructurePlugin(BasePlugin):
             colors={self._COL_NAME: color, self._COL_STATUS: color},
             kind="folder",
         )
+        self._apply_icon(key, Path(key), True)
         if missing:
             self._tree.set_cell_widget(
                 key,
@@ -792,6 +814,7 @@ class ProjectStructurePlugin(BasePlugin):
         self._tree.set_cell_widget(
             key, self._COL_ACTIONS, self._build_subfolder_actions(path)
         )
+        self._apply_icon(key, path, True)
         self._request_statistics(key, path)
 
     def _render_file(self, parent_key: str, path: Path, size: int) -> None:
@@ -819,6 +842,7 @@ class ProjectStructurePlugin(BasePlugin):
         self._tree.set_cell_widget(
             key, self._COL_ACTIONS, self._build_file_actions(path)
         )
+        self._apply_icon(key, path, False)
 
     def _build_subfolder_actions(self, path: Path) -> GridActionCell:
         """Célula de ações de uma subpasta: Abrir no gerenciador de arquivos."""
@@ -833,6 +857,28 @@ class ProjectStructurePlugin(BasePlugin):
         btn_open = SimpleSecondaryButton("Abrir", glow=False)
         btn_open.clicked.connect(lambda _=False: FsOps.open_path(path))
         return GridActionCell(btn_open)
+
+    def _apply_icon(self, key: str, path: Path, is_dir: bool) -> None:
+        """Aplica (ou limpa) o ícone do sistema na coluna de nome do nó."""
+        if not self._show_icons:
+            self._tree.clear_cell_icon(key, self._COL_NAME)
+            return
+        self._tree.set_cell_icon(
+            key,
+            self._COL_NAME,
+            IconManager.system_icon(str(path), is_dir=is_dir),
+        )
+
+    def _on_icons_toggled(self) -> None:
+        """Alterna a exibição dos ícones e reaplica nos nós já renderizados."""
+        self._show_icons = self._icons_cb.is_item_checked("icons")
+        self.save_prefs()
+        for key in self._tree.keys():
+            if not self._show_icons:
+                self._tree.clear_cell_icon(key, self._COL_NAME)
+                continue
+            is_dir = self._tree.node_kind(key) != "file"
+            self._apply_icon(key, Path(key), is_dir)
 
     def _clear_contents_loaded(self, root_key: str) -> None:
         """Esquece o conteúdo carregado de um ramo (recarrega ao expandir)."""

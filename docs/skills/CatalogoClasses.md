@@ -109,7 +109,7 @@
 ### resources/
 | Classe | Descrição |
 |---|---|
-| `IconManager` | Gerenciador de ícones do sistema, fornece ícones default e por ferramenta |
+| `IconManager` | Gerenciador de ícones do sistema; ícones default/por ferramenta (`get`, `get_tool_icon`) e ícones nativos do SO (`system_icon`) |
 
 ---
 

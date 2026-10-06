@@ -1,3 +1,9 @@
+[1.4.7][2026.10.06][09:30] - Gerenciador de Estrutura: ícones nativos do Windows na árvore
+  - resources/IconManager.py: novo system_icon(path, is_dir) — ícone nativo via QFileIconProvider (cache: 1 para pastas + 1 por extensão), fallback estático (folder.ico/file1.ico) e log ICON_SYS_ERR
+  - resources/widgets/grid/GridTree.py: novos set_cell_icon(key, col, icon) e clear_cell_icon(key, col), parâmetro opcional icons em add_node e setIconSize(16x16)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: ícones do sistema em arquivos, subpastas e pastas do template via _apply_icon (criados apenas na GUI thread); toggle "Ícones do sistema" no GroupPainel "Exibição" com persistência (pref show_icons)
+  - docs/skills/SKILL_WIDGETS.md: GridTree atualizado (set_cell_icon, clear_cell_icon, icons)
+
 [1.4.6][2026.10.06][09:00] - Gerenciador de Estrutura: navegação de arquivos na árvore
   - plugins/project_structure_manager/ProjectStructurePlugin.py: a árvore agora exibe subpastas e ARQUIVOS reais de cada pasta, carregados sob demanda ao expandir o nó (kinds "subfolder"/"file"); nós já validados pelo template são preservados (duplicados ignorados via has_node)
   - plugins/project_structure_manager/ProjectStructurePlugin.py: novos _load_folder_contents, _on_folder_contents e _render_content_batch (render em lotes via QTimer) + célula de ação "Abrir" por arquivo/subpasta; duplo clique abre o arquivo no programa padrão e a pasta no explorer
