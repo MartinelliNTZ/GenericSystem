@@ -23,6 +23,8 @@ from PySide6.QtCore import QThreadPool, QTimer
 from core.enum.ToolKey import ToolKey
 from core.firebase.FirebaseAuthService import FirebaseAuthService
 from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
+from core.firebase.FirebaseServiceAccountAuth import FirebaseServiceAccountAuth
+from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider
 from core.firebase.CloudDatabaseSync import CloudDatabaseSync
 from core.firebase.FirebaseWorker import FirebaseWorker
 from core.manager.SignalManager import SignalManager
@@ -118,6 +120,12 @@ class ProjectDatabasePlugin(BasePlugin):
 
     def _ensure_firebase_credentials(self) -> None:
         """Garante a autenticação Firebase via credenciais salvas ou diálogo inicial."""
+        if FirebaseServiceAccountAuth.is_configured():
+            self.logger.info(
+                "Conta de serviço configurada — login de usuário dispensado",
+                code="FB_SA_CONFIGURED",
+            )
+            return
         if FirebaseCredentialManager.has_saved_credentials():
             creds = FirebaseCredentialManager.load_credentials()
             if creds and creds.get("email") and creds.get("password"):
@@ -386,8 +394,8 @@ class ProjectDatabasePlugin(BasePlugin):
         local_dir = self._cloud_dir()
         if local_dir is None or not local_dir.is_dir():
             return
-        if not FirebaseAuthService.is_authenticated():
-            self.logger.info("Push ignorado: sessão Firebase inativa", code="PDB_PUSH_OFFLINE")
+        if not FirebaseTokenProvider.has_credentials():
+            self.logger.info("Push ignorado: sem credenciais Firebase", code="PDB_PUSH_OFFLINE")
             return
         self._sync_worker = FirebaseWorker(
             CloudDatabaseSync.push,
@@ -420,9 +428,9 @@ class ProjectDatabasePlugin(BasePlugin):
                 parent=self,
             )
             return
-        if not FirebaseAuthService.is_authenticated():
+        if not FirebaseTokenProvider.has_credentials():
             MessageBox.show_warning(
-                "Conecte ao Firebase para sincronizar o banco de dados.",
+                "Configure a conta de serviço ou conecte ao Firebase para sincronizar.",
                 title="Banco de Dados",
                 parent=self,
             )

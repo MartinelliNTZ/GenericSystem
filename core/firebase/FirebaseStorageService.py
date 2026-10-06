@@ -14,11 +14,10 @@ from typing import Callable, Optional
 import requests
 
 from core.enum.ToolKey import ToolKey
-from core.firebase.FirebaseAuthService import FirebaseAuthService
 from core.firebase.FirebaseConfig import FirebaseConfig
+from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider
 from core.manager.SignalManager import SignalManager
 from utils.BaseUtil import BaseUtil
-from utils.Preferences import Preferences
 
 
 class FirebaseStorageService(BaseUtil):
@@ -26,8 +25,7 @@ class FirebaseStorageService(BaseUtil):
 
     @classmethod
     def _get_token(cls) -> str:
-        prefs = Preferences.load_tool_prefs(ToolKey.FIREBASE)
-        return prefs.get("id_token", "")
+        return FirebaseTokenProvider.get_token()
 
     @classmethod
     def upload_file(
@@ -68,7 +66,7 @@ class FirebaseStorageService(BaseUtil):
 
             resp = requests.post(url, data=data, headers=headers, timeout=120)
             if resp.status_code == 401:
-                token = FirebaseAuthService.refresh_id_token()
+                token = FirebaseTokenProvider.refresh()
                 if token:
                     headers["Authorization"] = f"Bearer {token}"
                     resp = requests.post(url, data=data, headers=headers, timeout=120)
@@ -117,7 +115,7 @@ class FirebaseStorageService(BaseUtil):
         try:
             resp = requests.get(url, headers=headers, stream=True, timeout=120)
             if resp.status_code == 401:
-                token = FirebaseAuthService.refresh_id_token()
+                token = FirebaseTokenProvider.refresh()
                 if token:
                     headers["Authorization"] = f"Bearer {token}"
                     resp = requests.get(url, headers=headers, stream=True, timeout=120)

@@ -54,6 +54,8 @@
 |---|---|
 | `FirebaseConfig` | Leitura de credenciais/parâmetros do Firebase via Preferences ou variáveis de ambiente |
 | `FirebaseAuthService` | Autenticação (login/logout/refresh de token) via REST do Firebase Auth |
+| `FirebaseServiceAccountAuth` | Token OAuth2 via conta de serviço (Admin SDK) — dispensa Web API Key e login de usuário; cache + renovação automática |
+| `FirebaseTokenProvider` | Resolve o token Bearer (conta de serviço primeiro; senão sessão de usuário) |
 | `FirestoreService` | Operações REST no Cloud Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `delete_document`) com conversão automática de tipos |
 | `CloudDatabaseSync` | Espelha um diretório de JSONs (`.BancoDados`) ↔ coleção Firestore (`push`/`pull`) com metadados em `.cloud/meta.json` |
 | `FirebaseStorageService` | Upload/download de arquivos no Firebase Storage |

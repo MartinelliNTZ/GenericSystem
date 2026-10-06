@@ -23,6 +23,8 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 |---|---|---|
 | `FirebaseConfig` | `core/firebase/FirebaseConfig.py` | Credenciais (Preferences `Firebase` / env vars) |
 | `FirebaseAuthService` | `core/firebase/FirebaseAuthService.py` | Login/logout/refresh (Identity Toolkit) |
+| `FirebaseServiceAccountAuth` | `core/firebase/FirebaseServiceAccountAuth.py` | Token OAuth2 da conta de serviço (Admin SDK) — cache + renovação |
+| `FirebaseTokenProvider` | `core/firebase/FirebaseTokenProvider.py` | Resolve o token Bearer (conta de serviço ou usuário) |
 | `FirestoreService` | `core/firebase/FirestoreService.py` | CRUD REST no Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `delete_document`) |
 | `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Sincroniza um diretório de JSONs ↔ uma coleção Firestore (`push` / `pull`) |
 | `FirebaseWorker` | `core/firebase/FirebaseWorker.py` | Execução assíncrona (QThread) |
@@ -48,6 +50,36 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
   confundido com um documento do banco.
 - A gravação é **atômica** (`<arquivo>.tmp` + `os.replace`) em `ProjectDatabaseStore`
   e em `CloudDatabaseSync`.
+
+## Autenticação
+
+A ordem de prioridade na resolução do token (``Bearer``) é definida pelo
+`FirebaseTokenProvider`:
+
+1. **Conta de serviço (Admin SDK)** — se `service_account_path` apontar para um
+   JSON válido, o `FirebaseServiceAccountAuth` obtém um token OAuth2 e o usa em
+   todas as chamadas REST. **Não exige Web API Key nem login de usuário.**
+2. **Sessão de usuário** — sem conta de serviço, usa o `id_token` do login
+   e-mail/senha (Preferences `Firebase`).
+
+- `FirebaseTokenProvider.get_token()` → token atual (conta de serviço primeiro).
+- `FirebaseTokenProvider.has_credentials()` → True se houver qualquer credencial.
+- `FirebaseTokenProvider.refresh()` → renova (usado no tratamento de 401).
+- O token da conta de serviço é **cacheado** e renovado ~60s antes de expirar,
+  com escopos `datastore` + `devstorage.read_write`.
+- Requer o pacote `google-auth` (ver `requirements.txt`).
+
+Configuração mínima (seção `Firebase` em `config/<APP_SLUG>_preferences.json`):
+
+```json
+"Firebase": {
+  "project_id": "verrafarmer",
+  "service_account_path": "config/verrafarmer-firebase-adminsdk-XXXX.json"
+}
+```
+
+> A `api_key` (**Web API Key**) só é necessária no modo usuário. Com conta de
+> serviço, `project_id` + `service_account_path` bastam.
 
 ## Fluxo de Sincronização
 

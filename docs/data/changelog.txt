@@ -1,3 +1,14 @@
+[1.5.3][2026.10.06][15:10] - Firebase: autenticação por conta de serviço (Admin SDK) — dispensa Web API Key/login de usuário
+  - core/firebase/FirebaseServiceAccountAuth.py: NOVO — obtém/cacheia/renova token OAuth2 do JSON de conta de serviço (escopos datastore + devstorage.read_write)
+  - core/firebase/FirebaseTokenProvider.py: NOVO — resolve o token Bearer (conta de serviço primeiro; senão id_token do usuário)
+  - core/firebase/FirestoreService.py e FirebaseStorageService.py: passam a usar o FirebaseTokenProvider (Bearer + refresh em 401)
+  - core/firebase/__init__.py: exporta FirebaseServiceAccountAuth e FirebaseTokenProvider
+  - plugins/project_database_manager/ProjectDatabasePlugin.py: pula o diálogo de login quando há conta de serviço e usa FirebaseTokenProvider.has_credentials() nos portões de sync
+  - requirements.txt: adicionado google-auth>=2.0.0
+  - config/<APP_SLUG>_preferences.json: seção Firebase com project_id, storage_bucket e service_account_path
+  - docs/skills/SKILL_DATABASE.md + CatalogoClasses.md: documentada a autenticação por conta de serviço
+
+
 [1.5.2][2026.10.06][14:30] - Banco de Dados: Firebase oficial + espelho JSON offline + log desacoplado
   - core/config/LogUtils.py: suporte a CANAIS de log — cada canal escreve um arquivo JSON próprio (canal "main" => log/<ts>_<APP_SLUG>.json; canais nomeados => log/<canal>/<ts>_<canal>.json); campo "channel" no evento; constantes DEFAULT_CHANNEL e DATABASE_CHANNEL; estado de sessão por canal
   - utils/BaseUtil.py: _get_logger aceita parâmetro channel opcional

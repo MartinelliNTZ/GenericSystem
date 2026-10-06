@@ -13,10 +13,9 @@ import requests
 
 from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
-from core.firebase.FirebaseAuthService import FirebaseAuthService
 from core.firebase.FirebaseConfig import FirebaseConfig
+from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider
 from utils.BaseUtil import BaseUtil
-from utils.Preferences import Preferences
 
 
 class FirestoreService(BaseUtil):
@@ -29,8 +28,7 @@ class FirestoreService(BaseUtil):
 
     @classmethod
     def _auth_headers(cls) -> Dict[str, str]:
-        prefs = Preferences.load_tool_prefs(ToolKey.FIREBASE)
-        token = prefs.get("id_token", "")
+        token = FirebaseTokenProvider.get_token()
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -112,7 +110,7 @@ class FirestoreService(BaseUtil):
         try:
             resp = requests.get(url, headers=cls._auth_headers(), timeout=12)
             if resp.status_code == 401:
-                new_token = FirebaseAuthService.refresh_id_token()
+                new_token = FirebaseTokenProvider.refresh()
                 if new_token:
                     resp = requests.get(url, headers=cls._auth_headers(), timeout=12)
 
@@ -140,7 +138,7 @@ class FirestoreService(BaseUtil):
         try:
             resp = requests.patch(url, json=payload, headers=cls._auth_headers(), timeout=12)
             if resp.status_code == 401:
-                new_token = FirebaseAuthService.refresh_id_token()
+                new_token = FirebaseTokenProvider.refresh()
                 if new_token:
                     resp = requests.patch(url, json=payload, headers=cls._auth_headers(), timeout=12)
 
@@ -167,7 +165,7 @@ class FirestoreService(BaseUtil):
         try:
             resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
             if resp.status_code == 401:
-                new_token = FirebaseAuthService.refresh_id_token()
+                new_token = FirebaseTokenProvider.refresh()
                 if new_token:
                     resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
 
@@ -201,7 +199,7 @@ class FirestoreService(BaseUtil):
         try:
             resp = requests.delete(url, headers=cls._auth_headers(), timeout=12)
             if resp.status_code == 401:
-                new_token = FirebaseAuthService.refresh_id_token()
+                new_token = FirebaseTokenProvider.refresh()
                 if new_token:
                     resp = requests.delete(url, headers=cls._auth_headers(), timeout=12)
 
