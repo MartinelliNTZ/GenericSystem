@@ -28,7 +28,7 @@ class LogCleanup:
     _LOG_DIR: Path = Path(__file__).resolve().parent.parent.parent / "log"
 
     @classmethod
-    def run(cls, max_files: int = 5) -> int:
+    def run(cls, max_files: int = 5, channel: str = "") -> int:
         """
         Mantém apenas os ``max_files`` arquivos .json mais recentes.
 
@@ -38,7 +38,7 @@ class LogCleanup:
         Retorna:
             Quantidade de arquivos removidos.
         """
-        logs = cls._list_logs()
+        logs = cls._list_logs(cls._channel_dir(channel))
         if len(logs) <= max_files:
             return 0
 
@@ -58,11 +58,16 @@ class LogCleanup:
         return removed
 
     @classmethod
-    def _list_logs(cls) -> List[Path]:
+    def _channel_dir(cls, channel: str) -> Path:
+        """Retorna o diretório de log do canal (vazio = raiz ``log/``)."""
+        return cls._LOG_DIR / channel if channel else cls._LOG_DIR
+
+    @classmethod
+    def _list_logs(cls, directory: Path) -> List[Path]:
         """Lista todos os arquivos .json dentro do diretorio de log."""
-        if not cls._LOG_DIR.is_dir():
+        if not directory.is_dir():
             return []
         return sorted(
-            p for p in cls._LOG_DIR.iterdir()
+            p for p in directory.iterdir()
             if p.is_file() and p.suffix.lower() == ".json"
         )

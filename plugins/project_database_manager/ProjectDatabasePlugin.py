@@ -23,6 +23,7 @@ from PySide6.QtCore import QThreadPool, QTimer
 from core.enum.ToolKey import ToolKey
 from core.firebase.FirebaseAuthService import FirebaseAuthService
 from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
+from core.firebase.CloudDatabaseSync import CloudDatabaseSync
 from core.firebase.FirebaseWorker import FirebaseWorker
 from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
@@ -55,6 +56,9 @@ class ProjectDatabasePlugin(BasePlugin):
     _COL_YEARS = 3
     _COL_PATH = 4
 
+    # Coleção do Cloud Firestore onde o banco é espelhado.
+    _CLOUD_COLLECTION = "banco_dados"
+
     # Tempo (ms) que o 100% fica visível antes de resetar a barra central.
     _PROGRESS_RESET_MS = 1200
 
@@ -64,11 +68,17 @@ class ProjectDatabasePlugin(BasePlugin):
             parent=parent,
             title="Banco de Dados",
             buttons_config={
+                "sincronizar": {
+                    "text": "SINCRONIZAR NUVEM",
+                    "callback": self._on_sync_clicked,
+                    "type": "secondary",
+                    "description": "Baixa atualizações do Firebase e regrava os JSONs",
+                },
                 "atualizar": {
                     "text": "ATUALIZAR DADOS",
                     "callback": self._on_refresh_clicked,
                     "type": "primary",
-                    "description": "Recalcula e grava os dados das OS",
+                    "description": "Recalcula, grava e espelha os dados das OS na nuvem",
                 },
             },
         )
@@ -82,6 +92,7 @@ class ProjectDatabasePlugin(BasePlugin):
         self._generation = 0
         self._worker: Optional[ProjectDatabaseWorker] = None
         self._auth_worker: Optional[FirebaseWorker] = None
+        self._sync_worker: Optional[FirebaseWorker] = None
         self._database: Dict[str, Any] = {}
         self._suspend_backup_cb = False
         self._pool = QThreadPool(self)
@@ -97,6 +108,9 @@ class ProjectDatabasePlugin(BasePlugin):
         if self._auth_worker is not None and self._auth_worker.isRunning():
             self._auth_worker.quit()
             self._auth_worker.wait(1000)
+        if self._sync_worker is not None and self._sync_worker.isRunning():
+            self._sync_worker.quit()
+            self._sync_worker.wait(1000)
         self._pool.clear()
         super().closeEvent(event)
 
@@ -340,6 +354,7 @@ class ProjectDatabasePlugin(BasePlugin):
         )
         MessageBox.show_toast(message, parent=self)
         SignalManager.instance().console_message.emit(message)
+        self._push_to_cloud_async()
         self._finish_progress()
 
     def _on_failed(self, generation: int, message: str) -> None:
@@ -357,6 +372,103 @@ class ProjectDatabasePlugin(BasePlugin):
         self.page.set_badge(self.page.ERROR)
         self.page.buttons.set_enabled("atualizar", True)
         SignalManager.instance().progress_reset.emit()
+
+    # ── Sincronização com a nuvem (Firestore) ────────────────────────
+
+    def _cloud_dir(self) -> Optional[Path]:
+        """Diretório local do banco (``<pasta-mãe>/.BancoDados``)."""
+        if self._mother_folder is None:
+            return None
+        return ProjectDatabaseStore.db_dir(self._mother_folder)
+
+    def _push_to_cloud_async(self) -> None:
+        """Espelha o banco local no Firestore (se houver sessão ativa)."""
+        local_dir = self._cloud_dir()
+        if local_dir is None or not local_dir.is_dir():
+            return
+        if not FirebaseAuthService.is_authenticated():
+            self.logger.info("Push ignorado: sessão Firebase inativa", code="PDB_PUSH_OFFLINE")
+            return
+        self._sync_worker = FirebaseWorker(
+            CloudDatabaseSync.push,
+            str(local_dir),
+            self._CLOUD_COLLECTION,
+            tool_key=ToolKey.PROJECT_DATABASE.value,
+            parent=self,
+        )
+        self._sync_worker.finished_with_result.connect(self._on_push_result)
+        self._sync_worker.failed.connect(self._on_sync_failed)
+        self._sync_worker.start()
+
+    def _on_push_result(self, result: Optional[Dict[str, Any]]) -> None:
+        """Trata o resultado do espelhamento local → nuvem."""
+        pushed = (result or {}).get("pushed", 0)
+        self.logger.info(f"Banco espelhado na nuvem: {pushed} documento(s)", code="PDB_PUSH_OK")
+        SignalManager.instance().cloud_sync_status.emit({
+            "status": "completed",
+            "message": f"Banco espelhado: {pushed} documento(s)",
+            "progress": 100.0,
+        })
+
+    def _on_sync_clicked(self) -> None:
+        """Baixa as atualizações da nuvem e regrava os JSONs locais."""
+        if self._mother_folder is None:
+            self.page.set_badge(self.page.INFO)
+            MessageBox.show_warning(
+                "Defina a pasta-mãe no Gerenciador de Estrutura antes de sincronizar.",
+                title="Banco de Dados",
+                parent=self,
+            )
+            return
+        if not FirebaseAuthService.is_authenticated():
+            MessageBox.show_warning(
+                "Conecte ao Firebase para sincronizar o banco de dados.",
+                title="Banco de Dados",
+                parent=self,
+            )
+            return
+        self._start_pull()
+
+    def _start_pull(self) -> None:
+        """Inicia o download assíncrono do banco a partir do Firestore."""
+        local_dir = self._cloud_dir()
+        if local_dir is None:
+            return
+        self.page.set_badge(self.page.RUNNING)
+        self.page.buttons.set_enabled("sincronizar", False)
+        self.page.buttons.set_enabled("atualizar", False)
+        SignalManager.instance().console_message.emit("Baixando atualizações do banco...")
+        self._sync_worker = FirebaseWorker(
+            CloudDatabaseSync.pull,
+            str(local_dir),
+            self._CLOUD_COLLECTION,
+            tool_key=ToolKey.PROJECT_DATABASE.value,
+            parent=self,
+        )
+        self._sync_worker.finished_with_result.connect(self._on_pull_result)
+        self._sync_worker.failed.connect(self._on_sync_failed)
+        self._sync_worker.start()
+
+    def _on_pull_result(self, result: Optional[Dict[str, Any]]) -> None:
+        """Aplica os JSONs baixados, recarrega e re-renderiza o banco."""
+        pulled = (result or {}).get("pulled", 0)
+        self.page.set_badge(self.page.PRONTA)
+        self.page.buttons.set_enabled("sincronizar", True)
+        self.page.buttons.set_enabled("atualizar", True)
+        self._load_from_disk()
+        message = f"Nuvem sincronizada: {pulled} arquivo(s) restaurado(s)."
+        MessageBox.show_toast(message, parent=self)
+        SignalManager.instance().console_message.emit(message)
+
+    def _on_sync_failed(self, message: str) -> None:
+        """Trata falhas de sincronização (push/pull) em background."""
+        self.logger.error("Falha na sincronização com a nuvem", code="PDB_SYNC_ERR", error=message)
+        self.page.set_badge(self.page.ERROR)
+        self.page.buttons.set_enabled("sincronizar", True)
+        self.page.buttons.set_enabled("atualizar", True)
+        MessageBox.show_toast(
+            f"Erro na sincronização: {message}", is_error=True, parent=self
+        )
 
     def _finish_progress(self) -> None:
         """Mostra 100% e agenda o reset da barra central."""

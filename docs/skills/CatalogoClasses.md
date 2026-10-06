@@ -6,8 +6,8 @@
 | Classe | Descrição |
 |---|---|
 | `BootStrap` | Singleton que orquestra toda a inicialização da aplicação (ambiente, logging, QApplication, registro de ferramentas, MainWindow) |
-| `LogUtils` | Logger responsável por escrever mensagens JSON de execução e debug do software |
-| `LogCleanup` | Gerencia limpeza de arquivos de log antigos, mantendo apenas os N mais recentes |
+| `LogUtils` | Logger que escreve eventos JSON por **canal**: o canal padrão (`main`) vai para `log/` e canais nomeados (ex: `database`) vão para subpastas próprias — ver SKILL_DATABASE.md |
+| `LogCleanup` | Limpeza de logs antigos por canal, mantendo os N arquivos mais recentes (`run(max_files, channel)`) |
 | `LogFilter` | Filtro customizado para o sistema de logging (formatação, nível, etc.) |
 | `MenuManager` | Gerencia a construção da toolbar com grupos de ferramentas (ToolGroup) e emite sinais ao clicar em um botão |
 | `ToolRegistry` | Registry singleton que armazena e gerencia todas as definições de ferramentas (Tool) do sistema |
@@ -49,6 +49,17 @@
 |---|---|
 | `LogDetailDialog` | Diálogo de detalhes de log, exibe informações completas de uma entrada de log |
 
+### core/firebase/
+| Classe | Descrição |
+|---|---|
+| `FirebaseConfig` | Leitura de credenciais/parâmetros do Firebase via Preferences ou variáveis de ambiente |
+| `FirebaseAuthService` | Autenticação (login/logout/refresh de token) via REST do Firebase Auth |
+| `FirestoreService` | Operações REST no Cloud Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `delete_document`) com conversão automática de tipos |
+| `CloudDatabaseSync` | Espelha um diretório de JSONs (`.BancoDados`) ↔ coleção Firestore (`push`/`pull`) com metadados em `.cloud/meta.json` |
+| `FirebaseStorageService` | Upload/download de arquivos no Firebase Storage |
+| `FirebaseWorker` | Executor assíncrono (QThread) de operações Firebase |
+| `FirebaseCredentialManager` | Persistência criptografada de credenciais (`config/.firebase_auth.enc`) |
+
 ---
 
 ## plugins/ — Ferramentas (Plugins)
@@ -74,6 +85,13 @@
 | `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes e as subpastas de template de uma pasta de topo (ex: `14_RELATORIO`) são validadas na árvore e criadas junto com a pasta; toda pasta com conteúdo em disco aparece expansível (subpastas/arquivos carregados sob demanda via `set_node_expandable`) |
 | `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano, o template completo de documentos e o template de subpastas das pastas de topo via `scan_project_trees`) e estatísticas; `folder_has_items(path)` indica se uma pasta tem conteúdo (indicador de expansão); `StatisticsWorker` calcula em background |
 | `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + templates (`create_template`, `create_document_year`, `create_project_folder`) + abertura no explorer; `RenameFolderWorker` |
+
+### plugins/project_database_manager/
+| Classe | Descrição |
+|---|---|
+| `ProjectDatabasePlugin` | Ferramenta CENTRAL do banco de dados: cards, árvore OS/Cliente/Pastas/Anos, ATUALIZAR DADOS (push para o Firestore) e SINCRONIZAR NUVEM (pull) |
+| `ProjectDatabaseService` (módulo) | Monta os registros por OS + banco consolidado e o `ProjectDatabaseWorker` (varredura em background) |
+| `ProjectDatabaseStore` (módulo) | Leitura/escrita atômica dos JSONs em `<pasta-mãe>/.BancoDados` |
 
 ---
 

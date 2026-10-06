@@ -36,17 +36,23 @@ class BaseUtil:
     """
 
     @classmethod
-    def _get_logger(cls, tool_key: str, class_name: Optional[str] = None) -> LogUtils:
+    def _get_logger(
+        cls,
+        tool_key: str,
+        class_name: Optional[str] = None,
+        channel: Optional[str] = None,
+    ) -> LogUtils:
         """
         Retorna uma instância de LogUtils para a classe e tool especificadas.
 
         Args:
             tool_key: Chave da ferramenta (ex: ToolKey.CONSOLE.value).
             class_name: Nome da classe (opcional; usa cls.__name__ se omitido).
+            channel: Canal de log (ex: LogUtils.DATABASE_CHANNEL). None = canal padrão.
 
         Returns:
             Instância de LogUtils configurada.
         """
         if class_name is None:
             class_name = cls.__name__
-        return LogUtils(tool=tool_key, class_name=class_name)
+        return LogUtils(tool=tool_key, class_name=class_name, channel=channel)

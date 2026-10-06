@@ -216,6 +216,36 @@ SignalManager.instance().hud_stage_done.emit(3)  # stage 3 concluido -> pula par
 - Registrar exceções e contexto (`logger.error("msg", code="COD", error=str(e))`).
 - Registrar variáveis, estados e entradas/saídas críticas.
 
+### Canais de log (arquivos separados)
+
+O `LogUtils` escreve **um arquivo JSON por canal**. O canal padrão (`main`)
+mantém o comportamento histórico (`log/<ts>_<APP_SLUG>.json`). Canais nomeados
+geram subpastas próprias — ex.: o canal `database` grava em
+`log/database/<ts>_database.json`, mantendo o registro do banco de dados
+**desacoplado** do log geral.
+
+```python
+from core.config.LogUtils import LogUtils
+from core.enum.ToolKey import ToolKey
+from utils.BaseUtil import BaseUtil
+
+# Canal padrão (log geral)
+self.logger.info("Executando")
+
+# Canal do banco de dados (arquivo separado)
+db_logger = BaseUtil._get_logger(
+    ToolKey.PROJECT_DATABASE.value, "CloudDatabaseSync",
+    channel=LogUtils.DATABASE_CHANNEL,
+)
+db_logger.info("Push concluído", code="CSYNC_PUSH_DONE")
+```
+
+- `LogUtils.DEFAULT_CHANNEL` = `"main"`; `LogUtils.DATABASE_CHANNEL` = `"database"`.
+- `BaseUtil._get_logger(tool_key, class_name, channel=None)` aceita o canal.
+- `LogCleanup.run(max_files=5, channel="database")` limpa um canal específico.
+
+Ver `docs/skills/SKILL_DATABASE.md` para o fluxo completo do banco de dados.
+
 ### 📝 Regras de Log
 
 **Prefira f-string de uma linha** em vez de dict com code/data excessivo:

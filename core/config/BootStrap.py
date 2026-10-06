@@ -97,6 +97,7 @@ class BootStrap:
         from core.config.LogUtils import LogUtils
 
         removed = LogCleanup.run(max_files=5)
+        LogCleanup.run(max_files=5, channel=LogUtils.DATABASE_CHANNEL)
         logger = LogUtils(tool="System", class_name="BootStrap")
         logger.info("Inicializacao do sistema", code="BOOT_OK", logs_removidos=removed)
 

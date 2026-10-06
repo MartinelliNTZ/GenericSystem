@@ -1,3 +1,16 @@
+[1.5.2][2026.10.06][14:30] - Banco de Dados: Firebase oficial + espelho JSON offline + log desacoplado
+  - core/config/LogUtils.py: suporte a CANAIS de log — cada canal escreve um arquivo JSON próprio (canal "main" => log/<ts>_<APP_SLUG>.json; canais nomeados => log/<canal>/<ts>_<canal>.json); campo "channel" no evento; constantes DEFAULT_CHANNEL e DATABASE_CHANNEL; estado de sessão por canal
+  - utils/BaseUtil.py: _get_logger aceita parâmetro channel opcional
+  - core/config/LogCleanup.py: run(max_files, channel) — limpeza de logs por canal
+  - core/config/BootStrap.py: limpa também o canal database no boot
+  - core/firebase/FirestoreService.py: novos list_documents, delete_document e save_documents; get_document/save_document aceitam tool_key e logam no canal database
+  - core/firebase/CloudDatabaseSync.py: NOVO — espelha um diretório de JSONs ↔ coleção Firestore (push/pull) com metadados em .cloud/meta.json, gravação atômica e log no canal database
+  - core/firebase/__init__.py: exporta CloudDatabaseSync
+  - plugins/project_database_manager/ProjectDatabasePlugin.py: ATUALIZAR DADOS passa a espelhar o banco no Firestore (push assíncrono); novo botão SINCRONIZAR NUVEM (pull -> regrava JSONs -> recarrega a árvore)
+  - docs/skills/SKILL_DATABASE.md: NOVA skill (Firebase oficial, espelho JSON, fluxo push/pull, log desacoplado)
+  - docs/skills/SKILL_AGENT.md, CatalogoClasses.md e SKILL_COMUNICATION.md: documentados o canal de log e os componentes de banco
+
+
 [1.5.1][2026.10.06][13:40] - Gerenciador de Estrutura: toda pasta com conteúdo aparece expansível
   - resources/widgets/grid/GridTree.py: novo set_node_expandable(key, expandable) — mostra/esconde o indicador de expansão mesmo sem filhos (QTreeWidgetItem.ChildIndicatorPolicy), permitindo carregamento sob demanda
   - plugins/project_structure_manager/ProjectStructureScanner.py: novo folder_has_items(path) — verificação leve (os.scandir + primeiro item) se a pasta tem conteúdo
