@@ -188,19 +188,19 @@ class OsTrackerPlugin(BasePlugin):
     def _render_cards(self, record: Optional[Dict[str, Any]]) -> None:
         """Atualiza os cards de resumo."""
         sub_os = OsTrackerService.build_sub_os(record) if record else []
+        summary = OsTrackerService.record_summary(record) if record else {}
         self._cards.set_card_value(0, 0, str(record.get("os", "")) if record else "—")
         self._cards.set_card_value(1, 0, str(len(sub_os)))
-        folders = len(record.get("folders", [])) if record else 0
-        years = len(record.get("years", [])) if record else 0
-        self._cards.set_card_value(2, 0, str(folders))
-        self._cards.set_card_value(3, 0, str(years))
+        self._cards.set_card_value(2, 0, str(len(summary.get("folders", []))))
+        self._cards.set_card_value(3, 0, str(len(summary.get("years", []))))
 
     def _render_general(self, record: Optional[Dict[str, Any]]) -> None:
         """Atualiza os labels de dados gerais da OS."""
         os_number = str(record.get("os", "")) if record else "—"
-        folders = len(record.get("folders", [])) if record else 0
-        years = len(record.get("years", [])) if record else 0
-        path = str(record.get("path", "") or "") if record else ""
+        summary = OsTrackerService.record_summary(record) if record else {}
+        folders = len(summary.get("folders", []))
+        years = len(summary.get("years", []))
+        path = str(summary.get("path", "") or "")
         self._general.set("os", os_number or "—")
         self._general.set("folders", str(folders))
         self._general.set("years", str(years))

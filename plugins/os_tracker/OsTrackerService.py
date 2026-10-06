@@ -21,6 +21,7 @@ from core.enum.ToolKey import ToolKey
 from core.model.SubOSModel import SubOS
 from plugins.project_database_manager.ProjectDatabaseStore import ProjectDatabaseStore
 from utils.BaseUtil import BaseUtil
+from utils.ProjectStructureUtil import ProjectStructureUtil
 
 
 class OsTrackerService(BaseUtil):
@@ -53,15 +54,13 @@ class OsTrackerService(BaseUtil):
         return models
 
     @classmethod
+    def record_summary(cls, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Resume cliente/pastas/anos/caminho da OS a partir das suas SubOS."""
+        return ProjectStructureUtil.aggregate_record(record)
+
+    @classmethod
     def order_label(cls, record: Dict[str, Any]) -> str:
         """Rótulo exibido no seletor de OS (``OS <numero> — <cliente>``)."""
         number = str(record.get("os", "")).strip()
-        client = str(record.get("client", "")).strip()
-        if not client:
-            names = {
-                str(entry.get("client", "")).strip()
-                for entry in record.get("sub_os", []) or []
-                if entry.get("client")
-            }
-            client = " / ".join(sorted(names))
+        client = cls.record_summary(record)["client"].strip()
         return f"OS {number} — {client}" if client else f"OS {number}"

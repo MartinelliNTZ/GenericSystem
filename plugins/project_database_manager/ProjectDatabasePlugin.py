@@ -46,7 +46,7 @@ from utils.FormatUtils import FormatUtils
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
 from utils.ProjectDatabaseBackup import ProjectDatabaseBackup
-from utils.ProjectStructureUtil import DOCUMENT_YEARS_FOLDER
+from utils.ProjectStructureUtil import DOCUMENT_YEARS_FOLDER, ProjectStructureUtil
 
 
 class ProjectDatabasePlugin(BasePlugin):
@@ -508,15 +508,16 @@ class ProjectDatabasePlugin(BasePlugin):
         """Popula a árvore, os cards e a legenda com os dados atuais."""
         self._tree.clear_nodes()
         for index, record in enumerate(self._database.get("projects", [])):
-            node_key = f"os::{record.get('name', index)}::{index}"
+            summary = ProjectStructureUtil.aggregate_record(record)
+            node_key = f"os::{record.get('os', index)}::{index}"
             self._tree.add_node(
                 key=node_key,
                 texts={
                     self._COL_OS: record.get("os", ""),
-                    self._COL_CLIENT: record.get("client", "") or "—",
-                    self._COL_FOLDERS: ", ".join(record.get("folders", [])) or "—",
-                    self._COL_YEARS: ", ".join(record.get("years", [])) or "—",
-                    self._COL_PATH: record.get("path", ""),
+                    self._COL_CLIENT: summary["client"] or "—",
+                    self._COL_FOLDERS: ", ".join(summary["folders"]) or "—",
+                    self._COL_YEARS: ", ".join(summary["years"]) or "—",
+                    self._COL_PATH: summary["path"],
                 },
                 bold=True,
                 kind="os",
@@ -527,8 +528,9 @@ class ProjectDatabasePlugin(BasePlugin):
     def _update_cards(self) -> None:
         """Atualiza os cards de resumo."""
         projects = self._database.get("projects", [])
-        total_folders = sum(len(r.get("folders", [])) for r in projects)
-        total_years = sum(len(r.get("years", [])) for r in projects)
+        summaries = [ProjectStructureUtil.aggregate_record(r) for r in projects]
+        total_folders = sum(len(s["folders"]) for s in summaries)
+        total_years = sum(len(s["years"]) for s in summaries)
         self._cards.set_card_value(0, 0, str(len(projects)))
         self._cards.set_card_value(1, 0, str(total_folders))
         self._cards.set_card_value(2, 0, str(total_years))

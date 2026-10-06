@@ -4,9 +4,10 @@ ProjectDatabaseService — Lógica do Banco de Dados de Projetos (OS)
 =================================================================
 Lógica pura (sem widgets Qt):
 
-- ``build_os_record`` monta o registro de UMA OS, agrupando todas as suas
-  pastas (uma por SubOS; o cliente/nome comercial/CNPJ são associados pelo
-  seed via a chave ``sub_os``).
+- ``build_os_record`` monta o registro de UMA OS a partir das suas pastas:
+  cada pasta em disco vira UMA SubOS (a letra vem do nome da pasta) e as
+  pastas/anos pertencem à SubOS; o cliente/nome comercial/CNPJ são associados
+  pelo seed via a chave ``sub_os``.
 - ``build_database`` percorre a pasta-mãe, agrupa as pastas pelo NÚMERO de OS
   e monta o banco consolidado.
 - ``ProjectDatabaseWorker`` (QRunnable) executa a varredura em background,
@@ -45,10 +46,12 @@ class ProjectDatabaseService(BaseUtil):
         project_paths: list,
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Monta o registro de UMA OS, agrupando todas as suas pastas (SubOS).
+        """Monta o registro de UMA OS a partir das suas pastas (uma por SubOS).
 
-        Preserva a categorização (cliente/nome comercial/CNPJ) já gravada em
-        disco para cada SubOS, para que uma nova varredura não a apague.
+        Cada pasta em disco vira UMA SubOS (a letra vem do nome da pasta) e é a
+        SubOS que possui ``path``/``folders``/``years`` — pastas pertencem à
+        SubOS, não à OS. SubOS sem pasta **não** entram no registro. A
+        categorização (cliente/nome comercial/CNPJ) já gravada é preservada.
         """
         previous = cls._load_existing_record(mother, os_number, tool_key=tool_key)
         previous_sub = {
@@ -57,20 +60,13 @@ class ProjectDatabaseService(BaseUtil):
             if isinstance(entry, dict)
         }
 
-        all_folders: list = []
-        all_years: list = []
-        sub_os_entries: list = []
-        used_letters: set = set()
-
         letters = ProjectStructureUtil.assign_sub_os_letters(project_paths)
+        sub_os_entries: list = []
         for project in project_paths:
             data = ProjectStructureUtil.collect_created_data(
                 project, tool_key=tool_key
             )
-            cls._extend_unique(all_folders, data["folders"])
-            cls._extend_unique(all_years, data["years"])
             letter = letters.get(project, "")
-            used_letters.add(letter)
             prev = previous_sub.get(letter, {})
             sub_os_entries.append({
                 "sub_os": letter,
@@ -82,38 +78,13 @@ class ProjectDatabaseService(BaseUtil):
                 "cnpj": prev.get("cnpj", ""),
             })
 
-        # Mantém SubOS que existem no banco mas não têm pasta criada.
-        for letter, prev in previous_sub.items():
-            if letter not in used_letters:
-                sub_os_entries.append(prev)
-
         sub_os_entries.sort(key=lambda entry: str(entry.get("sub_os", "")))
-        ordered_folders = [
-            name for name in ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS
-            if name in all_folders
-        ]
-        ordered_paths = [
-            str(path) for path in
-            sorted(project_paths, key=lambda path: path.name.lower())
-        ]
         return {
             "os": os_number,
             "name": "",
-            "client": "",
-            "path": ordered_paths[0] if ordered_paths else "",
-            "paths": ordered_paths,
-            "folders": ordered_folders,
-            "years": all_years,
             "sub_os": sub_os_entries,
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }
-
-    @staticmethod
-    def _extend_unique(target: list, values) -> None:
-        """Adiciona a ``target`` os itens de ``values`` que ainda não existem."""
-        for value in values:
-            if value not in target:
-                target.append(value)
 
     @classmethod
     def _load_existing_record(

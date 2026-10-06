@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-seed_sub_os.py — Script de DEV: popula o banco com a categorização OS → SubOS
-=============================================================================
-Insere, no espelho offline do banco de dados (``<pasta-mãe>/.BancoDados``),
-a lista de SubOS de cada OS (cliente, nome comercial e CNPJ).
+seed_sub_os.py — Script de DEV: semeia a categorização OS → SubOS no Firestore
+==============================================================================
+Envia, DIRETAMENTE ao Firebase (Cloud Firestore, coleção ``banco_dados``), a
+lista de SubOS de cada OS (cliente, nome comercial e CNPJ). O Firestore é a
+fonte oficial; os JSONs em ``.BancoDados`` são consequência/backup gerados pelo
+sistema — este script **nunca** grava JSON.
 
 Este script é SOMENTE PARA DESENVOLVIMENTO (seed inicial da base).
 
 USO:
     python add_data/seed_sub_os.py                      # usa a pasta-mãe da preferência
     python add_data/seed_sub_os.py --mother "C:/pasta"  # pasta-mãe explícita
-    python add_data/seed_sub_os.py --dry-run            # só mostra o resumo, não grava
-    python add_data/seed_sub_os.py --push               # grava e espelha no Firestore
+    python add_data/seed_sub_os.py --dry-run            # só mostra o resumo, não envia
 
 Como a pasta-mãe é resolvida (nesta ordem):
     1. Argumento --mother
     2. Variável de ambiente AETHERIS_MOTHER_FOLDER
     3. Preferência ProjectStructure.mother_folder (config/<APP_SLUG>_preferences.json)
 
-O que é gravado:
-    - ``<os>.json``        (um por OS, com a chave ``sub_os``)
-    - ``banco_dados.json`` (consolidado)
+O que é gravado (no Firestore):
+    - ``<os>``            (um documento por OS, com a chave ``sub_os``)
+    - ``banco_dados``     (documento consolidado)
 """
 
 from __future__ import annotations
@@ -39,13 +40,17 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.enum.ToolKey import ToolKey  # noqa: E402
+from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider  # noqa: E402
+from core.firebase.FirestoreService import FirestoreService  # noqa: E402
 from core.model.SubOSModel import SubOS  # noqa: E402
 from utils.ProjectStructureUtil import ProjectStructureUtil  # noqa: E402
 
-DB_FOLDER = ".BancoDados"
-CONSOLIDATED_FILENAME = "banco_dados.json"
+# Coleção/doc do Firestore (o Firestore é a fonte oficial do banco).
+COLLECTION = "banco_dados"
+CONSOLIDATED_DOC_ID = "banco_dados"
+_TOOL_KEY = ToolKey.PROJECT_DATABASE.value
 
-# ── Dados de entrada: (OS, SubOS, Cliente, Nome comercial, CNPJ) ──────
 # ── Dados de entrada: (OS, SubOS, Cliente, Nome comercial, CNPJ) ──────
 RAW_ROWS: List[tuple] = [
     ("39", "A", "Cornélio Adriano Sanders", "GRUPO PROGRESSO", ""),
@@ -63,14 +68,18 @@ RAW_ROWS: List[tuple] = [
     ("160", "A", "Itaquere", "Participações E Empreendimentos Rio Suia Ltda", "19.083.038/0001-01"),
     ("167", "A", "GGF FAZENDAS LTDA", "GGF FAZENDAS LTDA", ""),
 
-    # OS 169 é a única que mantém múltiplas SubOS.
-    ("169", "A", "Agropecuária Água Viva Ltda.", "AGROPENIDO", ""),
-    ("169", "B", "Agropecuária Darro Ltda.", "AGROPENIDO", ""),
-    ("169", "C", "Fazenda Pioneira Empreendimentos Agrícolas S.A.", "SLC AGRÍCOLA SA", ""),
+    # OS 169 tem UMA pasta no disco (OS_169_SLC) => uma única SubOS (A).
+    ("169", "A", "Fazenda Pioneira Empreendimentos Agrícolas S.A.", "SLC AGRÍCOLA SA", ""),
 
     ("171", "A", "Lida Agrícola Ltda. / Grupo Lida", "GRUPO LIDA", ""),
     ("179", "A", "Guilherme Borges de Freitas", "Guilherme Borges de Freitas", ""),
+
+    # OS 181 é a única subdividida em 3 pastas no disco (RENNER A/B/C);
+    # os clientes de B/C vêm do nome da pasta — revise se necessário.
     ("181", "A", "Capricornio Renner", "GRUPO JCN", ""),
+    ("181", "B", "Grupo Falavinha - Faz Almanaras", "GRUPO JCN", ""),
+    ("181", "C", "Grupo Salazar - Faz Rio Alegre", "GRUPO JCN", ""),
+
     ("182", "A", "SPM Holding e Administradora de Bens Ltda.", "Stradiotti", ""),
     ("183", "A", "FADEL", "", ""),
     ("184", "A", "AGROMANTOVA", "AGROMANTOVA", ""),
@@ -102,15 +111,6 @@ RAW_ROWS: List[tuple] = [
 def _safe_filename(name: str) -> str:
     """Sanitiza ``name`` para uso como nome de arquivo (mesma regra do Store)."""
     return re.sub(r'[<>:"/\\|?*]', "_", str(name)).strip() or "os"
-
-
-def _write_json(path: Path, data: Any) -> None:
-    """Grava ``data`` em ``path`` de forma atômica (tmp + replace)."""
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    os.replace(tmp, path)
 
 
 def _read_prefs_mother() -> str:
@@ -183,8 +183,9 @@ def _merge_sub_os(
 ) -> None:
     """Mescla cliente/nome comercial/CNPJ e os dados de pasta em cada SubOS.
 
-    Preserva ``path``/``folders``/``years`` já gravados pela varredura e aplica
-    os dados de pasta encontrados em disco quando a letra da SubOS bate.
+    A SubOS é derivada da estrutura de pastas (uma pasta = uma SubOS), então
+    SubOS sem pasta em disco **não** entram no registro. As pastas e anos ficam
+    dentro de cada SubOS (não no nível da OS).
     """
     existing = {
         str(entry.get("sub_os", "")): entry
@@ -219,39 +220,14 @@ def _merge_sub_os(
             "cnpj": "",
         })
         seen.add(letter)
-    for letter, prev in existing.items():
-        if letter not in seen:
-            merged.append(prev)
-
     merged.sort(key=lambda entry: str(entry.get("sub_os", "")))
     record["sub_os"] = merged
-    record["client"] = ""
-
-    all_paths: List[str] = []
-    all_folders: List[str] = []
-    all_years: List[str] = []
-    for data in folders.values():
-        path = str(data.get("path", ""))
-        if path and path not in all_paths:
-            all_paths.append(path)
-        for name in data.get("folders", []):
-            if name not in all_folders:
-                all_folders.append(name)
-        for year in data.get("years", []):
-            if year not in all_years:
-                all_years.append(year)
-    if all_paths:
-        record["paths"] = all_paths
-        record["path"] = all_paths[0]
-    else:
-        record.setdefault("paths", [])
-    if all_folders:
-        record["folders"] = [
-            name for name in ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS
-            if name in all_folders
-        ]
-    if all_years:
-        record["years"] = all_years
+    # Pastas e anos pertencem à SubOS — remove resquícios no nível da OS.
+    record.pop("client", None)
+    record.pop("folders", None)
+    record.pop("years", None)
+    record.pop("paths", None)
+    record.pop("path", None)
     record["updated_at"] = now
 
 
@@ -274,21 +250,55 @@ def _scan_folders(mother: Path) -> Dict[str, Dict[str, Dict[str, Any]]]:
     return result
 
 
+def _load_cloud_projects() -> List[Dict[str, Any]]:
+    """Lê os registros de OS já existentes no Firestore (fonte oficial).
+
+    Reconstrói a lista a partir dos documentos por OS; o consolidado é ignorado
+    (é apenas um snapshot).
+    """
+    documents = FirestoreService.list_documents(COLLECTION, tool_key=_TOOL_KEY)
+    return [
+        data
+        for doc_id, data in documents.items()
+        if doc_id != CONSOLIDATED_DOC_ID and isinstance(data, dict)
+    ]
+
+
+def _write_to_cloud(
+    touched: List[Dict[str, Any]], projects: List[Dict[str, Any]]
+) -> None:
+    """Grava cada OS e o consolidado DIRETO no Firestore (nunca em JSON)."""
+    now = datetime.now().isoformat(timespec="seconds")
+    saved = 0
+    failed = 0
+    for record in touched:
+        doc_id = _safe_filename(str(record.get("os", "os")))
+        if FirestoreService.save_document(
+            COLLECTION, doc_id, record, tool_key=_TOOL_KEY
+        ):
+            saved += 1
+        else:
+            failed += 1
+
+    consolidated = {
+        "db_schema": 1,
+        "generated_at": now,
+        "total_projects": len(projects),
+        "projects": projects,
+    }
+    FirestoreService.save_document(
+        COLLECTION, CONSOLIDATED_DOC_ID, consolidated, tool_key=_TOOL_KEY
+    )
+    print(f"Firebase  : {saved} documento(s) enviado(s), {failed} falha(s)")
+
+
 def _apply(mother: Path, dry_run: bool) -> None:
-    """Aplica a categorização ao banco (``.BancoDados``)."""
+    """Semeia a categorização OS → SubOS DIRETO no Firestore."""
     entries = _build_entries()
     scan = _scan_folders(mother)
-    db_dir = mother / DB_FOLDER
-    consolidated_path = db_dir / CONSOLIDATED_FILENAME
-
-    consolidated: Dict[str, Any] = {}
-    if consolidated_path.is_file():
-        consolidated = json.loads(consolidated_path.read_text(encoding="utf-8"))
-    projects = consolidated.get("projects", [])
-    if not isinstance(projects, list):
-        projects = []
-
     now = datetime.now().isoformat(timespec="seconds")
+
+    projects = [] if dry_run else _load_cloud_projects()
     created = 0
     updated = 0
     touched: List[Dict[str, Any]] = []
@@ -300,11 +310,6 @@ def _apply(mother: Path, dry_run: bool) -> None:
             record = {
                 "os": os_number,
                 "name": "",
-                "client": "",
-                "path": "",
-                "paths": [],
-                "folders": [],
-                "years": [],
                 "sub_os": [],
                 "updated_at": now,
             }
@@ -315,75 +320,41 @@ def _apply(mother: Path, dry_run: bool) -> None:
         _merge_sub_os(record, categorias, scan.get(os_number, {}), now)
         touched.append(record)
 
-    consolidated["projects"] = projects
-    consolidated.setdefault("db_schema", 1)
-    consolidated["mother_folder"] = str(mother)
-    consolidated["total_projects"] = len(projects)
-    consolidated["generated_at"] = now
-
     total_sub_os = sum(len(value) for value in entries.values())
     print(f"Pasta-mãe : {mother}")
-    print(f"Banco     : {db_dir}")
+    print(f"Firestore : {COLLECTION}")
     print(f"OS        : {len(entries)} ({created} criada(s), {updated} atualizada(s))")
     print(f"SubOS     : {total_sub_os}")
 
     if dry_run:
-        print("[dry-run] Nada foi gravado.")
+        print("[dry-run] Nada foi enviado ao Firebase.")
         return
 
-    db_dir.mkdir(parents=True, exist_ok=True)
-    for record in touched:
-        filename = _safe_filename(str(record.get("os", "os"))) + ".json"
-        _write_json(db_dir / filename, record)
-    _write_json(consolidated_path, consolidated)
-    print("Gravado com sucesso.")
-
-
-def _push_to_cloud(mother: Path) -> None:
-    """Espelha o ``.BancoDados`` no Firestore (coleção ``banco_dados``)."""
-    from core.enum.ToolKey import ToolKey
-    from core.firebase.CloudDatabaseSync import CloudDatabaseSync
-    from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider
-
-    if not FirebaseTokenProvider.has_credentials():
-        print(
-            "Push ignorado: sem credenciais Firebase (conta de serviço ou login)."
-        )
-        return
-
-    db_dir = mother / DB_FOLDER
-    result = CloudDatabaseSync.push(
-        str(db_dir), "banco_dados", tool_key=ToolKey.PROJECT_DATABASE.value
-    )
-    pushed = result.get("pushed", 0)
-    failed = result.get("failed", 0)
-    print(f"Firebase  : {pushed} documento(s) enviado(s), {failed} falha(s)")
+    _write_to_cloud(touched, projects)
 
 
 def main() -> None:
     """Ponto de entrada do script de seed."""
     parser = argparse.ArgumentParser(
-        description="DEV: popula o banco com a categorização OS/SubOS.",
+        description="DEV: semeia a categorização OS/SubOS direto no Firestore.",
     )
     parser.add_argument(
-        "--mother", default="", help="Pasta-mãe (contém a pasta .BancoDados).",
+        "--mother", default="", help="Pasta-mãe (varredura das pastas/SubOS).",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="Não grava; apenas mostra o resumo.",
-    )
-    parser.add_argument(
-        "--push",
-        action="store_true",
-        help="Após gravar, espelha o .BancoDados no Firestore (banco_dados).",
+        "--dry-run", action="store_true", help="Não envia; apenas mostra o resumo.",
     )
     args = parser.parse_args()
 
     mother = _resolve_mother(args.mother)
     if not mother.exists():
         raise SystemExit(f"Pasta-mãe inexistente: {mother}")
+    if not args.dry_run and not FirebaseTokenProvider.has_credentials():
+        raise SystemExit(
+            "Sem credenciais Firebase (conta de serviço ou login). "
+            "Este script envia direto ao Firestore."
+        )
     _apply(mother, args.dry_run)
-    if args.push and not args.dry_run:
-        _push_to_cloud(mother)
 
 
 if __name__ == "__main__":

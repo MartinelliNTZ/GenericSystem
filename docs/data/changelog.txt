@@ -1,3 +1,16 @@
+[1.7.3][2026.10.06][19:00] - Seed SubOS passa a gravar DIRETO no Firebase (nunca em JSON)
+  - add_data/seed_sub_os.py: removida toda a escrita em .BancoDados (DB_FOLDER/_write_json) e o flag --push; agora lê o estado dos documentos por OS no Firestore e grava os docs <os> + o consolidado banco_dados via FirestoreService.save_document; exige credenciais Firebase e nunca toca em JSON (que passa a ser consequência do sistema, via pull)
+  - add_data/README.md e docs/skills/SKILL_DATABASE.md: seed descrito como "envia direto ao Firestore; os JSONs são consequência do sistema"
+
+
+[1.7.2][2026.10.06][18:30] - OS/SubOS: pastas pertencem à SubOS, fim das SubOS fantasma e seed alinhado à pasta
+  - utils/ProjectStructureUtil.py: NOVO aggregate_record — deriva cliente/pastas/anos/caminho a partir das SubOS (a fonte das pastas/anos é a SubOS, não a OS)
+  - plugins/project_database_manager/ProjectDatabaseService.py: build_os_record monta registro enxuto (os + name + sub_os) e REMOVE as SubOS "fantasma" (que existiam no banco sem pasta em disco); folders/years passam a viver só dentro de cada sub_os
+  - plugins/project_database_manager/ProjectDatabasePlugin.py, plugins/os_tracker/OsTrackerService.py e OsTrackerPlugin.py: árvore, cards e dados gerais passam a agregar pastas/anos/cliente/caminho via aggregate_record
+  - add_data/seed_sub_os.py: corrige a subdivisão — OS 181 é a única com 3 pastas (RENNER A/B/C) e a OS 169 volta a ser única (A); remove o "keep" de SubOS sem pasta e os campos de nível de OS (client/folders/years/path/paths)
+  - docs/skills/SKILL_DATABASE.md, SKILL_PROJECT.md e add_data/README.md: schema atualizado (pastas/anos na SubOS, 1 pasta = 1 SubOS)
+
+
 [1.7.1][2026.10.06][17:05] - OS/SubOS: SubOS "A" por padrão, subdivisão ABC e OS sem cliente
   - utils/ProjectStructureUtil.py: NOVO assign_sub_os_letters — usa a letra do nome da pasta quando todas têm letra (ex.: OS_181_RENNER_A_...), senão atribui por ORDEM (1ª → A; com várias pastas do mesmo número a OS é subdividida em A, B, C…) e uma pasta única fica sempre em A
   - plugins/project_database_manager/ProjectDatabaseService.py e add_data/seed_sub_os.py: a pasta única passa a ser SubOS "A" (não mais sub_os ""); o registro da OS deixa de ter "client" (o cliente fica em cada sub_os); a pasta é anexada à SubOS correspondente

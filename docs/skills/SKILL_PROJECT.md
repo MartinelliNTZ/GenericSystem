@@ -293,9 +293,9 @@ consulta rápida.
 | Arquivo | Responsabilidade |
 |---|---|
 | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS, prefs, backup e varredura assíncrona |
-| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta UM registro por OS (agrupando as pastas/SubOS pelo número) + banco consolidado + `ProjectDatabaseWorker` |
+| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta UM registro por OS (uma SubOS por pasta) + banco consolidado + `ProjectDatabaseWorker` |
 | `plugins/project_database_manager/ProjectDatabaseStore.py` | Leitura/escrita dos JSONs em `.BancoDados` (gravação atômica) |
-| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`) |
+| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
 ### Estrutura em disco
@@ -306,31 +306,34 @@ consulta rápida.
 └── <numero_os>.json           ← um JSON independente por OS
 ```
 
-### Chave da OS
+### Chave da OS e estrutura
 
 O nome da pasta segue `OS_<numero>_<resto...>` (ex.: `OS_039_Bunge`,
 `OS_181_RENNER_A_Grupo JCN - Faz Clateia`). O **número** é o primeiro campo
-após `OS_`. A chave (`os`) — que também dá nome ao arquivo — segue a regra:
+após `OS_` e é normalizado (`039` → `39`). Uma OS com o mesmo número em várias
+pastas vira **um único registro** (`<numero>.json`), com **uma SubOS por pasta**.
+A chave (`os`) — que também dá nome ao arquivo — é o número normalizado
+(ex.: `68` → `68.json`, `181` → `181.json`).
 
-- **Número único** → apenas o número (ex.: `068` → `068.json`).
-- **Número repetido** → número + resto do nome, para desambiguar
-  (ex.: `181_RENNER_A`, `181_RENNER_B`, `181_RENNER_C`).
-
-O **nome do cliente** (último campo) é salvo à parte em `client`, e o nome
-completo em `name`.
+**As pastas pertencem à SubOS, não à OS.** O registro da OS guarda apenas
+`os`, `name` e a lista `sub_os`; cada entrada de `sub_os` carrega o seu
+`path`/`folders`/`years` + cliente/nome comercial/CNPJ:
 
 ```json
 {
-  "os": "181_RENNER_A",
-  "name": "OS_181_RENNER_A_Grupo JCN - Faz Clateia",
-  "client": "Grupo JCN - Faz Clateia",
-  "path": "C:/.../OS_181_RENNER_A_Grupo JCN - Faz Clateia",
-  "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
-  "years": ["2023", "2024"],
-  "updated_at": "2026-10-05T17:15:36"
+  "os": "181",
+  "name": "",
+  "updated_at": "2026-10-05T17:15:36",
+  "sub_os": [
+    {"sub_os": "A", "path": "C:/.../OS_181_RENNER_A_...",
+     "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
+     "years": ["2023", "2024"],
+     "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""}
+  ]
 }
 ```
 
+- **Uma pasta = uma SubOS**: não existem SubOS sem pasta em disco.
 - `folders`: **apenas** as pastas **padrão** presentes em disco (nunca as fora
   de padrão).
 - `years`: **apenas** as pastas de ano presentes em `03_ENVIO_DE_DOCUMENTOS`.

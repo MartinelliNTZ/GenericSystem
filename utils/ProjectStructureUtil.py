@@ -235,6 +235,49 @@ class ProjectStructureUtil(BaseUtil):
 
         return {"folders": folders, "years": years}
 
+    # ── Agregação (Regra: pastas e anos pertencem à SubOS) ──────────
+
+    @classmethod
+    def aggregate_record(cls, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Deriva cliente/pastas/anos/caminho a partir das SubOS do registro.
+
+        As pastas e os anos **pertencem à SubOS** — não à OS. Este helper apenas
+        agrega esses dados para telas que resumem a OS; a fonte continua sendo
+        cada entrada de ``sub_os``.
+        """
+        folders: List[str] = []
+        years: List[str] = []
+        paths: List[str] = []
+        clients: List[str] = []
+        for entry in record.get("sub_os", []) or []:
+            if not isinstance(entry, dict):
+                continue
+            cls._extend_unique(folders, entry.get("folders", []) or [])
+            cls._extend_unique(years, entry.get("years", []) or [])
+            path = str(entry.get("path", "") or "")
+            if path and path not in paths:
+                paths.append(path)
+            client = str(entry.get("client", "") or "").strip()
+            if client and client not in clients:
+                clients.append(client)
+        ordered_folders = [
+            name for name in cls.DEFAULT_PROJECT_FOLDERS if name in folders
+        ]
+        return {
+            "client": " / ".join(clients),
+            "folders": ordered_folders or folders,
+            "years": sorted(years),
+            "path": paths[0] if paths else "",
+            "paths": paths,
+        }
+
+    @staticmethod
+    def _extend_unique(target: List[str], values: List[str]) -> None:
+        """Adiciona a ``target`` os itens de ``values`` que ainda não existem."""
+        for value in values:
+            if value not in target:
+                target.append(value)
+
 
 # ── Funções de módulo (re-exportáveis por outras ferramentas) ───────
 
