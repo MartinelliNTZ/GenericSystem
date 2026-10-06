@@ -50,3 +50,5 @@ class SignalCatalog(QObject):
     execution_cancelled:  Signal = Signal(str) # emitido quando plugin cancela execução: tool_name
     hud_stage_done:       Signal = Signal(int)  # emitido quando uma etapa externa é concluída: stage_index
     system_stats_updated: Signal = Signal(dict) # emitido pelo SystemMonitorService: {"cpu": float, "ram": float, "cpu_tooltip": str, "ram_tooltip": str}
+    cloud_auth_changed:   Signal = Signal(dict) # emitido quando autenticação muda: {"logged_in": bool, "user": dict}
+    cloud_sync_status:    Signal = Signal(dict) # emitido durante sync: {"status": str, "message": str, "progress": float}

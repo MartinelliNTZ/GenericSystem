@@ -1,3 +1,40 @@
+[1.4.2][2026.10.05][21:25] - Nome de usuário nas credenciais e CloudUserStatusWidget na MenuBar
+  - resources/widgets/dialogs/FirebaseLoginDialog.py: Adicionado campo "Nome" no formulário e retorno de (name, email, password)
+  - core/firebase/FirebaseCredentialManager.py: Salva e carrega o nome criptografado em config/.firebase_auth.enc; adicionado helper get_user_name()
+  - core/firebase/FirebaseAuthService.py: Suporte ao parâmetro name e persistência de nome no perfil da sessão
+  - plugins/project_database_manager/ProjectDatabasePlugin.py: Coleta e repassa nome de usuário para armazenamento e autenticação
+  - resources/widgets/CloudUserStatusWidget.py: Indicador de status na MenuBar ao lado da RAM com heartbeat assíncrono a cada 3s (🟢 Online / 🟡 Offline / ⚪ Desconectado), nome do usuário e menu estilizado via AppStyles.menu_dropdown_style()
+  - resources/widgets/__init__.py: Exportado CloudUserStatusWidget
+  - core/config/MenuManager.py: Instanciação e posicionamento do CloudUserStatusWidget na MenuBar ao lado do monitor de RAM
+  - docs/skills/SKILL_WIDGETS.md: Documentado CloudUserStatusWidget no catálogo oficial
+
+[1.4.1][2026.10.05][20:46] - Model de Cultura na cadeia de domínio
+  - core/model/CultureModel.py: NOVO model Culture herdando de BaseModel
+    (code, variety, cycle, season, status, area, planted_at, harvested_at)
+    + enums CultureStatus e CultureCycle
+    + métodos plant() e harvest()
+  - core/model/FieldModel.py: atributo crop (str) substituído por cultures: list[Culture]
+    + método add_culture(); Field.area permanece atributo do talhão
+  - docs/skills/CatalogoClasses.md: Culture e Field atualizados
+  - Changelog atualizado
+
+[1.4.0][2026.10.05][20:30] - Integração com Firebase (Auth, Firestore, Storage, Worker e UI)
+  - requirements.txt: Adicionados pacotes requests>=2.31.0 e firebase-admin>=6.5.0
+  - core/enum/ToolKey.py: Adicionado FIREBASE = "Firebase"
+  - core/manager/SignalCatalog.py: Adicionados sinais cloud_auth_changed e cloud_sync_status
+  - core/firebase/: NOVO pacote contendo serviços de integração:
+    * FirebaseConfig.py: Configurações e leitura de credenciais via Preferences
+    * FirebaseAuthService.py: Autenticação via REST API (Identity Toolkit), refresh token e gestão de sessão
+    * FirestoreService.py: Operações de documentos e coleções com mapeamento automático de tipos
+    * FirebaseStorageService.py: Upload e download de arquivos com sinalização de progresso
+    * FirebaseWorker.py: Executor assíncrono em QThread para evitar bloqueio da interface gráfica
+    * FirebaseCredentialManager.py: Persistência criptografada (PBKDF2/SHA-256 + keystream) em config/.firebase_auth.enc
+  - resources/widgets/FirebaseAuthWidget.py: NOVO widget composto para autenticação e logout com feedback visual
+  - resources/widgets/dialogs/FirebaseLoginDialog.py: NOVO diálogo modal frameless com credenciais padrão pré-preenchidas
+  - resources/widgets/__init__.py: Exportado FirebaseAuthWidget
+  - docs/skills/SKILL_WIDGETS.md: Documentados FirebaseAuthWidget e FirebaseLoginDialog no catálogo oficial
+  - plugins/project_database_manager/ProjectDatabasePlugin.py: Integrada solicitação inicial de credenciais (primeira vez) e login transparente subsequente via arquivo criptografado
+
 [1.3.9][2026.10.05][18:00] - Banco de Dados de Projetos (ProjectDatabase) — ferramenta CENTRAL
   - utils/ProjectStructureUtil.py: NOVO — constantes da estrutura (PROJECT_PREFIX,
     DEFAULT_PROJECT_FOLDERS, DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS) + discover_projects,

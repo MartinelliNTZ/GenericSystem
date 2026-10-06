@@ -21,6 +21,8 @@ pyautogui
 keyboard
 fiona
 fastkml
+requests>=2.31.0
+firebase-admin>=6.5.0
 
 #NAO PAGA MEUS COMENTARIOS
 # python -m pip install -r requirements.txt

@@ -8,6 +8,8 @@ from resources.widgets.DialogPage import DialogPage
 from resources.widgets.HorizontalTab import HorizontalTab
 from resources.widgets.crs.CrsSearchDialog import CrsSearchDialog
 from resources.widgets.crs.CrsSelectorWidget import CrsSelectorWidget
+from resources.widgets.FirebaseAuthWidget import FirebaseAuthWidget
+from resources.widgets.CloudUserStatusWidget import CloudUserStatusWidget
 
 __all__ = [
     "BasePage",
@@ -15,4 +17,7 @@ __all__ = [
     "HorizontalTab",
     "CrsSearchDialog",
     "CrsSelectorWidget",
+    "FirebaseAuthWidget",
+    "CloudUserStatusWidget",
 ]
+

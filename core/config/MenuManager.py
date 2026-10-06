@@ -36,6 +36,7 @@ from core.menus.SystemMenuItem import SystemMenuItem
 from core.menus.HelpMenuItem import HelpMenuItem
 from core.model.Tool import Tool
 from core.monitor.SystemMonitorService import SystemMonitorService
+from resources.widgets.CloudUserStatusWidget import CloudUserStatusWidget
 from resources.widgets.MenuBar import MenuBar
 from resources.widgets.ToolGroup import ToolGroup
 from resources.widgets.ToolBar import ToolBar
@@ -77,6 +78,7 @@ class MenuManager(QObject):
         self._governor: Optional["ResourceGovernor"] = None
         self._monitor_service: Optional["SystemMonitorService"] = None
         self._monitor_view: Optional["GridPercentView"] = None
+        self._cloud_user_widget: Optional[CloudUserStatusWidget] = None
 
     # ────────────────────────────────────────────────────────────────
     # API pública
@@ -189,6 +191,11 @@ class MenuManager(QObject):
     def tool_groups(self) -> list[ToolGroup]:
         """Lista dos ToolGroups criados (útil para inspeção)."""
         return list(self._groups)
+
+    @property
+    def cloud_user_widget(self) -> Optional[CloudUserStatusWidget]:
+        """Widget de status do usuário na nuvem exibido na toolbar."""
+        return self._cloud_user_widget
 
     # ────────────────────────────────────────────────────────────────
     # Sinais internos (conectados pela MainWindow)
@@ -437,6 +444,10 @@ class MenuManager(QObject):
             },
         })
         self._menu_bar.add_widget_right(self._monitor_view)
+
+        # Status da Nuvem ao lado da RAM
+        self._cloud_user_widget = CloudUserStatusWidget()
+        self._menu_bar.add_widget_right(self._cloud_user_widget)
         self._monitor_initialized = False
         # ResourceGovernor + SystemMonitorService NÃO são iniciados aqui!
         # São iniciados por MainWindow._open_home_on_startup() após Home abrir.
@@ -479,6 +490,8 @@ class MenuManager(QObject):
 
     def shutdown(self) -> None:
         """Para serviços em background."""
+        if self._cloud_user_widget:
+            self._cloud_user_widget.stop_heartbeat()
         if self._monitor_service:
             self._monitor_service.stop()
             self._monitor_service = None

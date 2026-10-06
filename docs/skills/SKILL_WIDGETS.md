@@ -8,6 +8,57 @@ Catálogo oficial de todos os widgets disponíveis em `resources/widgets/`. **Se
 
 ## 📋 Catálogo de Widgets
 
+### `FirebaseAuthWidget` — `FirebaseAuthWidget.py`
+Widget composto para autenticação e gestão de sessão com Firebase Auth:
+- Formulário integrado com campos de E-mail e Senha (`GridLineEdit`)
+- Botões estilizados Entrar / Desconectar (`SimplePrimaryButton`)
+- Execução assíncrona não-bloqueante via `FirebaseWorker` (evita travamento de UI)
+- Sincronização automática com `SignalManager.instance().cloud_auth_changed`
+
+```python
+from resources.widgets.FirebaseAuthWidget import FirebaseAuthWidget
+
+auth_widget = FirebaseAuthWidget(parent=self)
+auth_widget.auth_changed.connect(self._on_auth_changed)
+layout.addWidget(auth_widget)
+```
+
+---
+
+### `FirebaseLoginDialog` — `dialogs/FirebaseLoginDialog.py`
+Diálogo modal para entrada e persistência segura de credenciais do Firebase:
+- Baseado em `BaseDialog` com AppBar frameless e estilo consistente
+- Campos estruturados via `GridLineEdit` com suporte a ocultação de senha
+- Valores padrão pré-configurados e validação de preenchimento
+- Botões estilizados Salvar e Cancelar
+
+```python
+from resources.widgets.dialogs.FirebaseLoginDialog import FirebaseLoginDialog
+
+dialog = FirebaseLoginDialog(parent=self)
+if dialog.exec():
+    email, password = dialog.get_credentials()
+```
+
+---
+
+### `CloudUserStatusWidget` — `CloudUserStatusWidget.py`
+Indicador de status de autenticação na nuvem (Firebase) posicionado na MenuBar ao lado da RAM:
+- Estilo compatível com os monitores de CPU/RAM (`GridPercentView`) e cores do tema (`AppStyles`)
+- Indicador luminoso com heartbeat assíncrono a cada 3s (🟢 Online / 🟡 Offline / ⚪ Desconectado) e nome do usuário
+- Tooltip informativo com nome, e-mail e status da sessão
+- Menu interativo com `AppStyles.menu_dropdown_style()` para reconectar, testar ping ou desconectar
+- Reage automaticamente ao sinal `SignalManager.instance().cloud_auth_changed`
+
+```python
+from resources.widgets.CloudUserStatusWidget import CloudUserStatusWidget
+
+status_widget = CloudUserStatusWidget(parent=self)
+menu_bar.add_widget_right(status_widget)
+```
+
+---
+
 ### `AppBar` — `app_bar.py`
 Barra de título superior com:
 - Ícone e título da janela

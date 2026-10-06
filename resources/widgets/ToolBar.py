@@ -49,6 +49,10 @@ class ToolBar(QWidget):
             self._layout.addWidget(group)
         self._layout.addStretch()
 
+    def add_widget_right(self, widget: QWidget) -> None:
+        """Adiciona um widget alinhado à direita da toolbar (após o stretch)."""
+        self._layout.addWidget(widget)
+
     def _on_tool_clicked(self, tool_name: str) -> None:
         """Propaga o clique para o sinal tool_clicked."""
         self.tool_clicked.emit(tool_name)

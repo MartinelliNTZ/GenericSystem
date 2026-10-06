@@ -21,6 +21,9 @@ from typing import Any, Dict, Optional
 from PySide6.QtCore import QThreadPool, QTimer
 
 from core.enum.ToolKey import ToolKey
+from core.firebase.FirebaseAuthService import FirebaseAuthService
+from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
+from core.firebase.FirebaseWorker import FirebaseWorker
 from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.project_database_manager.ProjectDatabaseService import (
@@ -29,6 +32,7 @@ from plugins.project_database_manager.ProjectDatabaseService import (
 from plugins.project_database_manager.ProjectDatabaseStore import (
     ProjectDatabaseStore,
 )
+from resources.widgets.dialogs.FirebaseLoginDialog import FirebaseLoginDialog
 from resources.widgets.grid.GridCardView import GridCardView
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
 from resources.widgets.grid.GridLabel import GridLabel
@@ -77,19 +81,69 @@ class ProjectDatabasePlugin(BasePlugin):
         """Configura pool, estado e agenda a carga inicial e o backup."""
         self._generation = 0
         self._worker: Optional[ProjectDatabaseWorker] = None
+        self._auth_worker: Optional[FirebaseWorker] = None
         self._database: Dict[str, Any] = {}
         self._suspend_backup_cb = False
         self._pool = QThreadPool(self)
         self._pool.setMaxThreadCount(1)
         QTimer.singleShot(0, self._load_from_disk)
         QTimer.singleShot(0, self._maybe_backup)
+        QTimer.singleShot(100, self._ensure_firebase_credentials)
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
-        """Cancela o worker e limpa a fila antes de fechar."""
+        """Cancela os workers e limpa a fila antes de fechar."""
         if self._worker is not None:
             self._worker.cancel()
+        if self._auth_worker is not None and self._auth_worker.isRunning():
+            self._auth_worker.quit()
+            self._auth_worker.wait(1000)
         self._pool.clear()
         super().closeEvent(event)
+
+    # ── Autenticação / Firebase ──────────────────────────────────────
+
+    def _ensure_firebase_credentials(self) -> None:
+        """Garante a autenticação Firebase via credenciais salvas ou diálogo inicial."""
+        if FirebaseCredentialManager.has_saved_credentials():
+            creds = FirebaseCredentialManager.load_credentials()
+            if creds and creds.get("email") and creds.get("password"):
+                self.logger.info("Credenciais Firebase criptografadas detectadas", code="FB_AUTO_LOGIN")
+                self._authenticate_async(creds["email"], creds["password"], creds.get("name", ""))
+            return
+
+        # Primeira vez: exibe diálogo solicitando credenciais
+        dialog = FirebaseLoginDialog(
+            default_name="Matheus Martinelli",
+            default_email="martinelli.matheus0@gmail.com",
+            default_password="12345678",
+            parent=self,
+        )
+        if dialog.exec():
+            name, email, password = dialog.get_credentials()
+            saved = FirebaseCredentialManager.save_credentials(email, password, name)
+            if saved:
+                self.logger.info("Credenciais criptografadas salvas com sucesso", code="FB_CREDS_SAVED")
+                self._authenticate_async(email, password, name)
+        else:
+            self.logger.warning("Configuração inicial do Firebase cancelada pelo usuário", code="FB_CREDS_SKIPPED")
+
+    def _authenticate_async(self, email: str, password: str, name: str = "") -> None:
+        """Autentica com o Firebase de forma assíncrona para não travar a UI."""
+        self._auth_worker = FirebaseWorker(
+            FirebaseAuthService.sign_in_with_email,
+            email,
+            password,
+            name,
+            parent=self,
+        )
+        self._auth_worker.finished_with_result.connect(self._on_auth_result)
+        self._auth_worker.start()
+
+    def _on_auth_result(self, result: Optional[Dict[str, Any]]) -> None:
+        if result:
+            self.logger.info("Sessão Firebase iniciada com sucesso", code="FB_SESSION_OK")
+        else:
+            self.logger.warning("Não foi possível autenticar no Firebase (operação offline)", code="FB_SESSION_OFFLINE")
 
     # ── Preferências ─────────────────────────────────────────────────
 
