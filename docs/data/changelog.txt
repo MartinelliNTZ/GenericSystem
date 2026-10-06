@@ -1,3 +1,11 @@
+[1.5.0][2026.10.06][11:00] - Gerenciador de Estrutura: pasta 14_RELATORIO com template de subpastas validado
+  - utils/ProjectStructureUtil.py: nova pasta padrão "14_RELATORIO" em DEFAULT_PROJECT_FOLDERS e nova constante PROJECT_FOLDER_TEMPLATES (subpastas esperadas por pasta de topo — 14_RELATORIO: "Uso e Ocupacao do Solo" e "Laudos Analises de Solo")
+  - plugins/project_structure_manager/ProjectStructureScanner.py: novo scan_project_trees (valida as subpastas de topo com template via scan_template); scan_project_full passa a retornar (structure, years, trees); project_status_counts considera as subárvores; ScanResult e ProjectScanResult ganham o campo trees
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: as subpastas de template aparecem na árvore com status (Correta/Ausente) e ação "+ Criar"; _create_folder cria a pasta já com suas subpastas de template; novos _project_trees e ajuste de _append_project_children/_register_project_counts
+  - plugins/project_structure_manager/FolderOperations.py: novo create_project_folder(project, name, template) — cria a pasta padrão e suas subpastas de template de uma vez
+  - docs/skills/CatalogoClasses.md: ProjectStructurePlugin/Scanner/FolderOperations atualizados (template de subpastas de pasta de topo)
+
+
 [1.4.9][2026.10.06][10:30] - Gerenciador de Estrutura: ícone de pasta colorido pela cor da pasta
   - resources/IconManager.py: novos folder_icon(color), colorized(icon, color, size) e _tint(pixmap, color) — tinge o ícone nativo da pasta por luminância (cinza + multiplicar), preservando o sombreado 3D e o alpha; cache por (cor, tamanho)
   - plugins/project_structure_manager/ProjectStructurePlugin.py: _apply_icon passa a tingir o ícone de pasta com a cor da pasta de topo (mesma cor do nome, propagada por profundidade); arquivos mantêm o ícone nativo

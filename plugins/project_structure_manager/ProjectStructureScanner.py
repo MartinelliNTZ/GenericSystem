@@ -27,6 +27,7 @@ from utils.ProjectStructureUtil import (
     DEFAULT_PROJECT_FOLDERS,
     DEFAULT_YEARS,
     DOCUMENT_YEARS_FOLDER,
+    PROJECT_FOLDER_TEMPLATES,
     PROJECT_PREFIX,
     discover_projects,
     is_year_folder,
@@ -232,13 +233,37 @@ def scan_document_years(envio: Path) -> List[StructureNode]:
     return nodes
 
 
+def scan_project_trees(
+    structure: ProjectStructure,
+) -> Dict[str, List[StructureNode]]:
+    """Valida as subpastas das pastas de topo que possuem template.
+
+    Retorna um mapa ``caminho da pasta de topo -> nós validados`` apenas para
+    as pastas de ``PROJECT_FOLDER_TEMPLATES`` presentes em disco.
+    """
+    trees: Dict[str, List[StructureNode]] = {}
+    for folder in structure.folders:
+        template = PROJECT_FOLDER_TEMPLATES.get(folder.name)
+        if not template or folder.path is None:
+            continue
+        if folder.status == STATUS_MISSING:
+            continue
+        trees[str(folder.path)] = scan_template(folder.path, template)
+    return trees
+
+
 def scan_project_full(
     project: Path,
-) -> tuple[ProjectStructure, Dict[str, List[StructureNode]]]:
+) -> tuple[
+    ProjectStructure,
+    Dict[str, List[StructureNode]],
+    Dict[str, List[StructureNode]],
+]:
     """Inspeciona um projeto por completo.
 
-    Retorna a estrutura das pastas esperadas e as pastas de ano do
-    ``03_ENVIO_DE_DOCUMENTOS`` (mapeadas por caminho).
+    Retorna a estrutura das pastas esperadas, as pastas de ano do
+    ``03_ENVIO_DE_DOCUMENTOS`` e as subárvores de template das pastas de topo
+    (ex: ``14_RELATORIO``), todas mapeadas por caminho.
     """
     structure = scan_project(project, DEFAULT_PROJECT_FOLDERS)
     years: Dict[str, List[StructureNode]] = {}
@@ -249,17 +274,18 @@ def scan_project_full(
             and folder.status != STATUS_MISSING
         ):
             years[str(folder.path)] = scan_document_years(folder.path)
-    return structure, years
+    return structure, years, scan_project_trees(structure)
 
 
 def project_status_counts(
     structure: ProjectStructure,
     years: Dict[str, List[StructureNode]],
+    trees: Dict[str, List[StructureNode]],
 ) -> Dict[str, int]:
     """Conta os status (correta/incoerente/ausente) de um projeto.
 
-    Soma as pastas de topo do projeto e todos os nós da subárvore das pastas
-    de ano (anos + template).
+    Soma as pastas de topo do projeto e todos os nós das subárvores de ano e
+    de template de pastas de topo.
     """
     totals = {"correct": 0, "incorrect": 0, "missing": 0}
 
@@ -280,6 +306,8 @@ def project_status_counts(
         _bump(folder.status)
     for year_nodes in years.values():
         _walk(year_nodes)
+    for tree_nodes in trees.values():
+        _walk(tree_nodes)
     return totals
 
 
@@ -392,6 +420,8 @@ class ScanResult:
 
     projects: List[ProjectStructure] = field(default_factory=list)
     years: Dict[str, List[StructureNode]] = field(default_factory=dict)
+    trees: Dict[str, List[StructureNode]] = field(default_factory=dict)
+    trees: Dict[str, List[StructureNode]] = field(default_factory=dict)
 
 
 class _ScanSignals(QObject):
@@ -434,9 +464,10 @@ class ScanWorker(QRunnable):
             for index, project in enumerate(projects, start=1):
                 if self._cancelled:
                     return
-                structure, years = scan_project_full(project)
+                structure, years, trees = scan_project_full(project)
                 result.projects.append(structure)
                 result.years.update(years)
+                result.trees.update(trees)
                 self.signals.progress.emit(self.generation, index, total)
             if self._cancelled:
                 return
@@ -458,6 +489,7 @@ class ProjectScanResult:
     path: str
     structure: ProjectStructure
     years: Dict[str, List[StructureNode]] = field(default_factory=dict)
+    trees: Dict[str, List[StructureNode]] = field(default_factory=dict)
 
 
 class _ProjectScanSignals(QObject):
@@ -480,10 +512,10 @@ class ProjectScanWorker(QRunnable):
     def run(self) -> None:
         """Executa a varredura do projeto e emite o resultado."""
         try:
-            structure, years = scan_project_full(Path(self.project))
+            structure, years, trees = scan_project_full(Path(self.project))
             self.signals.finished.emit(
                 self.generation,
-                ProjectScanResult(self.project, structure, years),
+                ProjectScanResult(self.project, structure, years, trees),
             )
         except Exception as e:
             _logger().error(

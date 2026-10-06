@@ -18,7 +18,7 @@ Uso:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
@@ -44,6 +44,7 @@ DEFAULT_PROJECT_FOLDERS: List[str] = [
     "11_AGROROBOTICA",
     "12_FOTOS_INICIO_PROJETO",
     "13_ZONAS_DE_MANEJO",
+    "14_RELATORIO",
 ]
 
 # Pasta do projeto que agrupa as pastas de ano.
@@ -51,6 +52,16 @@ DOCUMENT_YEARS_FOLDER = "03_ENVIO_DE_DOCUMENTOS"
 
 # Anos oferecidos por padrão (usados pelo diálogo de criação de anos).
 DEFAULT_YEARS: List[int] = list(range(2019, 2028))
+
+# Templates de subpastas para pastas de topo específicas do projeto.
+# ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas (validadas
+# na árvore e criadas junto com a pasta de topo).
+PROJECT_FOLDER_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    "14_RELATORIO": {
+        "Uso e Ocupacao do Solo": None,
+        "Laudos Analises de Solo": None,
+    },
+}
 
 
 class ProjectStructureUtil(BaseUtil):
@@ -61,6 +72,7 @@ class ProjectStructureUtil(BaseUtil):
     DEFAULT_PROJECT_FOLDERS = DEFAULT_PROJECT_FOLDERS
     DOCUMENT_YEARS_FOLDER = DOCUMENT_YEARS_FOLDER
     DEFAULT_YEARS = DEFAULT_YEARS
+    PROJECT_FOLDER_TEMPLATES = PROJECT_FOLDER_TEMPLATES
 
 
     # ── Descoberta ──────────────────────────────────────────────────

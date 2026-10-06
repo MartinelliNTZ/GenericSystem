@@ -71,9 +71,9 @@
 ### plugins/project_structure_manager/
 | Classe | Descrição |
 |---|---|
-| `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes |
-| `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano e o template completo de documentos) e estatísticas; `StatisticsWorker` calcula em background |
-| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + templates de ano (`create_template`, `create_document_year`) + abertura no explorer; `RenameFolderWorker` |
+| `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes e as subpastas de template de uma pasta de topo (ex: `14_RELATORIO`) são validadas na árvore e criadas junto com a pasta |
+| `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano, o template completo de documentos e o template de subpastas das pastas de topo via `scan_project_trees`) e estatísticas; `StatisticsWorker` calcula em background |
+| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + templates (`create_template`, `create_document_year`, `create_project_folder`) + abertura no explorer; `RenameFolderWorker` |
 
 ---
 

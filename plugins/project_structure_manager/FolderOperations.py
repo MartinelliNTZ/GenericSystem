@@ -40,6 +40,19 @@ def create_folder(project: Path, name: str) -> Path:
     return destination
 
 
+def create_project_folder(
+    project: Path, name: str, template: Optional[Dict[str, Any]] = None
+) -> Path:
+    """Cria a pasta padrão ``name`` e, se houver, o template de subpastas.
+
+    Levanta OSError em falha de filesystem.
+    """
+    destination = create_folder(project, name)
+    if template:
+        create_template(destination, template)
+    return destination
+
+
 def create_template(root: Path, template: Dict[str, Any]) -> Path:
     """Cria recursivamente o template de pastas dentro de ``root``.
 

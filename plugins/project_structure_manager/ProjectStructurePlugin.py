@@ -463,10 +463,11 @@ class ProjectStructurePlugin(BasePlugin):
             key = str(structure.path)
             self._load_projects_list.append(structure.path)
             proj_years = self._project_years(structure, result.years)
-            self._register_project_counts(key, structure, proj_years)
+            proj_trees = self._project_trees(structure, result.trees)
+            self._register_project_counts(key, structure, proj_years, proj_trees)
             self._render_queue.append(partial(self._render_project, structure))
             self._append_project_children(
-                structure, result.years, expected_years
+                structure, result.years, result.trees, expected_years
             )
 
     @staticmethod
@@ -484,32 +485,54 @@ class ProjectStructurePlugin(BasePlugin):
                 subset[node_key] = years[node_key]
         return subset
 
+    @staticmethod
+    def _project_trees(
+        structure: Scanner.ProjectStructure,
+        trees: Dict[str, List[Scanner.StructureNode]],
+    ) -> Dict[str, List[Scanner.StructureNode]]:
+        """Retorna apenas as subárvores de template pertencentes ao projeto."""
+        subset: Dict[str, List[Scanner.StructureNode]] = {}
+        for folder in structure.folders:
+            if not folder.path:
+                continue
+            node_key = str(folder.path)
+            if node_key in trees:
+                subset[node_key] = trees[node_key]
+        return subset
+
     def _append_project_children(
         self,
         structure: Scanner.ProjectStructure,
         years: Dict[str, List[Scanner.StructureNode]],
+        trees: Dict[str, List[Scanner.StructureNode]],
         expected_years: List[str],
     ) -> None:
-        """Enfileira as pastas do projeto e a subárvore das pastas de ano."""
+        """Enfileira as pastas do projeto e as subárvores validadas."""
         for folder in structure.folders:
             self._render_queue.append(
                 partial(self._render_folder, structure.path, folder)
             )
-            if folder.name != Scanner.DOCUMENT_YEARS_FOLDER:
-                continue
             key = str(folder.path) if folder.path else ""
-            for node in years.get(key, []):
-                self._queue_structure(node, key, expected_years, True)
+            if folder.name == Scanner.DOCUMENT_YEARS_FOLDER:
+                for node in years.get(key, []):
+                    self._queue_structure(node, key, expected_years, True)
+            elif key in trees:
+                expected = list(
+                    Scanner.PROJECT_FOLDER_TEMPLATES.get(folder.name, {})
+                )
+                for node in trees[key]:
+                    self._queue_structure(node, key, expected, False)
 
     def _register_project_counts(
         self,
         key: str,
         structure: Scanner.ProjectStructure,
         years: Dict[str, List[Scanner.StructureNode]],
+        trees: Dict[str, List[Scanner.StructureNode]],
     ) -> None:
         """Guarda a contagem de status de um projeto (para os cards)."""
         self._project_counts[key] = Scanner.project_status_counts(
-            structure, years
+            structure, years, trees
         )
 
     def _queue_structure(
@@ -1123,9 +1146,11 @@ class ProjectStructurePlugin(BasePlugin):
         expanded = self._expanded_branch(key)
         self._clear_contents_loaded(key)
         self._render_queue.clear()
-        self._register_project_counts(key, scan.structure, scan.years)
+        self._register_project_counts(
+            key, scan.structure, scan.years, scan.trees
+        )
         self._append_project_children(
-            scan.structure, scan.years, expected_years
+            scan.structure, scan.years, scan.trees, expected_years
         )
         self._tree.setUpdatesEnabled(False)
         try:
@@ -1314,14 +1339,15 @@ class ProjectStructurePlugin(BasePlugin):
         self._work_pool.start(worker)
 
     def _create_folder(self, project: Path, name: str) -> None:
-        """Cria uma pasta padrão dentro de um projeto."""
+        """Cria uma pasta padrão (e suas subpastas de template) no projeto."""
         destination = project / name
         if destination.exists():
             MessageBox.show_toast(f"{name} já existe.", parent=self)
             return
+        template = Scanner.PROJECT_FOLDER_TEMPLATES.get(name, {})
         self._run_folder_operation(
             "create_folder",
-            lambda: FsOps.create_folder(project, name),
+            lambda: FsOps.create_project_folder(project, name, template),
             lambda _value: f"Pasta criada: {name}",
             project=project,
         )
