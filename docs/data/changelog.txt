@@ -1,3 +1,10 @@
+[1.5.1][2026.10.06][13:40] - Gerenciador de Estrutura: toda pasta com conteúdo aparece expansível
+  - resources/widgets/grid/GridTree.py: novo set_node_expandable(key, expandable) — mostra/esconde o indicador de expansão mesmo sem filhos (QTreeWidgetItem.ChildIndicatorPolicy), permitindo carregamento sob demanda
+  - plugins/project_structure_manager/ProjectStructureScanner.py: novo folder_has_items(path) — verificação leve (os.scandir + primeiro item) se a pasta tem conteúdo
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: novo _mark_expandable marca como expansíveis todas as pastas com conteúdo em disco (projeto, pastas de topo, nós de template e subpastas), disparando o carregamento sob demanda ao expandir; _on_folder_contents remove o indicador quando a pasta está vazia
+  - docs/skills/SKILL_WIDGETS.md e CatalogoClasses.md: GridTree/ProjectStructure atualizados (set_node_expandable, folder_has_items)
+
+
 [1.5.0][2026.10.06][11:00] - Gerenciador de Estrutura: pasta 14_RELATORIO com template de subpastas validado
   - utils/ProjectStructureUtil.py: nova pasta padrão "14_RELATORIO" em DEFAULT_PROJECT_FOLDERS e nova constante PROJECT_FOLDER_TEMPLATES (subpastas esperadas por pasta de topo — 14_RELATORIO: "Uso e Ocupacao do Solo" e "Laudos Analises de Solo")
   - plugins/project_structure_manager/ProjectStructureScanner.py: novo scan_project_trees (valida as subpastas de topo com template via scan_template); scan_project_full passa a retornar (structure, years, trees); project_status_counts considera as subárvores; ScanResult e ProjectScanResult ganham o campo trees

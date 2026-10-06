@@ -708,6 +708,7 @@ class ProjectStructurePlugin(BasePlugin):
             key, self._COL_ACTIONS, self._build_project_actions(structure.path)
         )
         self._apply_icon(key, structure.path, True)
+        self._mark_expandable(key, structure.path)
         self._request_statistics(key, structure.path)
 
     def _render_folder(self, project: Path, folder: Scanner.FolderStatus) -> None:
@@ -731,6 +732,7 @@ class ProjectStructurePlugin(BasePlugin):
             kind="folder",
         )
         self._apply_icon(key, Path(key), True)
+        self._mark_expandable(key, Path(key))
         if missing:
             self._tree.set_cell_widget(
                 key,
@@ -773,6 +775,7 @@ class ProjectStructurePlugin(BasePlugin):
             kind="folder",
         )
         self._apply_icon(key, Path(key), True)
+        self._mark_expandable(key, Path(key))
         if missing:
             self._tree.set_cell_widget(
                 key,
@@ -812,6 +815,9 @@ class ProjectStructurePlugin(BasePlugin):
     ) -> None:
         """Enfileira o conteúdo listado para render em lotes."""
         if generation != self._generation or not self._tree.has_node(folder):
+            return
+        if not dirs and not files:
+            self._tree.set_node_expandable(folder, False)
             return
         for path in dirs:
             self._content_queue.append((folder, path, True, 0))
@@ -872,6 +878,7 @@ class ProjectStructurePlugin(BasePlugin):
             key, self._COL_ACTIONS, self._build_subfolder_actions(path)
         )
         self._apply_icon(key, path, True)
+        self._mark_expandable(key, path)
         self._request_statistics(key, path)
 
     def _render_file(self, parent_key: str, path: Path, size: int) -> None:
@@ -931,6 +938,16 @@ class ProjectStructurePlugin(BasePlugin):
         else:
             icon = IconManager.system_icon(str(path), is_dir=is_dir)
         self._tree.set_cell_icon(key, self._COL_NAME, icon)
+
+    def _mark_expandable(self, key: str, path: Path) -> None:
+        """Exibe a seta de expansão em pastas que possuem conteúdo em disco.
+
+        O conteúdo real é carregado sob demanda; aqui garantimos que pastas
+        sem filhos na árvore ainda apareçam expansíveis, para que possam ser
+        abertas e carregar suas subpastas e arquivos.
+        """
+        if path.is_dir() and Scanner.folder_has_items(path):
+            self._tree.set_node_expandable(key, True)
 
     def _on_icons_toggled(self) -> None:
         """Alterna a exibição dos ícones e reaplica nos nós já renderizados."""

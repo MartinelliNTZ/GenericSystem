@@ -209,6 +209,26 @@ def list_contents(folder: Path) -> tuple[List[Path], List[FileEntry]]:
     return dirs, files
 
 
+def folder_has_items(path: Path) -> bool:
+    """Indica se ``path`` contém ao menos um item (subpasta ou arquivo).
+
+    Verificação leve (``os.scandir`` + primeiro item) usada para marcar na
+    árvore quais pastas devem exibir o indicador de expansão antes de o
+    conteúdo ser carregado sob demanda.
+    """
+    try:
+        with os.scandir(path) as entries:
+            return next(entries, None) is not None
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        _logger().warning(
+            "Falha ao verificar conteúdo da pasta",
+            code="PSM_HAS_ITEMS_ERR",
+            error=str(e),
+            path=str(path),
+        )
+        return False
+
+
 def scan_document_years(envio: Path) -> List[StructureNode]:
     """Inspeciona as pastas de ano dentro de ``03_ENVIO_DE_DOCUMENTOS``.
 

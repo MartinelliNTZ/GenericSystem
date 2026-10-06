@@ -236,6 +236,23 @@ class GridTree(QTreeWidget):
         item = self._nodes.get(key)
         return item.isExpanded() if item is not None else False
 
+    def set_node_expandable(self, key: str, expandable: bool) -> None:
+        """Mostra/esconde o indicador de expansão mesmo sem filhos.
+
+        Útil para carregamento sob demanda: exibe a seta de expansão em
+        pastas cujo conteúdo ainda não foi adicionado como filhos, para que
+        possam ser expandidas e disparar o carregamento.
+        """
+        item = self._nodes.get(key)
+        if item is None:
+            return
+        policy = QTreeWidgetItem.ChildIndicatorPolicy
+        item.setChildIndicatorPolicy(
+            policy.ShowIndicator
+            if expandable
+            else policy.DontShowIndicatorWhenChildless
+        )
+
     def has_node(self, key: str) -> bool:
         """Indica se o nó existe no índice."""
         return key in self._nodes
