@@ -225,6 +225,18 @@ class GridTree(QTreeWidget):
         """Retorna as chaves de todos os nós indexados."""
         return list(self._nodes.keys())
 
+    def expanded_keys(self) -> List[str]:
+        """Retorna as chaves de todos os nós expandidos."""
+        return [key for key, item in self._nodes.items() if item.isExpanded()]
+
+    def expand_all(self) -> None:
+        """Expande todos os nós da árvore."""
+        self.expandAll()
+
+    def collapse_all(self) -> None:
+        """Recolhe todos os nós da árvore."""
+        self.collapseAll()
+
     # ── Privados ─────────────────────────────────────────────────────
 
     def _on_double_clicked(self, item: QTreeWidgetItem, _col: int) -> None:

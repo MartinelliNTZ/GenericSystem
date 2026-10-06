@@ -54,6 +54,7 @@ DOCUMENT_TEMPLATE: Dict[str, Any] = {
     "03_NOTAS_FISCAIS": {
         "NF_ANIMAIS": {"FICHA_VACINACAO": None, "GTA_ANIMAL": None},
         "NF_COMBUSTIVEL": None,
+        "NF_DEFENSIVOS": None,
         "NF_ENERGIA": None,
         "NF_FERTILIZANTE": {"CALCARIO": None, "KCL": None, "MAP": None},
         "NF_RACOES": None,

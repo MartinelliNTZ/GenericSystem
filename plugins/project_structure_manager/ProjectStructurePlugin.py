@@ -24,6 +24,7 @@ Performance (assíncrono + refresh incremental):
 
 from __future__ import annotations
 
+import os
 import time
 from collections import deque
 from functools import partial
@@ -91,6 +92,18 @@ class ProjectStructurePlugin(BasePlugin):
             parent=parent,
             title="Gerenciador de Estrutura",
             buttons_config={
+                "abrir_abas": {
+                    "text": "ABRIR ABAS",
+                    "callback": self._on_expand_all,
+                    "type": "secondary",
+                    "description": "Abre todas as pastas (abas) da árvore",
+                },
+                "fechar_abas": {
+                    "text": "FECHAR ABAS",
+                    "callback": self._on_collapse_all,
+                    "type": "secondary",
+                    "description": "Fecha todas as pastas (abas) da árvore",
+                },
                 "atualizar": {
                     "text": "ATUALIZAR",
                     "callback": self._on_refresh_clicked,
@@ -294,6 +307,14 @@ class ProjectStructurePlugin(BasePlugin):
 
     def _on_refresh_clicked(self) -> None:
         self._load_projects(show_toast=True)
+
+    def _on_expand_all(self) -> None:
+        """Abre todas as pastas (abas) da árvore."""
+        self._tree.expand_all()
+
+    def _on_collapse_all(self) -> None:
+        """Fecha todas as pastas (abas) da árvore."""
+        self._tree.collapse_all()
 
     def _load_projects(
         self, show_toast: bool, show_progress: bool = True
@@ -712,16 +733,11 @@ class ProjectStructurePlugin(BasePlugin):
     # ── Estado / filtro / watcher ────────────────────────────────────
 
     def _capture_state(self) -> Dict[str, Any]:
-        """Captura os projetos expandidos antes de recarregar."""
-        expanded: List[str] = [
-            key for key in self._tree.keys()
-            if self._tree.node_kind(key) == "project"
-            and self._tree.is_node_expanded(key)
-        ]
-        return {"expanded": expanded}
+        """Captura os nós expandidos antes de recarregar."""
+        return {"expanded": self._tree.expanded_keys()}
 
     def _restore_state(self, state: Dict[str, Any]) -> None:
-        """Restaura os projetos expandidos."""
+        """Restaura os nós que estavam expandidos."""
         for key in state.get("expanded", []):
             self._tree.set_node_expanded(key, True)
 
@@ -841,10 +857,23 @@ class ProjectStructurePlugin(BasePlugin):
             self._refresh_pending.discard(key)
             self._refresh_project(Path(key))
 
+    def _expanded_branch(self, root_key: str) -> List[str]:
+        """Retorna as chaves expandidas dentro do ramo ``root_key``."""
+        prefix = root_key + os.sep
+        return [
+            key for key in self._tree.expanded_keys()
+            if key.startswith(prefix)
+        ]
+
     def _rebuild_project_branch(self, scan: Scanner.ProjectScanResult) -> None:
-        """Remove e re-renderiza os filhos de um único projeto."""
+        """Remove e re-renderiza os filhos de um único projeto.
+
+        Preserva as pastas (abas) que estavam abertas para que criar,
+        renomear ou mesclar pastas não feche a navegação do usuário.
+        """
         key = scan.path
         expected_years = [str(year) for year in Scanner.DEFAULT_YEARS]
+        expanded = self._expanded_branch(key)
         self._render_queue.clear()
         self._register_project_counts(key, scan.structure, scan.years)
         self._append_project_children(
@@ -859,6 +888,8 @@ class ProjectStructurePlugin(BasePlugin):
             self._tree.setUpdatesEnabled(True)
         self._request_statistics(key, Path(key))
         self._tree.set_node_expanded(key, True)
+        for node_key in expanded:
+            self._tree.set_node_expanded(node_key, True)
         self._apply_current_filter()
         self._update_cards()
 

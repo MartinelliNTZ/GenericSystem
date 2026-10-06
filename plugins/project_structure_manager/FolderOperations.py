@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
@@ -76,10 +78,65 @@ def rename_folder(origin: Path, new_name: str) -> Path:
     return destination
 
 
+def _clear_readonly(path: Path) -> None:
+    """Remove o atributo somente leitura de ``path`` (Windows)."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+    except OSError as e:
+        _logger().warning(
+            f"Falha ao limpar atributo somente leitura: {path}",
+            code="PSM_CHMOD_SKIP",
+            error=str(e),
+        )
+
+
+def _remove_if_empty(
+    path: Path, retries: int = 12, delay: float = 0.4
+) -> bool:
+    """Remove ``path`` se estiver vazia, com retries para locks transientes.
+
+    No Windows, pastas sincronizadas (ex: OneDrive) ou pastas sendo enumeradas
+    por ``os.scandir`` (worker de estatísticas) podem recusar a remoção
+    momentaneamente ([WinError 5] Acesso negado). Limpa o atributo somente
+    leitura e tenta novamente algumas vezes antes de desistir. Retorna True
+    apenas se a pasta foi efetivamente removida.
+    """
+    last_error: Optional[OSError] = None
+    for attempt in range(retries):
+        try:
+            if not path.is_dir() or any(path.iterdir()):
+                return False
+            os.rmdir(path)
+            return True
+        except PermissionError as e:
+            last_error = e
+            _clear_readonly(path)
+            if attempt < retries - 1:
+                time.sleep(delay)
+        except OSError as e:
+            _logger().warning(
+                f"Nao foi possivel remover pasta vazia: {path}",
+                code="PSM_RMDIR_SKIP",
+                error=str(e),
+            )
+            return False
+    _logger().warning(
+        f"Pasta vazia permaneceu bloqueada (remocao falhou): {path}",
+        code="PSM_RMDIR_SKIP",
+        error=str(last_error),
+    )
+    return False
+
+
 def _merge_recursive(
     source: Path, destination: Path, conflicts: List[str]
 ) -> None:
-    """Mescla recursivamente ``source`` em ``destination``."""
+    """Mescla recursivamente ``source`` em ``destination``.
+
+    Subpastas homônimas são mescladas recursivamente e removidas assim que
+    ficam vazias, garantindo que a pasta de origem (nome incoerente) seja
+    eliminada ao final da padronização.
+    """
     destination.mkdir(parents=True, exist_ok=True)
     for item in list(source.iterdir()):
         target = destination / item.name
@@ -87,22 +144,23 @@ def _merge_recursive(
             shutil.move(str(item), str(target))
         elif item.is_dir() and target.is_dir():
             _merge_recursive(item, target, conflicts)
+            _remove_if_empty(item)
         else:
             conflicts.append(str(item))
 
 
 def merge_folders(source: Path, destination: Path) -> List[str]:
-    """Mescla ``source`` em ``destination``. Retorna a lista de conflitos."""
+    """Mescla ``source`` em ``destination`` e remove a origem se ficar vazia.
+
+    Retorna a lista de conflitos (arquivos que já existiam no destino). Quando
+    não há conflitos, a pasta de origem é eliminada por completo.
+    """
     source = Path(source)
     destination = Path(destination)
     conflicts: List[str] = []
     try:
         _merge_recursive(source, destination, conflicts)
-        try:
-            if not any(source.iterdir()):
-                source.rmdir()
-        except OSError:
-            pass
+        _remove_if_empty(source)
         _logger().info(
             f"Mesclagem concluída: {source} -> {destination} "
             f"({len(conflicts)} conflito(s))"

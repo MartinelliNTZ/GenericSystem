@@ -1,3 +1,19 @@
+[1.4.5][2026.10.06][08:20] - Mesclagem robusta contra lock do OneDrive (WinError 5)
+  - plugins/project_structure_manager/FolderOperations.py: a remoção da pasta de origem vazia agora limpa o atributo somente leitura e repete com pequeno atraso (12 tentativas x 0.4s) antes de desistir — evita que o lock transiente do OneDrive ou de um os.scandir concorrente ([WinError 5] Acesso negado) deixe a pasta com nome incoerente no disco
+  - plugins/project_structure_manager/FolderOperations.py: novo helper _clear_readonly() e logs PSM_CHMOD_SKIP
+
+[1.4.4][2026.10.06][08:17] - Estrutura de Projetos: mesclagem remove pasta de origem + NF_DEFENSIVOS
+  - plugins/project_structure_manager/FolderOperations.py: a mesclagem agora remove as subpastas de origem que ficam vazias após a recursão e elimina a pasta de origem (nome incoerente) quando não há conflitos — antes a pasta padronizada permanecia mesmo após mover todo o conteúdo
+  - plugins/project_structure_manager/FolderOperations.py: removido "except OSError: pass" silencioso; falha ao remover pasta vazia agora é logada (PSM_RMDIR_SKIP), conforme Contrato 2
+  - plugins/project_structure_manager/ProjectStructureScanner.py: DOCUMENT_TEMPLATE ganhou NF_DEFENSIVOS dentro de 03_NOTAS_FISCAIS
+
+[1.4.3][2026.10.06][08:03] - Gerenciador de Estrutura: preservar abas abertas + botões ABRIR/FECHAR ABAS
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: o refresh incremental (_rebuild_project_branch) agora preserva as pastas (abas) que estavam abertas ao criar/renomear/mesclar pastas — antes só a aba da OS permanecia aberta
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: _capture_state passou a capturar TODOS os nós expandidos (recarga completa restaura subpastas abertas)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: adicionados botões "ABRIR ABAS" e "FECHAR ABAS" nos ExecutionButtons (Contrato 18)
+  - resources/widgets/grid/GridTree.py: novos métodos expanded_keys(), expand_all() e collapse_all()
+  - docs/skills/SKILL_WIDGETS.md: GridTree atualizado (expanded_keys, expand_all, collapse_all)
+
 [1.4.2][2026.10.05][21:25] - Nome de usuário nas credenciais e CloudUserStatusWidget na MenuBar
   - resources/widgets/dialogs/FirebaseLoginDialog.py: Adicionado campo "Nome" no formulário e retorno de (name, email, password)
   - core/firebase/FirebaseCredentialManager.py: Salva e carrega o nome criptografado em config/.firebase_auth.enc; adicionado helper get_user_name()
