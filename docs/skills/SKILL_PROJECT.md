@@ -292,9 +292,10 @@ consulta rápida.
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS, prefs, backup e varredura assíncrona |
-| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta UM registro por OS (uma SubOS por pasta) + banco consolidado + `ProjectDatabaseWorker` |
-| `plugins/project_database_manager/ProjectDatabaseStore.py` | Leitura/escrita dos JSONs em `.BancoDados` (gravação atômica) |
+| `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS (consulta Firebase + re-escaneia), prefs, backup e varredura assíncrona |
+| `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: **NÃO cria OS** — re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
+| `core/firebase/CloudProjectDatabase.py` | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore) + geração dos backups JSON |
+| `core/database/ProjectDatabaseStore.py` | Leitura/escrita atômica dos backups JSON em `.BancoDados` (usada só pela `CloudProjectDatabase`) |
 | `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) e tipos de nó (`BaseFile`, `Years`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
@@ -325,7 +326,7 @@ A chave (`os`) — que também dá nome ao arquivo — é o número normalizado
   "name": "",
   "updated_at": "2026-10-05T17:15:36",
   "sub_os": [
-    {"sub_os": "A", "path": "C:/.../OS_181_RENNER_A_...",
+    {"sub_os": "A", "path": "OS_181_RENNER_A_...",
      "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
      "years": ["2023", "2024"],
      "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""}
@@ -342,15 +343,17 @@ A chave (`os`) — que também dá nome ao arquivo — é o número normalizado
 
 ### Regras
 
-1. **Abrir a ferramenta NÃO recalcula nem grava** — apenas lê o consolidado.
-2. Os dados só são recalculados/gravados ao clicar em **ATUALIZAR DADOS**
-   (varredura em background + gravação atômica).
+1. **Abrir a ferramenta NÃO recalcula nem grava** — apenas lê a base (Firebase).
+2. **ATUALIZAR DADOS não cria OS**: consulta o Firestore as OS já existentes,
+   **re-escaneia** as pastas associadas (caminhos RELATIVOS à pasta-mãe) e
+   atualiza `folders`/`years` (varredura em background + gravação no Firebase),
+   exibindo um modal de resumo. A gravação dos backups JSON é da
+   `CloudProjectDatabase` (Contrato 28 — plugins com ZERO contato com o JSON).
 3. A **pasta-mãe** é a mesma do Gerenciador de Estrutura (fonte única — seção
    `ProjectStructure`), exibida **somente leitura**.
 4. O **backup diário** é `zipfile` (stdlib), gravado em
    `<backup_dir>/<YYYYMMDDHHMMSS>.BancoDados.zip` (default
    `~/Documents/Backups/VerraData`), no máximo **1x/dia**, disparado ao iniciar
-   **esta ferramenta ou** o Gerenciador de Estrutura
-   (`ProjectDatabaseBackup.ensure_daily_backup`).
+   **esta ferramenta** (`ProjectDatabaseBackup.ensure_daily_backup`).
 5. Código compartilhado vive em `utils/` (Contrato 7) — nenhum plugin importa
    outro plugin.

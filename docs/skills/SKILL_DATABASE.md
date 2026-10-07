@@ -7,8 +7,9 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 ## Visão Geral
 
 - O **Firebase (Cloud Firestore)** é o **banco de dados oficial**.
-- Os dados têm **cópias offline em JSON** dentro da **pasta-mãe** (um JSON por
-  OS + um consolidado). Esses JSONs funcionam como **backups** consultáveis.
+- Os dados têm **cópias offline (backup) em JSON** dentro da **pasta-mãe** (um
+  JSON por OS + um consolidado). Esses JSONs são **escritos** pela classe de
+  banco (`CloudProjectDatabase`) e **NUNCA lidos pela aplicação**.
 - A sincronização é **bidirecional**:
   - `push` — "mandar atualizar a base" grava/atualiza o Firestore a partir dos
     JSONs locais.
@@ -26,11 +27,12 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 | `FirebaseServiceAccountAuth` | `core/firebase/FirebaseServiceAccountAuth.py` | Token OAuth2 da conta de serviço (Admin SDK) — cache + renovação |
 | `FirebaseTokenProvider` | `core/firebase/FirebaseTokenProvider.py` | Resolve o token Bearer (conta de serviço ou usuário) |
 | `FirestoreService` | `core/firebase/FirestoreService.py` | CRUD REST no Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `delete_document`) |
-| `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Sincroniza um diretório de JSONs ↔ uma coleção Firestore (`push` / `pull`) |
+| `CloudProjectDatabase` | `core/firebase/CloudProjectDatabase.py` | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS — lê/grava o Firestore (`load_orders`/`get_order`/`save_order`/`rebuild_consolidated`) e GERA os backups JSON |
+| `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Materializa os documentos da coleção como JSONs locais (`pull`) |
 | `FirebaseWorker` | `core/firebase/FirebaseWorker.py` | Execução assíncrona (QThread) |
-| `ProjectDatabaseStore` | `core/database/ProjectDatabaseStore.py` | Gravação atômica dos JSONs em `.BancoDados` (camada de banco de dados compartilhada) |
-| `ProjectDatabaseService` | `plugins/project_database_manager/ProjectDatabaseService.py` | Monta os registros + `ProjectDatabaseWorker` |
-| `ProjectDatabasePlugin` | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI: ATUALIZAR DADOS (push) + SINCRONIZAR NUVEM (pull) |
+| `ProjectDatabaseStore` | `core/database/ProjectDatabaseStore.py` | Gravação atômica dos backups JSON em `.BancoDados` (usada SÓ pela `CloudProjectDatabase`) |
+| `ProjectDatabaseService` | `plugins/project_database_manager/ProjectDatabaseService.py` | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years` + `ProjectDatabaseWorker` |
+| `ProjectDatabasePlugin` | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI: ATUALIZAR DADOS (consulta Firebase + re-escaneia, com modal de resumo) + SINCRONIZAR NUVEM (pull) |
 | `ProjectDatabaseBackup` | `utils/ProjectDatabaseBackup.py` | ZIP diário do `.BancoDados` |
 
 ## Estrutura em disco (pasta-mãe)
@@ -64,9 +66,9 @@ guarda apenas o número + a lista de SubOS:
   "name": "",
   "updated_at": "2026-10-06T16:40:00",
   "sub_os": [
-    {"sub_os": "A", "path": "C:/.../OS_181_RENNER_A_...", "folders": ["05_ASA"], "years": ["2024"],
+    {"sub_os": "A", "path": "OS_181_RENNER_A_...", "folders": ["05_ASA"], "years": ["2024"],
      "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""},
-    {"sub_os": "B", "path": "C:/.../OS_181_RENNER_B_...", "folders": ["01_..."], "years": [],
+    {"sub_os": "B", "path": "OS_181_RENNER_B_...", "folders": ["01_..."], "years": [],
      "client": "...", "commercial_name": "...", "cnpj": ""}
   ]
 }
@@ -76,8 +78,8 @@ guarda apenas o número + a lista de SubOS:
 - A chave **`sub_os`** guarda **OS → SubOS → (path, folders, years, cliente,
   nome comercial, CNPJ)** — uma entrada por pasta da OS, com os dados daquela
   SubOS.
-- **Uma pasta = uma SubOS**: não existem SubOS sem pasta. O refresh **não**
-  mantém SubOS "fantasma" que estejam no banco mas não tenham pasta em disco.
+- **Uma pasta = uma SubOS**: o refresh associa cada pasta a uma SubOS. Uma OS
+  recém-criada tem a SubOS `A` (sem pasta até usar ADICIONAR PASTA).
 - A letra da **SubOS** vem do **nome da pasta** quando todas as pastas da OS têm
   letra (ex.: ``OS_181_RENNER_A_...`` → ``"A"``); senão é atribuída por **ordem**
   (`ProjectStructureUtil.assign_sub_os_letters`): 1ª pasta → ``A`` (uma pasta
@@ -86,12 +88,17 @@ guarda apenas o número + a lista de SubOS:
 - A **OS não guarda** `client`/`folders`/`years`/`path`: cliente / nome comercial
   / CNPJ e as pastas/anos ficam **em cada `sub_os`**. Telas que resumem a OS
   agregam esses dados com `ProjectStructureUtil.aggregate_record`.
-- O **cliente não** é mais derivado do nome da pasta: é **associado** pelo seed
-  (`add_data/seed_sub_os.py`) via a letra da SubOS. O refresh preserva essa
-  categorização (`ProjectDatabaseService.build_os_record`).
-- O seed (`add_data/seed_sub_os.py`) envia **direto ao Firestore** (coleção
-  `banco_dados`) e **nunca** grava JSON; para materializar os JSONs locais use o
-  **pull** (SINCRONIZAR NUVEM) — os JSONs são consequência do sistema.
+- O **cliente não** é derivado do nome da pasta: é **associado** pelo seed
+  (`add_data/seed_sub_os.py`) via a letra da SubOS.
+- O `path` de cada SubOS é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`),
+  resolvido em runtime por `ProjectStructureUtil.resolve_path` — portável entre
+  computadores.
+- O seed **cria a base de OS** (OS + SubOS + pasta, garantindo a SubOS A) direto
+  no Firestore via `CloudProjectDatabase`. Novas OS são criadas pelo
+  **Acompanhamento de OS** (botão CRIAR OS; só o número é obrigatório).
+- O **Banco de Dados** (ATUALIZAR DADOS) **não cria OS**: consulta o Firestore as
+  OS existentes, re-escaneia as pastas e atualiza `folders`/`years`, exibindo um
+  modal de resumo. Plugins têm **zero contato** com o JSON (Contrato 28).
 
 > A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse
 > registro para exibir as SubOS de uma OS selecionada.
@@ -128,21 +135,20 @@ Configuração mínima (seção `Firebase` em `config/<APP_SLUG>_preferences.jso
 
 ## Fluxo de Sincronização
 
-### Push (local → Firebase)
+### Atualização (ATUALIZAR DADOS → Firebase)
 
 ```
 Usuário clica ATUALIZAR DADOS
-  → ProjectDatabaseWorker varre a pasta-mãe (background)
-  → ProjectDatabasePlugin._save_database grava .BancoDados/*.json (atômico)
-  → ProjectDatabasePlugin._push_to_cloud_async()
-      → FirebaseWorker(CloudDatabaseSync.push, <local_dir>, "banco_dados")
-          → para cada *.json: FirestoreService.save_document("banco_dados", <stem>, dados)
-          → CloudDatabaseSync grava .cloud/meta.json
+  → FirebaseWorker(CloudProjectDatabase.load_orders) consulta as OS existentes no Firestore
+  → ProjectDatabaseWorker re-escaneia as pastas das SubOS (background)
+  → FirebaseWorker(CloudProjectDatabase.save_orders) grava no Firestore
+      → e a própria classe gera os backups JSON (atômico): .BancoDados/*.json + consolidado
+  → modal de resumo (MessageBox.show_info)
 ```
 
-- O push só ocorre se houver **sessão Firebase ativa**
-  (`FirebaseAuthService.is_authenticated()`); caso contrário, é ignorado com log
-  `PDB_PUSH_OFFLINE`.
+- Exige **credenciais Firebase** (`FirebaseTokenProvider.has_credentials()`).
+- A leitura é **somente** do Firestore; com a base vazia/offline a ferramenta
+  fica **vazia** — nunca há fallback para o JSON local.
 
 ### Pull (Firebase → local)
 
@@ -218,7 +224,9 @@ meta = CloudDatabaseSync.read_meta(local_dir)
 
 ## Regras
 
-1. **O Firestore é a fonte oficial**; o JSON em `.BancoDados` é o espelho/backup offline.
+1. **O Firestore é a fonte oficial**; o JSON em `.BancoDados` é um **backup**
+   ESCRITO pela classe de banco (`CloudProjectDatabase`) — **nunca lido pela
+   aplicação** (Contrato 28).
 2. Todo `*.json` do `.BancoDados` é tratado como documento da coleção `banco_dados`
    (nome do arquivo = `doc_id`).
 3. Os metadados de sync **nunca** ficam na raiz do `.BancoDados` (usar

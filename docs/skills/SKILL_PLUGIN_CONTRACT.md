@@ -520,3 +520,32 @@ Isso lê o arquivo como texto e analisa a estrutura sintática sem executar nada
 - ❌ `python -c "from resources.widgets.X import Y"` — **TRAVA** o terminal
 - ❌ `python -c "from PySide6.QtWidgets import ..."` — **TRAVA** o terminal
 - Apenas execute imports de widgets Qt dentro de uma aplicação rodando (`main.py`)
+
+## 🔴 Contrato 28 — Persistência de Dados (Firebase-first): plugins com ZERO contato com o JSON
+
+```
+O Firebase (Cloud Firestore) é a FONTE OFICIAL dos dados do banco (OS/SubOS).
+Plugins/ferramentas NUNCA leem nem escrevem o JSON de dados diretamente.
+Quem grava/lê e GERA os backups JSON é a CLASSE DE BANCO — hoje
+`core.firebase.CloudProjectDatabase`.
+```
+
+**Regras:**
+- Toda leitura/escrita de registros do banco (OS/SubOS) passa por
+  `CloudProjectDatabase` (`load_orders`, `get_order`, `save_order`,
+  `rebuild_consolidated`).
+- Os backups JSON em `<pasta-mãe>/.BancoDados` são CONSEQUÊNCIA da escrita —
+  gerados EXCLUSIVAMENTE por `CloudProjectDatabase` (via `ProjectDatabaseStore`).
+- Plugins NÃO importam `ProjectDatabaseStore` nem manipulam `.json` de dados.
+- A **leitura** é EXCLUSIVAMENTE do Firestore: se a base estiver vazia/offline,
+  a ferramenta fica **vazia** — é **proibido** qualquer fallback para o JSON local.
+- O caminho de cada pasta associada é gravado RELATIVO à pasta-mãe (portável
+  entre computadores), resolvido em runtime por
+  `ProjectStructureUtil.resolve_path` / `to_relative_path`.
+- Operações de rede rodam em background (`FirebaseWorker`), nunca na UI thread.
+
+**Quem cria OS:** o seed (`add_data/seed_sub_os.py`, a base já existente) e a
+ferramenta **Acompanhamento de OS** (botão CRIAR OS). O Banco de Dados
+(ATUALIZAR DADOS) apenas LÊ a base e atualiza `folders`/`years` das OS já
+existentes.
+

@@ -5,10 +5,15 @@ Aetheris ToolBox.
 
 ## `seed_sub_os.py`
 
-Semeia, **direto no Firebase (Cloud Firestore, coleção `banco_dados`)**, a
-categorização **OS → SubOS → Cliente / Nome comercial / CNPJ**. O Firestore é a
-fonte oficial: este script **nunca** grava JSON — os JSONs em `.BancoDados` são
-consequência/backup gerados pelo sistema (pull / ATUALIZAR DADOS).
+Cria, **direto no Firebase (Cloud Firestore, coleção `banco_dados`)**, a BASE de
+OS já existente: um registro por OS com as suas **SubOS** (cliente, nome
+comercial e CNPJ) e a **pasta associada** (caminho **RELATIVO** à pasta-mãe —
+portável entre computadores). Toda OS ganha ao menos a **SubOS A**.
+
+O Firestore é a **fonte oficial**. Os backups JSON em `.BancoDados` são gerados
+pela **classe de banco** `CloudProjectDatabase` (o script nunca grava JSON). A
+criação de **novas** OS é feita pelo sistema, na ferramenta **Acompanhamento de
+OS** (botão CRIAR OS).
 
 ### Uso
 
@@ -24,9 +29,8 @@ python add_data/seed_sub_os.py --dry-run
 ```
 
 > ⚠️ O script exige credenciais Firebase (conta de serviço ou login). Ele grava
-> os documentos `<os>` e o consolidado `banco_dados` na coleção `banco_dados`.
-> Para materializar os JSONs locais, use **SINCRONIZAR NUVEM** no **Banco de
-> Dados** (pull) — os JSONs são consequência do sistema.
+> os documentos `<os>` e o consolidado `banco_dados` na coleção `banco_dados`
+> via `CloudProjectDatabase`.
 
 ### Resolução da pasta-mãe (nesta ordem)
 
@@ -40,14 +44,16 @@ python add_data/seed_sub_os.py --dry-run
 - Agrupa por **número de OS** (normalizado, `039` → `39`): todas as pastas de
   uma OS ficam em um **único registro**.
 - **Uma pasta = uma SubOS**: a SubOS é derivada da estrutura de pastas (a letra
-  é lida do nome da pasta — ex.: `OS_181_RENNER_A_...` → `A`); não existem
-  SubOS sem pasta.
+  é lida do nome da pasta — ex.: `OS_181_RENNER_A_...` → `A`).
+- O `path` de cada SubOS é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`).
 - Mescla a categorização por **letra da SubOS**: preenche `client`,
   `commercial_name` e `cnpj` **sem apagar** `path`/`folders`/`years`.
+- **Garante a SubOS A** em toda OS.
 - As pastas/anos ficam **dentro da SubOS** (não no nível da OS).
-- Lê o estado atual **do Firestore** (documentos por OS) para preservar o que
-  não é semeado; o refresh do plugin **Banco de Dados** preserva a categorização
-  (ver `ProjectDatabaseService.build_os_record`).
+
+> Lê o estado atual **do Firestore** (via `CloudProjectDatabase.load_orders`)
+> para preservar o que não é semeado.
 
 > O formulário enviado por linha é:
-> `{"sub_os": "A", "client": "...", "commercial_name": "...", "cnpj": "..."}`.
+> `{"sub_os": "A", "path": "...", "folders": [...], "years": [...],
+> "client": "...", "commercial_name": "...", "cnpj": "..."}`.

@@ -86,20 +86,21 @@
 |---|---|
 | `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes e as subpastas de template de uma pasta de topo (ex: `14_RELATORIOS`) são validadas na árvore e criadas junto com a pasta; toda pasta com conteúdo em disco aparece expansível (subpastas/arquivos carregados sob demanda via `set_node_expandable`) |
 | `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano, o template completo de documentos e o template de subpastas das pastas de topo via `scan_project_trees`) e estatísticas; `folder_has_items(path)` indica se uma pasta tem conteúdo (indicador de expansão); `StatisticsWorker` calcula em background |
-| `FolderOperations` (módulo) | Criação, renomeação e mesclagem de pastas + templates (`create_template`, `create_document_year`, `create_project_folder`) + abertura no explorer; `RenameFolderWorker` |
+| `FolderOperations` (módulo) | Renomeação e mesclagem de pastas + abertura no explorer; re-exporta a criação (delegada a `utils/ProjectStructureCreator`); `RenameFolderWorker` |
 
 ### plugins/project_database_manager/
 | Classe | Descrição |
 |---|---|
-| `ProjectDatabasePlugin` | Ferramenta CENTRAL do banco de dados: cards, árvore OS/Cliente/Pastas/Anos, ATUALIZAR DADOS (push para o Firestore) e SINCRONIZAR NUVEM (pull) |
-| `ProjectDatabaseService` (módulo) | Monta UM registro por OS (agrupando as pastas/SubOS pelo número) + banco consolidado e o `ProjectDatabaseWorker` (varredura em background); preserva a categorização `sub_os` |
-| `ProjectDatabaseStore` (módulo) | Leitura/escrita atômica dos JSONs em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) |
+| `ProjectDatabasePlugin` | Ferramenta CENTRAL do banco de dados: cards, árvore OS/Cliente/Pastas/Anos; ATUALIZAR DADOS (consulta Firebase + re-escaneia as OS existentes) e SINCRONIZAR NUVEM (pull) |
+| `ProjectDatabaseService` (módulo) | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
+| `CloudProjectDatabase` (core/firebase) | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore: `load_orders`/`get_order`/`save_order`/`rebuild_consolidated`) + geração dos backups JSON |
+| `ProjectDatabaseStore` (core/database) | Leitura/escrita atômica dos backups JSON em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) — usada só pela `CloudProjectDatabase` |
 
 ### plugins/os_tracker/
 | Classe | Descrição |
 |---|---|
-| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: escolhe uma OS e exibe as SubOS (cliente, nome comercial e CNPJ) a partir do banco `.BancoDados` |
-| `OsTrackerService` (módulo) | Lê os registros de OS do banco consolidado e monta os modelos `SubOS` (`load_orders`, `build_sub_os`, `order_label`) |
+| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS, exibe os dados e cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase` |
+| `OsTrackerService` (módulo) | Lê a base (Firebase) e monta os modelos `SubOS`; cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
 
 ---
 

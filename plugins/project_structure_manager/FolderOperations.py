@@ -15,92 +15,29 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
 from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
-from utils.ProjectStructureUtil import (
-    BaseFile,
-    DOCUMENT_TEMPLATE,
-    ProjectStructureUtil,
-    file_spec,
-    is_file_node,
-)
+from utils.ProjectStructureCreator import ProjectStructureCreator
+
+# A CRIAÇÃO de pastas/arquivos base vive na camada COMPARTILHADA (utils/ —
+# Contrato 7) para poder ser reusada por outras ferramentas sem plugin→plugin.
+# Aqui apenas re-exportamos, mantendo a API pública ``FsOps.create_*`` usada
+# pelo ProjectStructurePlugin.
+create_folder = ProjectStructureCreator.create_folder
+create_project_folder = ProjectStructureCreator.create_project_folder
+create_base_file = ProjectStructureCreator.create_base_file
+create_template = ProjectStructureCreator.create_template
+create_document_year = ProjectStructureCreator.create_document_year
 
 
 def _logger() -> LogUtils:
     return LogUtils(
         tool=ToolKey.PROJECT_STRUCTURE.value, class_name="FolderOperations"
     )
-
-
-def create_folder(project: Path, name: str) -> Path:
-    """Cria a pasta ``name`` dentro de ``project``. Levanta OSError em falha."""
-    destination = Path(project) / name
-    destination.mkdir()
-    _logger().info(f"Pasta criada: {destination}")
-    return destination
-
-
-def create_project_folder(
-    project: Path, name: str, template: Optional[Dict[str, Any]] = None
-) -> Path:
-    """Cria a pasta padrão ``name`` e, se houver, o template de subpastas.
-
-    Levanta OSError em falha de filesystem.
-    """
-    destination = create_folder(project, name)
-    if template:
-        create_template(destination, template)
-    return destination
-
-
-def create_base_file(destination: Path, spec: BaseFile) -> Path:
-    """Cria/copia um ARQUIVO BASE conforme ``spec`` dentro do projeto.
-
-    Copia de ``ProjectStructureUtil.BASE_FILES_DIR`` quando ``spec.source`` é
-    informado; caso contrário grava ``spec.content``. Levanta OSError em falha.
-    """
-    destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists() and not spec.overwrite:
-        return destination
-    if spec.source:
-        shutil.copy2(ProjectStructureUtil.BASE_FILES_DIR / spec.source, destination)
-    else:
-        destination.write_text(spec.content, encoding="utf-8")
-    _logger().info(f"Arquivo base criado: {destination}")
-    return destination
-
-
-def create_template(root: Path, template: Dict[str, Any]) -> Path:
-    """Cria recursivamente o template (pastas e arquivos base) dentro de ``root``.
-
-    Pastas já existentes são preservadas (idempotente). Nós de arquivo (``str``
-    ou ``BaseFile``) materializam o arquivo correspondente. Levanta OSError em
-    falha de filesystem.
-    """
-    root = Path(root)
-    root.mkdir(parents=True, exist_ok=True)
-    for name, node in template.items():
-        child = root / name
-        if is_file_node(node):
-            create_base_file(child, file_spec(node))
-            continue
-        child.mkdir(exist_ok=True)
-        if isinstance(node, dict):
-            create_template(child, node)
-    return root
-
-
-def create_document_year(envio: Path, year: int) -> Path:
-    """Cria a pasta do ``year`` com o template completo de documentos."""
-    year_path = Path(envio) / str(year)
-    create_template(year_path, DOCUMENT_TEMPLATE)
-    _logger().info(f"Pasta de ano criada: {year_path}")
-    return year_path
 
 
 def destination_exists(origin: Path, new_name: str) -> bool:

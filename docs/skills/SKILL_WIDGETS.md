@@ -1311,6 +1311,39 @@ if dialog.exec():
 ---
 
 
+### `FormLineEditDialog` — `dialogs/FormLineEditDialog.py`
+Diálogo genérico de formulário de campos de texto. Herda de `BaseDialog` (AppBar no topo) e monta os campos reutilizando `GridLineEdit`, com **validação de campos obrigatórios** (o OK não fecha se algum obrigatório estiver vazio). O consumidor informa a config no mesmo formato do `GridLineEdit` e recebe os valores por `values`.
+
+```python
+from resources.widgets.dialogs.FormLineEditDialog import FormLineEditDialog
+
+dialog = FormLineEditDialog(
+    config={
+        "os": {"label": "Número da OS *", "placeholder": "ex.: 39"},
+        "client": {"label": "Cliente", "placeholder": "opcional"},
+    },
+    title="Criar OS",
+    required_keys=["os"],
+    ok_text="Criar OS",
+    parent=self,
+)
+if dialog.exec():
+    valores = dialog.values  # {"os": "39", "client": "..."}
+```
+
+**Parâmetros do construtor:**
+- `config: Dict[str, Dict]` — itens no formato do `GridLineEdit` (`label`, `default`, `placeholder`, `description`)
+- `title: str = "Formulário"` — título da janela e da AppBar
+- `required_keys: list[str] | None` — chaves que não podem ficar vazias
+- `ok_text: str = "Criar"` — texto do botão de confirmação
+- `min_size: tuple = (380, 300)` — tamanho mínimo do diálogo
+- `parent: QWidget | None = None`
+
+**Propriedades:**
+- `values` → `dict[str, str]` — valores informados após `exec()` retornar True
+
+---
+
 ### `ComplexSelector` — `complex/ComplexSelector.py` (DEPRECATED)
 > ⚠️ **DEPRECATED** — Este widget está obsoleto. **Use `GridComplexSelector`** de `resources/widgets/complex/GridComplexSelector.py` em todas as novas ferramentas. `ComplexSelector` só deve ser usado internamente pelo grid — nunca diretamente por plugins.
 >

@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
@@ -274,6 +274,40 @@ class ProjectStructureUtil(BaseUtil):
         """Normaliza o número da OS — remove zeros à esquerda (``"039"`` → ``"39"``)."""
         text = str(number).strip()
         return str(int(text)) if text.isdigit() else text
+
+    # ── Caminhos (relativo à pasta-mãe — portável entre computadores) ──
+
+    @classmethod
+    def to_relative_path(
+        cls, mother: Optional[Path], path: str | Path
+    ) -> str:
+        """Converte ``path`` em caminho RELATIVO à pasta-mãe (portável).
+
+        Grava sempre com separador ``/`` para funcionar em qualquer computador.
+        Se ``path`` não estiver sob ``mother`` (ou ``mother`` for vazio),
+        retorna apenas o nome final da pasta/arquivo.
+        """
+        target = Path(path)
+        if mother is not None:
+            try:
+                return target.relative_to(Path(mother)).as_posix()
+            except ValueError:
+                pass
+        return target.name
+
+    @classmethod
+    def resolve_path(cls, mother: Optional[Path], rel_path: str | Path) -> Path:
+        """Resolve um caminho RELATIVO à pasta-mãe (ou devolve o absoluto).
+
+        Caminhos absolutos são retornados como estão (compatibilidade com o
+        legado). Caminhos relativos são combinados com ``mother``.
+        """
+        raw = str(rel_path or "").replace("\\", "/").strip()
+        candidate = Path(raw)
+        if candidate.is_absolute():
+            return candidate
+        base = Path(mother) if mother is not None else Path("")
+        return (base / raw) if raw else base
 
     # ── Dados já criados (adaptador para o Banco de Dados) ──────────
 

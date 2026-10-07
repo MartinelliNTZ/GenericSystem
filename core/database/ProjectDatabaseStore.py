@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-ProjectDatabaseStore — Persistência do Banco de Dados de Projetos (.BancoDados)
-===============================================================================
-Camada de BANCO DE DADOS compartilhada do sistema (Contrato 7): a leitura/escrita
-dos JSONs em ``<pasta-mãe>/.BancoDados`` não pertence a nenhuma ferramenta — é
-consumida tanto pelo Banco de Dados quanto pelo Acompanhamento de OS.
+ProjectDatabaseStore — Escrita dos backups JSON do banco (Firebase-first)
+========================================================================
+Camada de BANCO DE DADOS compartilhada (Contrato 7) que ESCREVE os backups JSON
+do banco em ``<pasta-mãe>/.BancoDados``. A escrita é feita EXCLUSIVAMENTE pela
+classe de banco ``CloudProjectDatabase`` (Contrato 28) — a aplicação (plugins)
+**nunca** lê nem grava esses JSONs diretamente.
 
-- Um JSON por OS (``<numero_os>.json``) — fonte por projeto.
-- Um JSON consolidado (``banco_dados.json``) — agregação de todas as OS.
+- Um JSON por OS (``<numero_os>.json``).
+- Um JSON consolidado (``banco_dados.json``).
 
 A gravação é atômica (``<arquivo>.tmp`` + ``os.replace``) para evitar JSON
 corrompido em caso de queda. Não decide regras de negócio (isso é da ferramenta).
@@ -24,11 +25,10 @@ from typing import Any, Dict, Iterable
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
 from utils.ExplorerUtils import ExplorerUtils
-from utils.JsonUtil import JsonUtil
 
 
 class ProjectDatabaseStore(BaseUtil):
-    """Grava/lê os JSONs do banco de dados em ``<pasta-mãe>/.BancoDados``."""
+    """ESCREVE os backups JSON do banco em ``<pasta-mãe>/.BancoDados`` (Contrato 28)."""
 
     DB_FOLDER = ".BancoDados"
     CONSOLIDATED_FILENAME = "banco_dados.json"
@@ -80,31 +80,10 @@ class ProjectDatabaseStore(BaseUtil):
             db / cls.CONSOLIDATED_FILENAME, data, tool_key=tool_key
         )
 
-    # ── Leitura ─────────────────────────────────────────────────────
-
-    @classmethod
-    def load_consolidated(
-        cls,
-        mother_folder: str | Path,
-        tool_key: str = ToolKey.PROJECT_DATABASE.value,
-    ) -> Dict[str, Any]:
-        """Lê o JSON consolidado. Retorna ``{}`` se não existir."""
-        path = cls.db_dir(mother_folder) / cls.CONSOLIDATED_FILENAME
-        return JsonUtil.read_json(str(path), tool_key=tool_key)
-
-    @classmethod
-    def load_project(
-        cls,
-        mother_folder: str | Path,
-        os_number: str,
-        tool_key: str = ToolKey.PROJECT_DATABASE.value,
-    ) -> Dict[str, Any]:
-        """Lê o JSON individual de uma OS (``<numero_os>.json``).
-
-        Retorna ``{}`` se o arquivo não existir.
-        """
-        path = cls.db_dir(mother_folder) / (cls._safe_filename(os_number) + ".json")
-        return JsonUtil.read_json(str(path), tool_key=tool_key)
+    # ── Leitura ── (PROIBIDA para a aplicação — Contrato 28) ─────────
+    #
+    # A aplicação NUNCA lê o JSON: a fonte é o Firebase (CloudProjectDatabase).
+    # Este store apenas ESCREVE os backups JSON.
 
     @classmethod
     def prune_projects(

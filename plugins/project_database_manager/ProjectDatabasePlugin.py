@@ -2,14 +2,15 @@
 """
 ProjectDatabasePlugin — Banco de Dados de Projetos (OS)
 ======================================================
-Ferramenta CENTRAL que persiste um retrato (JSON) das pastas padrão e dos
-anos criados por OS de uma pasta-mãe, além de um backup diário do banco.
+Ferramenta CENTRAL de ATUALIZAÇÃO do banco de OS.
 
-- Os dados só são recalculados/gravados quando o usuário clica em
-  ATUALIZAR DADOS; abrir a ferramenta apenas LÊ o consolidado.
-- A pasta-mãe vem do Gerenciador de Estrutura (fonte única — somente
-  leitura aqui).
-- O backup diário é disparado ao iniciar esta ferramenta.
+Nova regra de negócio:
+- A ferramenta **não cria mais OS**. Ela consulta a fonte oficial (Firebase,
+  coleção ``banco_dados``) as OS já existentes, **re-escaneia** as pastas
+  associadas a cada SubOS e **atualiza** ``folders``/``years`` no Firebase.
+- A ferramenta tem **zero contato** com o JSON de dados: quem grava/lê e gera
+  os backups JSON é a classe de banco ``CloudProjectDatabase`` (Contrato 28).
+- Ao final, exibe um **modal** com o resumo do que foi atualizado.
 """
 
 from __future__ import annotations
@@ -26,13 +27,13 @@ from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
 from core.firebase.FirebaseServiceAccountAuth import FirebaseServiceAccountAuth
 from core.firebase.FirebaseTokenProvider import FirebaseTokenProvider
 from core.firebase.CloudDatabaseSync import CloudDatabaseSync
+from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from core.firebase.FirebaseWorker import FirebaseWorker
 from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.project_database_manager.ProjectDatabaseService import (
     ProjectDatabaseWorker,
 )
-from core.database.ProjectDatabaseStore import ProjectDatabaseStore
 from resources.widgets.dialogs.FirebaseLoginDialog import FirebaseLoginDialog
 from resources.widgets.grid.GridCardView import GridCardView
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
@@ -44,11 +45,14 @@ from utils.FormatUtils import FormatUtils
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
 from utils.ProjectDatabaseBackup import ProjectDatabaseBackup
-from utils.ProjectStructureUtil import DOCUMENT_YEARS_FOLDER, ProjectStructureUtil
+from utils.ProjectStructureUtil import (
+    DOCUMENT_YEARS_FOLDER,
+    ProjectStructureUtil,
+)
 
 
 class ProjectDatabasePlugin(BasePlugin):
-    """Ferramenta CENTRAL: banco de dados (JSON) das pastas/anos por OS."""
+    """Ferramenta CENTRAL: atualiza (no Firebase) os dados das OS já existentes."""
 
     _COL_OS = 0
     _COL_CLIENT = 1
@@ -57,7 +61,7 @@ class ProjectDatabasePlugin(BasePlugin):
     _COL_PATH = 4
 
     # Coleção do Cloud Firestore onde o banco é espelhado.
-    _CLOUD_COLLECTION = "banco_dados"
+    _CLOUD_COLLECTION = CloudProjectDatabase.COLLECTION
 
     # Tempo (ms) que o 100% fica visível antes de resetar a barra central.
     _PROGRESS_RESET_MS = 1200
@@ -72,13 +76,13 @@ class ProjectDatabasePlugin(BasePlugin):
                     "text": "SINCRONIZAR NUVEM",
                     "callback": self._on_sync_clicked,
                     "type": "secondary",
-                    "description": "Baixa atualizações do Firebase e regrava os JSONs",
+                    "description": "Baixa a base do Firebase e materializa os backups JSON",
                 },
                 "atualizar": {
                     "text": "ATUALIZAR DADOS",
                     "callback": self._on_refresh_clicked,
                     "type": "primary",
-                    "description": "Recalcula, grava e espelha os dados das OS na nuvem",
+                    "description": "Consulta o Firebase, re-escaneia as pastas e atualiza a base",
                 },
             },
         )
@@ -93,7 +97,11 @@ class ProjectDatabasePlugin(BasePlugin):
         self._worker: Optional[ProjectDatabaseWorker] = None
         self._auth_worker: Optional[FirebaseWorker] = None
         self._sync_worker: Optional[FirebaseWorker] = None
+        self._load_worker: Optional[FirebaseWorker] = None
+        self._save_worker: Optional[FirebaseWorker] = None
         self._database: Dict[str, Any] = {}
+        self._pending_orders: list = []
+        self._pending_summary: Dict[str, Any] = {}
         self._suspend_backup_cb = False
         self._pool = QThreadPool(self)
         self._pool.setMaxThreadCount(1)
@@ -105,12 +113,11 @@ class ProjectDatabasePlugin(BasePlugin):
         """Cancela os workers e limpa a fila antes de fechar."""
         if self._worker is not None:
             self._worker.cancel()
-        if self._auth_worker is not None and self._auth_worker.isRunning():
-            self._auth_worker.quit()
-            self._auth_worker.wait(1000)
-        if self._sync_worker is not None and self._sync_worker.isRunning():
-            self._sync_worker.quit()
-            self._sync_worker.wait(1000)
+        for worker in (self._auth_worker, self._sync_worker,
+                       self._load_worker, self._save_worker):
+            if worker is not None and worker.isRunning():
+                worker.quit()
+                worker.wait(1000)
         self._pool.clear()
         super().closeEvent(event)
 
@@ -162,6 +169,7 @@ class ProjectDatabasePlugin(BasePlugin):
     def _on_auth_result(self, result: Optional[Dict[str, Any]]) -> None:
         if result:
             self.logger.info("Sessão Firebase iniciada com sucesso", code="FB_SESSION_OK")
+            self._load_from_disk()
         else:
             self.logger.warning("Não foi possível autenticar no Firebase (operação offline)", code="FB_SESSION_OFFLINE")
 
@@ -285,21 +293,39 @@ class ProjectDatabasePlugin(BasePlugin):
     # ── Carga / atualização ──────────────────────────────────────────
 
     def _load_from_disk(self) -> None:
-        """Lê o consolidado existente (somente leitura) e popula a UI."""
+        """Lê a base da FONTE OFICIAL (Firebase) via classe de banco, em background."""
         self._database = {}
-        if self._mother_folder is not None and self._mother_folder.exists():
-            data = ProjectDatabaseStore.load_consolidated(
-                self._mother_folder, tool_key=ToolKey.PROJECT_DATABASE.value
-            )
-            if data.get("projects"):
-                self._database = data
-        self._render()
-        self.page.set_badge(
-            self.page.PRONTA if self._database else self.page.INFO
+        if not FirebaseTokenProvider.has_credentials():
+            self._render()
+            self.page.set_badge(self.page.INFO)
+            return
+        self._load_worker = FirebaseWorker(
+            CloudProjectDatabase.load_orders,
+            tool_key=ToolKey.PROJECT_DATABASE.value,
+            parent=self,
         )
+        self._load_worker.finished_with_result.connect(self._on_orders_loaded)
+        self._load_worker.failed.connect(self._on_load_failed)
+        self._load_worker.start()
+
+    def _on_orders_loaded(self, result: Optional[list]) -> None:
+        """Aplica a base lida da fonte oficial na UI."""
+        orders = list(result or [])
+        self._database = {"projects": orders}
+        self._render()
+        self.page.set_badge(self.page.PRONTA if orders else self.page.INFO)
+
+    def _on_load_failed(self, message: str) -> None:
+        """Trata falha ao consultar o Firebase — a UI fica vazia (sem JSON local)."""
+        self.logger.warning(
+            "Falha ao consultar o Firebase", code="PDB_LOAD_ERR", error=message
+        )
+        self._database = {"projects": []}
+        self._render()
+        self.page.set_badge(self.page.INFO)
 
     def _on_refresh_clicked(self) -> None:
-        """Valida a pasta-mãe e inicia a atualização dos dados."""
+        """Valida pasta-mãe/credenciais e inicia a atualização das OS existentes."""
         if self._mother_folder is None:
             self.page.set_badge(self.page.INFO)
             MessageBox.show_warning(
@@ -317,18 +343,56 @@ class ProjectDatabasePlugin(BasePlugin):
                 parent=self,
             )
             return
-        self._start_refresh()
+        if not FirebaseTokenProvider.has_credentials():
+            self.page.set_badge(self.page.ERROR)
+            MessageBox.show_warning(
+                "Configure a conta de serviço (ou conecte ao Firebase) para "
+                "atualizar a base.",
+                title="Banco de Dados",
+                parent=self,
+            )
+            return
+        self.page.set_badge(self.page.RUNNING)
+        self.page.buttons.set_enabled("atualizar", False)
+        SignalManager.instance().console_message.emit(
+            "Consultando a base no Firebase..."
+        )
+        self._load_worker = FirebaseWorker(
+            CloudProjectDatabase.load_orders,
+            tool_key=ToolKey.PROJECT_DATABASE.value,
+            parent=self,
+        )
+        self._load_worker.finished_with_result.connect(
+            self._on_orders_loaded_for_refresh
+        )
+        self._load_worker.failed.connect(self._on_sync_failed)
+        self._load_worker.start()
 
-    def _start_refresh(self) -> None:
-        """Inicia a varredura assíncrona da pasta-mãe."""
+    def _on_orders_loaded_for_refresh(self, result: Optional[list]) -> None:
+        """Após consultar a base, inicia a re-varredura das pastas existentes."""
+        orders = list(result or [])
+        if not orders:
+            self.page.set_badge(self.page.INFO)
+            self.page.buttons.set_enabled("atualizar", True)
+            MessageBox.show_info(
+                "Nenhuma OS cadastrada na base. Crie OS pela ferramenta "
+                "Acompanhamento de OS.",
+                title="Banco de Dados",
+                parent=self,
+            )
+            return
+        self._start_refresh(orders)
+
+    def _start_refresh(self, orders: list) -> None:
+        """Inicia a re-varredura assíncrona das pastas das OS existentes."""
         self._generation += 1
         self.page.set_badge(self.page.RUNNING)
         self.page.buttons.set_enabled("atualizar", False)
-        SignalManager.instance().console_message.emit("Lendo os projetos (OS)...")
+        SignalManager.instance().console_message.emit("Lendo as pastas das OS...")
         SignalManager.instance().progress_update.emit(0.0)
 
         self._worker = ProjectDatabaseWorker(
-            self._generation, str(self._mother_folder)
+            self._generation, str(self._mother_folder), orders
         )
         self._worker.signals.progress.connect(self._on_progress)
         self._worker.signals.finished.connect(self._on_finished)
@@ -343,28 +407,61 @@ class ProjectDatabasePlugin(BasePlugin):
             100.0 * done / max(total, 1)
         )
 
-    def _on_finished(self, generation: int, database: dict) -> None:
-        """Grava os JSONs, atualiza a UI e finaliza o progresso."""
+    def _on_finished(self, generation: int, orders: object, summary: object) -> None:
+        """Grava os dados atualizados no Firebase (classe de banco), em background."""
         if generation != self._generation:
             return
-        self._save_database(database)
-        self._database = database
+        self._pending_orders = list(orders or [])
+        self._pending_summary = dict(summary or {})
+        SignalManager.instance().console_message.emit(
+            "Gravando atualizações no Firebase..."
+        )
+        self._save_worker = FirebaseWorker(
+            CloudProjectDatabase.save_orders,
+            self._pending_orders,
+            str(self._mother_folder),
+            tool_key=ToolKey.PROJECT_DATABASE.value,
+            parent=self,
+        )
+        self._save_worker.finished_with_result.connect(self._on_saved)
+        self._save_worker.failed.connect(self._on_failed_save)
+        self._save_worker.start()
+
+    def _on_saved(self, _result: Optional[object]) -> None:
+        """Notifica o fim: atualiza a UI, mostra o resumo e libera os botões."""
+        orders = self._pending_orders
+        self._database = {
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "projects": orders,
+        }
         self._render()
         self.page.set_badge(self.page.PRONTA)
         self.page.buttons.set_enabled("atualizar", True)
         self.save_prefs()
-
-        message = (
-            "Banco de dados atualizado: "
-            f"{database.get('total_projects', 0)} OS."
-        )
-        MessageBox.show_toast(message, parent=self)
-        SignalManager.instance().console_message.emit(message)
-        self._push_to_cloud_async()
+        SignalManager.instance().console_message.emit("Base atualizada no Firebase.")
+        self._show_summary(self._pending_summary)
         self._finish_progress()
 
+    def _show_summary(self, summary: Dict[str, Any]) -> None:
+        """Exibe um MODAL com o resumo do que foi atualizado (Contrato 1)."""
+        missing = list(summary.get("missing", []))
+        text = (
+            f"OS na base: {summary.get('total_orders', 0)}\n"
+            f"OS atualizadas: {summary.get('updated_orders', 0)}\n"
+            f"Pastas novas: {summary.get('folders_added', 0)}\n"
+            f"Anos novos: {summary.get('years_added', 0)}\n"
+            f"Pastas ausentes: {len(missing)}"
+        )
+        detail = "\n".join(missing[:80]) if missing else ""
+        MessageBox.show_info(
+            text,
+            title="Banco de Dados — Atualização concluída",
+            detail=detail,
+            parent=self,
+        )
+
     def _on_failed(self, generation: int, message: str) -> None:
-        """Trata falha da varredura em background."""
+        """Trata falha da re-varredura em background."""
         if generation != self._generation:
             return
         self.logger.error(
@@ -379,45 +476,36 @@ class ProjectDatabasePlugin(BasePlugin):
         self.page.buttons.set_enabled("atualizar", True)
         SignalManager.instance().progress_reset.emit()
 
+    def _on_failed_save(self, message: str) -> None:
+        """Trata falha ao gravar a base no Firebase."""
+        self.logger.error(
+            "Falha ao gravar a base no Firebase",
+            code="PDB_SAVE_ERR",
+            error=message,
+        )
+        MessageBox.show_toast(
+            f"Erro ao gravar no Firebase: {message}", is_error=True, parent=self
+        )
+        self.page.set_badge(self.page.ERROR)
+        self.page.buttons.set_enabled("atualizar", True)
+        SignalManager.instance().progress_reset.emit()
+
+    def _finish_progress(self) -> None:
+        """Mostra 100% e agenda o reset da barra central."""
+        signals = SignalManager.instance()
+        signals.progress_update.emit(100.0)
+        QTimer.singleShot(self._PROGRESS_RESET_MS, signals.progress_reset.emit)
+
     # ── Sincronização com a nuvem (Firestore) ────────────────────────
 
     def _cloud_dir(self) -> Optional[Path]:
-        """Diretório local do banco (``<pasta-mãe>/.BancoDados``)."""
+        """Diretório local dos backups JSON (``<pasta-mãe>/.BancoDados``)."""
         if self._mother_folder is None:
             return None
-        return ProjectDatabaseStore.db_dir(self._mother_folder)
-
-    def _push_to_cloud_async(self) -> None:
-        """Espelha o banco local no Firestore (se houver sessão ativa)."""
-        local_dir = self._cloud_dir()
-        if local_dir is None or not local_dir.is_dir():
-            return
-        if not FirebaseTokenProvider.has_credentials():
-            self.logger.info("Push ignorado: sem credenciais Firebase", code="PDB_PUSH_OFFLINE")
-            return
-        self._sync_worker = FirebaseWorker(
-            CloudDatabaseSync.push,
-            str(local_dir),
-            self._CLOUD_COLLECTION,
-            tool_key=ToolKey.PROJECT_DATABASE.value,
-            parent=self,
-        )
-        self._sync_worker.finished_with_result.connect(self._on_push_result)
-        self._sync_worker.failed.connect(self._on_sync_failed)
-        self._sync_worker.start()
-
-    def _on_push_result(self, result: Optional[Dict[str, Any]]) -> None:
-        """Trata o resultado do espelhamento local → nuvem."""
-        pushed = (result or {}).get("pushed", 0)
-        self.logger.info(f"Banco espelhado na nuvem: {pushed} documento(s)", code="PDB_PUSH_OK")
-        SignalManager.instance().cloud_sync_status.emit({
-            "status": "completed",
-            "message": f"Banco espelhado: {pushed} documento(s)",
-            "progress": 100.0,
-        })
+        return Path(self._mother_folder) / ".BancoDados"
 
     def _on_sync_clicked(self) -> None:
-        """Baixa as atualizações da nuvem e regrava os JSONs locais."""
+        """Baixa a base do Firebase e materializa os backups JSON locais."""
         if self._mother_folder is None:
             self.page.set_badge(self.page.INFO)
             MessageBox.show_warning(
@@ -436,14 +524,14 @@ class ProjectDatabasePlugin(BasePlugin):
         self._start_pull()
 
     def _start_pull(self) -> None:
-        """Inicia o download assíncrono do banco a partir do Firestore."""
+        """Inicia o download assíncrono da base a partir do Firestore."""
         local_dir = self._cloud_dir()
         if local_dir is None:
             return
         self.page.set_badge(self.page.RUNNING)
         self.page.buttons.set_enabled("sincronizar", False)
         self.page.buttons.set_enabled("atualizar", False)
-        SignalManager.instance().console_message.emit("Baixando atualizações do banco...")
+        SignalManager.instance().console_message.emit("Baixando a base do Firebase...")
         self._sync_worker = FirebaseWorker(
             CloudDatabaseSync.pull,
             str(local_dir),
@@ -456,7 +544,7 @@ class ProjectDatabasePlugin(BasePlugin):
         self._sync_worker.start()
 
     def _on_pull_result(self, result: Optional[Dict[str, Any]]) -> None:
-        """Aplica os JSONs baixados, recarrega e re-renderiza o banco."""
+        """Recarrega a base após materializar os backups JSON."""
         pulled = (result or {}).get("pulled", 0)
         self.page.set_badge(self.page.PRONTA)
         self.page.buttons.set_enabled("sincronizar", True)
@@ -467,37 +555,15 @@ class ProjectDatabasePlugin(BasePlugin):
         SignalManager.instance().console_message.emit(message)
 
     def _on_sync_failed(self, message: str) -> None:
-        """Trata falhas de sincronização (push/pull) em background."""
-        self.logger.error("Falha na sincronização com a nuvem", code="PDB_SYNC_ERR", error=message)
+        """Trata falhas de sincronização/leitura em background."""
+        self.logger.error(
+            "Falha na operação com a base", code="PDB_SYNC_ERR", error=message
+        )
         self.page.set_badge(self.page.ERROR)
         self.page.buttons.set_enabled("sincronizar", True)
         self.page.buttons.set_enabled("atualizar", True)
         MessageBox.show_toast(
             f"Erro na sincronização: {message}", is_error=True, parent=self
-        )
-
-    def _finish_progress(self) -> None:
-        """Mostra 100% e agenda o reset da barra central."""
-        signals = SignalManager.instance()
-        signals.progress_update.emit(100.0)
-        QTimer.singleShot(self._PROGRESS_RESET_MS, signals.progress_reset.emit)
-
-    def _save_database(self, database: dict) -> None:
-        """Grava um JSON por OS + o consolidado em ``.BancoDados``."""
-        if self._mother_folder is None:
-            return
-        key = ToolKey.PROJECT_DATABASE.value
-        for record in database.get("projects", []):
-            ProjectDatabaseStore.save_project(
-                self._mother_folder, record, tool_key=key
-            )
-        ProjectDatabaseStore.save_consolidated(
-            self._mother_folder, database, tool_key=key
-        )
-        ProjectDatabaseStore.prune_projects(
-            self._mother_folder,
-            [record.get("os", "") for record in database.get("projects", [])],
-            tool_key=key,
         )
 
     # ── Render ───────────────────────────────────────────────────────
@@ -507,6 +573,7 @@ class ProjectDatabasePlugin(BasePlugin):
         self._tree.clear_nodes()
         for index, record in enumerate(self._database.get("projects", [])):
             summary = ProjectStructureUtil.aggregate_record(record)
+            resolved = self._resolve_display_path(summary["path"])
             node_key = f"os::{record.get('os', index)}::{index}"
             self._tree.add_node(
                 key=node_key,
@@ -515,13 +582,19 @@ class ProjectDatabasePlugin(BasePlugin):
                     self._COL_CLIENT: summary["client"] or "—",
                     self._COL_FOLDERS: ", ".join(summary["folders"]) or "—",
                     self._COL_YEARS: ", ".join(summary["years"]) or "—",
-                    self._COL_PATH: summary["path"],
+                    self._COL_PATH: resolved or "—",
                 },
                 bold=True,
                 kind="os",
             )
         self._update_cards()
         self._update_legend()
+
+    def _resolve_display_path(self, rel_path: str) -> str:
+        """Resolve um caminho relativo para exibição (caminho absoluto local)."""
+        if not rel_path or self._mother_folder is None:
+            return rel_path or ""
+        return str(ProjectStructureUtil.resolve_path(self._mother_folder, rel_path))
 
     def _update_cards(self) -> None:
         """Atualiza os cards de resumo."""
@@ -558,7 +631,7 @@ class ProjectDatabasePlugin(BasePlugin):
         if self._database.get("projects"):
             text = (
                 "● Pastas padrão do projeto · Anos dentro de "
-                f"{DOCUMENT_YEARS_FOLDER}"
+                f"{DOCUMENT_YEARS_FOLDER} · atualização no Firebase"
             )
         else:
             text = "Sem dados. Clique em ATUALIZAR DADOS."

@@ -2,27 +2,27 @@
 """
 ProjectDatabaseService — Lógica do Banco de Dados de Projetos (OS)
 =================================================================
-Lógica pura (sem widgets Qt):
+Lógica pura (sem widgets Qt) da NOVA regra de negócio:
 
-- ``build_os_record`` monta o registro de UMA OS a partir das suas pastas:
-  cada pasta em disco vira UMA SubOS (a letra vem do nome da pasta) e as
-  pastas/anos pertencem à SubOS; o cliente/nome comercial/CNPJ são associados
-  pelo seed via a chave ``sub_os``.
-- ``build_database`` percorre a pasta-mãe, agrupa as pastas pelo NÚMERO de OS
-  e monta o banco consolidado.
+- O Banco de Dados **não cria mais OS**. Ele consulta a fonte oficial
+  (Firebase) as OS já existentes e, para cada SubOS com pasta associada,
+  **re-escaneia a pasta em disco** e atualiza ``folders``/``years``.
+- Os caminhos são gravados RELATIVOS à pasta-mãe (portável).
 - ``ProjectDatabaseWorker`` (QRunnable) executa a varredura em background,
   emitindo progresso por OS (Contrato 20).
+
+A gravação (Firestore + backup JSON) é responsabilidade da CLASSE DE BANCO
+(``core.firebase.CloudProjectDatabase``) — esta camada apenas monta o resultado.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+import copy
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
-from core.database.ProjectDatabaseStore import ProjectDatabaseStore
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureUtil import ProjectStructureUtil
@@ -31,122 +31,105 @@ _TOOL_KEY = ToolKey.PROJECT_DATABASE.value
 
 
 class ProjectDatabaseService(BaseUtil):
-    """Monta os registros do banco de dados a partir do disco.
-
-    Uma OS pode ter VÁRIAS pastas (uma por SubOS). Todas as pastas com o mesmo
-    NÚMERO de OS são agrupadas em UM único registro e a SubOS de cada pasta é
-    lida do próprio nome da pasta (``ProjectStructureUtil.extract_sub_os``).
-    """
+    """Atualiza (re-escaneia) as OS JÁ EXISTENTES — nunca cria OS."""
 
     @classmethod
-    def build_os_record(
+    def refresh_order(
         cls,
         mother: Path,
-        os_number: str,
-        project_paths: list,
+        record: Dict[str, Any],
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Monta o registro de UMA OS a partir das suas pastas (uma por SubOS).
+        """Re-escaneia as pastas de UMA OS e atualiza ``folders``/``years``.
 
-        Cada pasta em disco vira UMA SubOS (a letra vem do nome da pasta) e é a
-        SubOS que possui ``path``/``folders``/``years`` — pastas pertencem à
-        SubOS, não à OS. SubOS sem pasta **não** entram no registro. A
-        categorização (cliente/nome comercial/CNPJ) já gravada é preservada.
+        O caminho de cada SubOS é normalizado para RELATIVO à pasta-mãe. SubOS
+        cuja pasta não existe em disco é reportada em ``missing``. Retorna o
+        resumo das mudanças (para o modal de resumo).
         """
-        previous = cls._load_existing_record(mother, os_number, tool_key=tool_key)
-        previous_sub = {
-            str(entry.get("sub_os", "")): entry
-            for entry in previous.get("sub_os", [])
-            if isinstance(entry, dict)
-        }
-
-        letters = ProjectStructureUtil.assign_sub_os_letters(project_paths)
-        sub_os_entries: list = []
-        for project in project_paths:
-            data = ProjectStructureUtil.collect_created_data(
-                project, tool_key=tool_key
-            )
-            letter = letters.get(project, "")
-            prev = previous_sub.get(letter, {})
-            sub_os_entries.append({
-                "sub_os": letter,
-                "path": str(project),
-                "folders": data["folders"],
-                "years": data["years"],
-                "client": prev.get("client", ""),
-                "commercial_name": prev.get("commercial_name", ""),
-                "cnpj": prev.get("cnpj", ""),
-            })
-
-        sub_os_entries.sort(key=lambda entry: str(entry.get("sub_os", "")))
-        return {
+        os_number = str(record.get("os", ""))
+        summary: Dict[str, Any] = {
             "os": os_number,
-            "name": "",
-            "sub_os": sub_os_entries,
-            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            "updated": False,
+            "folders_added": 0,
+            "years_added": 0,
+            "missing": [],
         }
+        for entry in record.get("sub_os", []) or []:
+            if not isinstance(entry, dict):
+                continue
+            code = str(entry.get("sub_os", ""))
+            rel = str(entry.get("path", "") or "")
+            if not rel:
+                summary["missing"].append(f"OS {os_number} · SubOS {code or '?'}")
+                continue
+            folder = ProjectStructureUtil.resolve_path(mother, rel)
+            entry["path"] = ProjectStructureUtil.to_relative_path(mother, folder)
+            if not folder.exists():
+                summary["missing"].append(f"OS {os_number} · SubOS {code or '?'}")
+                continue
+            data = ProjectStructureUtil.collect_created_data(
+                folder, tool_key=tool_key
+            )
+            before = (
+                list(entry.get("folders") or []),
+                list(entry.get("years") or []),
+            )
+            entry["folders"] = data["folders"]
+            entry["years"] = data["years"]
+            if (data["folders"], data["years"]) != before:
+                summary["updated"] = True
+            summary["folders_added"] += sum(
+                1 for name in data["folders"] if name not in before[0]
+            )
+            summary["years_added"] += sum(
+                1 for year in data["years"] if year not in before[1]
+            )
+        return summary
 
     @classmethod
-    def _load_existing_record(
-        cls,
-        mother: Optional[Path],
-        os_number: str,
-        tool_key: str = _TOOL_KEY,
-    ) -> Dict[str, Any]:
-        """Lê o JSON individual de uma OS (``<numero>.json``). ``{}`` se não houver."""
-        if mother is None:
-            return {}
-        return ProjectDatabaseStore.load_project(mother, os_number, tool_key=tool_key)
-
-    @classmethod
-    def build_database(
+    def refresh_orders(
         cls,
         mother: Path,
+        orders: List[Dict[str, Any]],
         progress_cb: Optional[Callable[[int, int], None]] = None,
         tool_key: str = _TOOL_KEY,
-    ) -> Dict[str, Any]:
-        """Percorre a pasta-mãe e monta o banco consolidado (agrupado por OS)."""
-        projects = ProjectStructureUtil.discover_projects(mother, tool_key=tool_key)
-        groups = ProjectStructureUtil.group_projects_by_os(projects)
-        total = len(groups)
-        ordered_numbers = sorted(
-            groups,
-            key=lambda key: (not key.isdigit(), int(key) if key.isdigit() else key),
-        )
-        records = []
-        for index, number in enumerate(ordered_numbers, start=1):
-            records.append(
-                cls.build_os_record(
-                    mother, number, groups[number], tool_key=tool_key
-                )
-            )
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """Atualiza TODAS as OS existentes e retorna ``(orders, resumo_geral)``."""
+        total = max(len(orders), 1)
+        summaries: List[Dict[str, Any]] = []
+        for index, record in enumerate(orders, start=1):
+            summaries.append(cls.refresh_order(mother, record, tool_key=tool_key))
             if progress_cb is not None:
                 progress_cb(index, total)
-        return {
-            "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "mother_folder": str(mother),
-            "db_schema": ProjectDatabaseStore.DB_SCHEMA,
-            "total_projects": total,
-            "projects": records,
+        aggregate: Dict[str, Any] = {
+            "total_orders": len(orders),
+            "updated_orders": sum(1 for s in summaries if s.get("updated")),
+            "folders_added": sum(s["folders_added"] for s in summaries),
+            "years_added": sum(s["years_added"] for s in summaries),
+            "missing": [item for s in summaries for item in s["missing"]],
         }
+        return orders, aggregate
 
 
 class _ProjectDatabaseSignals(QObject):
     """Sinais do worker do banco de dados."""
 
-    progress = Signal(int, int, int)   # (generation, done, total)
-    finished = Signal(int, object)     # (generation, database dict)
-    failed = Signal(int, str)          # (generation, mensagem)
+    progress = Signal(int, int, int)          # (generation, done, total)
+    finished = Signal(int, object, object)    # (generation, orders, summary)
+    failed = Signal(int, str)                 # (generation, mensagem)
 
 
 class ProjectDatabaseWorker(QRunnable):
-    """Varre a pasta-mãe em background (não toca em widgets Qt)."""
+    """Re-escaneia as OS existentes em background (não toca em widgets Qt)."""
 
-    def __init__(self, generation: int, mother: str) -> None:
+    def __init__(
+        self, generation: int, mother: str, orders: List[Dict[str, Any]]
+    ) -> None:
         super().__init__()
         self.setAutoDelete(False)
         self.generation = generation
         self.mother = mother
+        self.orders = copy.deepcopy(orders)
         self.signals = _ProjectDatabaseSignals()
         self._cancelled = False
 
@@ -155,22 +138,25 @@ class ProjectDatabaseWorker(QRunnable):
         self._cancelled = True
 
     def run(self) -> None:
-        """Executa a varredura e emite o resultado."""
+        """Executa a atualização e emite o resultado."""
         try:
             def _progress(done: int, total: int) -> None:
                 self.signals.progress.emit(self.generation, done, total)
 
-            database = ProjectDatabaseService.build_database(
-                Path(self.mother), progress_cb=_progress, tool_key=_TOOL_KEY
+            orders, summary = ProjectDatabaseService.refresh_orders(
+                Path(self.mother),
+                self.orders,
+                progress_cb=_progress,
+                tool_key=_TOOL_KEY,
             )
             if self._cancelled:
                 return
-            self.signals.finished.emit(self.generation, database)
+            self.signals.finished.emit(self.generation, orders, summary)
         except Exception as e:
             ProjectDatabaseService._get_logger(
                 _TOOL_KEY, "ProjectDatabaseWorker"
             ).error(
-                "Falha na varredura do banco de dados",
+                "Falha na atualização do banco de dados",
                 code="PDB_WORKER_ERR",
                 error=str(e),
                 path=self.mother,

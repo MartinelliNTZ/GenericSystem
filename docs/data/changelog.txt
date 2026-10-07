@@ -1,3 +1,18 @@
+[1.8.0][2026.10.07][14:00] - Nova regra de negócio: OS pelo seed/OS Tracker, Banco de Dados só ATUALIZA, paths RELATIVOS e persistência Firebase-first
+  - core/firebase/CloudProjectDatabase.py: NOVO — CLASSE DE BANCO (Contrato 28): única porta de entrada dos registros de OS (Firestore: load_orders/get_order/save_order/rebuild_consolidated) e que GERA os backups JSON (via ProjectDatabaseStore). Plugins NUNCA tocam no JSON
+  - Correção: CloudProjectDatabase.load_orders deixa de ter QUALQUER fallback para o JSON local (.BancoDados) — a leitura é EXCLUSIVAMENTE do Firestore; com a base vazia/offline a ferramenta fica VAZIA (o app nunca consulta o JSON; a classe só ESCREVE os backups). Chamadores ajustados (ProjectDatabasePlugin/OsTrackerPlugin/OsTrackerService/seed) e docs (Contrato 28 + SKILL_DATABASE)
+  - utils/ProjectStructureUtil.py: novos to_relative_path e resolve_path — o caminho de cada SubOS passa a ser RELATIVO à pasta-mãe (portável entre computadores)
+  - utils/ProjectStructureCreator.py: NOVO — criação compartilhada de pastas/arquivos base (create_project_folders cria as pastas selecionadas COM as subpastas, EXCETO os anos do 03_ENVIO_DE_DOCUMENTOS); FolderOperations passa a delegar (fim da duplicação, sem plugin→plugin)
+  - add_data/seed_sub_os.py: passa a CRIAR a base de OS existente (OS + SubOS + pasta relativa; garante a SubOS A) e grava DIRETO no Firestore via CloudProjectDatabase; removidos FirestoreService/_safe_filename/CONSOLIDATED_DOC_ID
+  - plugins/project_database_manager/ProjectDatabaseService.py: NÃO cria mais OS — refresh_order/refresh_orders re-escaneiam as pastas das OS existentes e atualizam folders/years; o worker emite (orders, resumo)
+  - plugins/project_database_manager/ProjectDatabasePlugin.py: ATUALIZAR DADOS consulta o Firebase, re-escaneia e regrava via CloudProjectDatabase, exibindo um MODAL (MessageBox.show_info) com o resumo; carga e gravação assíncronas (FirebaseWorker)
+  - plugins/os_tracker/OsTrackerService.py: novos create_order (número obrigatório → SubOS A), add_sub_os, add_folders, ensure_sub_os_folder, sub_os_codes/sub_os_entry, next_sub_os_code; load_orders via CloudProjectDatabase
+  - plugins/os_tracker/OsTrackerPlugin.py: botões CRIAR OS / CRIAR SUBOS / ADICIONAR PASTA, seletor de SubOS (default A; navegação entre A/B/C) e render por SubOS selecionada
+  - resources/widgets/dialogs/FormLineEditDialog.py: NOVO widget — diálogo genérico de formulário (GridLineEdit) com validação de campos obrigatórios
+  - docs/skills/SKILL_PLUGIN_CONTRACT.md: NOVO Contrato 28 (persistência Firebase-first — plugins com ZERO contato com o JSON)
+  - docs/skills/SKILL_WIDGETS.md, SKILL_DATABASE.md, SKILL_PROJECT.md, CatalogoClasses.md e add_data/README.md: atualizados (CloudProjectDatabase, paths relativos, novas responsabilidades e o novo widget)
+
+
 [1.7.8][2026.10.07][13:00] - Correções das falhas graves (F1, F2, F5, F6, F7, F9, F10)
   - utils/MdManager.py (F1): RESTAURADO — reescrito como exportador real de DoclingDocument para Markdown multi-coluna (export_by_columns: 2-6 força o nº de colunas; 0 detecta por lacunas horizontais). A versão anterior era uma cópia corrompida do MessageBox e quebrava a opção "colunas" do Docling
   - docs (F2): corrigidas as referências a docs/ia/ (pasta inexistente) → docs/skills/SKILL_PLUGIN_CONTRACT.md e docs/skills/SKILL_AGENT.md (em SKILL_AGENT, Contrato 12, SKILL_CREATE_TOOL, PPT_CRIAR_FERRAMENTA_GENERICO e planos)
