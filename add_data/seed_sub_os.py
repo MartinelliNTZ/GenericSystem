@@ -70,7 +70,9 @@ RAW_ROWS: List[tuple] = [
     ("167", "A", "GGF FAZENDAS LTDA", "GGF FAZENDAS LTDA", ""),
 
     # OS 169 tem UMA pasta no disco (OS_169_SLC) => uma única SubOS (A).
-    ("169", "A", "Fazenda Pioneira Empreendimentos Agrícolas S.A.", "SLC AGRÍCOLA SA", ""),
+    ("169", "A", "Agua Viva.", "AGUA VIVA", ""),
+    ("169", "B", "Darro.", "DARRO", ""),
+    ("169", "C", "Fazenda Pioneira Empreendimentos Agrícolas S.A.", "SLC AGRÍCOLA SA", ""),
 
     ("171", "A", "Lida Agrícola Ltda. / Grupo Lida", "GRUPO LIDA", ""),
     ("179", "A", "Guilherme Borges de Freitas", "Guilherme Borges de Freitas", ""),
