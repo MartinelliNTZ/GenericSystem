@@ -26,10 +26,13 @@ from utils.FormatUtils import FormatUtils
 from utils.ProjectStructureUtil import (
     DEFAULT_PROJECT_FOLDERS,
     DEFAULT_YEARS,
+    DOCUMENT_TEMPLATE,
     DOCUMENT_YEARS_FOLDER,
     PROJECT_FOLDER_TEMPLATES,
     PROJECT_PREFIX,
     discover_projects,
+    file_spec,
+    is_file_node,
     is_year_folder,
 )
 
@@ -42,28 +45,8 @@ STATUS_CORRECT = "CORRETA"
 STATUS_INCORRECT = "INCOERENTE"
 STATUS_MISSING = "AUSENTE"
 
-# Template completo criado (e validado) dentro de cada pasta de ano.
-# ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas.
-DOCUMENT_TEMPLATE: Dict[str, Any] = {
-    "01_DADOS_OPERACIONAIS": {
-        "COMBUSTIVEL": None,
-        "DEFENSIVOS": {"ALGODAO": None, "MILHO": None, "SOJA": None},
-        "FERTILIZANTES": {"ALGODAO": None, "MILHO": None, "SOJA": None},
-        "PRODUTIVIDADE": None,
-    },
-    "02_ANALISES_SOLO": None,
-    "03_NOTAS_FISCAIS": {
-        "NF_ANIMAIS": {"FICHA_VACINACAO": None, "GTA_ANIMAL": None},
-        "NF_COMBUSTIVEL": None,
-        "NF_DEFENSIVOS": None,
-        "NF_ENERGIA": None,
-        "NF_FERTILIZANTE": {"CALCARIO": None, "KCL": None, "MAP": None},
-        "NF_RACOES": None,
-        "NF_SEMENTES": None,
-    },
-    "04_TICKETS_PESSAGEM_BALANCA": None,
-    "05_ANEXOS_TREINAMENTOS": None,
-}
+# O template de documentos (DOCUMENT_TEMPLATE) vive na FONTE ÚNICA:
+# utils.ProjectStructureUtil (importado no topo do módulo).
 
 
 def _logger() -> LogUtils:
@@ -99,7 +82,8 @@ class StructureNode:
     """Nó recursivo de uma estrutura esperada (template) de um projeto.
 
     ``subtree`` guarda a estrutura esperada DENTRO deste nó (usada para criar
-    toda a árvore de uma vez quando o nó está ausente).
+    toda a árvore de uma vez quando o nó está ausente). Nós de ARQUIVO base
+    (``is_file=True``) guardam em ``file_spec`` a origem/conteúdo do arquivo.
     """
 
     name: str
@@ -107,6 +91,8 @@ class StructureNode:
     status: str
     subtree: Optional[Dict[str, Any]] = None
     children: List["StructureNode"] = field(default_factory=list)
+    is_file: bool = False
+    file_spec: Optional[Any] = None
 
 
 def scan_project(project: Path, expected: List[str]) -> ProjectStructure:
@@ -165,6 +151,20 @@ def _list_subdirs(path: Path) -> List[Path]:
             path=str(path),
         )
         return []
+
+
+def _list_file_names(path: Path) -> set:
+    """Retorna os nomes dos arquivos de ``path`` (vazio em falha)."""
+    try:
+        return {item.name for item in path.iterdir() if item.is_file()}
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        _logger().warning(
+            "Falha ao listar arquivos",
+            code="PSM_LIST_FILES_ERR",
+            error=str(e),
+            path=str(path),
+        )
+        return set()
 
 
 @dataclass
@@ -329,27 +329,41 @@ def project_status_counts(
 
 
 def scan_template(root: Path, template: Dict[str, Any]) -> List[StructureNode]:
-    """Compara as subpastas de ``root`` com ``template`` recursivamente.
+    """Compara os itens de ``root`` com ``template`` recursivamente.
 
-    Presente e esperado → CORRETA (recursivo); ausente → AUSENTE; presente e
-    não esperado → INCOERENTE.
+    Pasta presente e esperada → CORRETA (recursivo); ausente → AUSENTE;
+    presente e não esperada → INCOERENTE. ARQUIVOS base são validados por
+    existência (presente → CORRETA; ausente → AUSENTE).
     """
-    existing = {path.name: path for path in _list_subdirs(root)}
+    existing_dirs = {path.name: path for path in _list_subdirs(root)}
+    existing_files = _list_file_names(root)
     nodes: List[StructureNode] = []
     for name, subtree in template.items():
-        path = existing.pop(name, None)
+        if is_file_node(subtree):
+            present = name in existing_files
+            nodes.append(
+                StructureNode(
+                    name,
+                    root / name,
+                    STATUS_CORRECT if present else STATUS_MISSING,
+                    is_file=True,
+                    file_spec=file_spec(subtree),
+                )
+            )
+            continue
+        path = existing_dirs.pop(name, None)
         if path is None:
             nodes.append(
                 StructureNode(name, root / name, STATUS_MISSING, subtree=subtree)
             )
             continue
-        children = scan_template(path, subtree) if subtree else []
+        children = scan_template(path, subtree) if isinstance(subtree, dict) else []
         nodes.append(
             StructureNode(
                 name, path, STATUS_CORRECT, subtree=subtree, children=children
             )
         )
-    for name, path in existing.items():
+    for name, path in existing_dirs.items():
         nodes.append(StructureNode(name, path, STATUS_INCORRECT))
     return nodes
 

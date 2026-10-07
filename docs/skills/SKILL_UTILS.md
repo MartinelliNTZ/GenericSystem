@@ -383,6 +383,41 @@ Também reúne catálogos de extensões (`LAS_EXTENSIONS`, `VECTOR_EXTENSIONS`,
 `RASTER_EXTENSIONS`, `DOCUMENT_EXTENSIONS`) e os helpers `get_extensions_list()`
 e `get_extensions_filter()`.
 
+### `utils.ProjectStructureUtil`
+
+**FONTE ÚNICA da estrutura dos projetos (OS)**. Toda a estrutura é descrita por
+UM dicionário — `PROJECT_STRUCTURE` — que você alimenta; os acessores
+(`DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`,
+`DEFAULT_YEARS`, `DOCUMENT_TEMPLATE`) são **derivados** dele e consumidos pelo
+scanner, pelo plugin, pelo banco de dados e pelas cores:
+
+```python
+from utils.ProjectStructureUtil import ProjectStructureUtil
+
+ProjectStructureUtil.PROJECT_STRUCTURE   # fonte única (edite este dicionário)
+```
+
+Tipos de nó (recursivo):
+
+- `None` → pasta vazia (folha);
+- `{ ... }` → pasta com itens filhos;
+- `"arquivo.ext"` → ARQUIVO BASE copiado de `BASE_FILES_DIR`;
+- `BaseFile(source=..., content=..., overwrite=...)` → arquivo base com opções;
+- `Years(years=[...], template={...})` → pasta que se expande em uma subpasta por ano.
+
+```python
+"14_RELATORIOS": {
+    "Laudos Analises de Solo": {"Fertilidade": {"Excel": None, "PDF": None}},
+    "modelo.xlsx": BaseFile(source="relatorios/modelo.xlsx"),  # arquivo base
+},
+"03_ENVIO_DE_DOCUMENTOS": Years(years=range(2019, 2028), template={...}),
+```
+
+```python
+projects = ProjectStructureUtil.discover_projects(mother)
+data = ProjectStructureUtil.collect_created_data(project)
+```
+
 
 ## ✅ Regras de uso
 

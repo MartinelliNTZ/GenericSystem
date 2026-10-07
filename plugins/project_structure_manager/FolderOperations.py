@@ -21,8 +21,12 @@ from PySide6.QtCore import QObject, QRunnable, Signal
 
 from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
-from plugins.project_structure_manager.ProjectStructureScanner import (
+from utils.ProjectStructureUtil import (
+    BaseFile,
     DOCUMENT_TEMPLATE,
+    ProjectStructureUtil,
+    file_spec,
+    is_file_node,
 )
 
 
@@ -53,19 +57,41 @@ def create_project_folder(
     return destination
 
 
-def create_template(root: Path, template: Dict[str, Any]) -> Path:
-    """Cria recursivamente o template de pastas dentro de ``root``.
+def create_base_file(destination: Path, spec: BaseFile) -> Path:
+    """Cria/copia um ARQUIVO BASE conforme ``spec`` dentro do projeto.
 
-    Pastas já existentes são preservadas (idempotente). Levanta OSError em
+    Copia de ``ProjectStructureUtil.BASE_FILES_DIR`` quando ``spec.source`` é
+    informado; caso contrário grava ``spec.content``. Levanta OSError em falha.
+    """
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists() and not spec.overwrite:
+        return destination
+    if spec.source:
+        shutil.copy2(ProjectStructureUtil.BASE_FILES_DIR / spec.source, destination)
+    else:
+        destination.write_text(spec.content, encoding="utf-8")
+    _logger().info(f"Arquivo base criado: {destination}")
+    return destination
+
+
+def create_template(root: Path, template: Dict[str, Any]) -> Path:
+    """Cria recursivamente o template (pastas e arquivos base) dentro de ``root``.
+
+    Pastas já existentes são preservadas (idempotente). Nós de arquivo (``str``
+    ou ``BaseFile``) materializam o arquivo correspondente. Levanta OSError em
     falha de filesystem.
     """
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
-    for name, subtree in template.items():
+    for name, node in template.items():
         child = root / name
+        if is_file_node(node):
+            create_base_file(child, file_spec(node))
+            continue
         child.mkdir(exist_ok=True)
-        if subtree:
-            create_template(child, subtree)
+        if isinstance(node, dict):
+            create_template(child, node)
     return root
 
 

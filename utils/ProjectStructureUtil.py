@@ -2,11 +2,21 @@
 """
 ProjectStructureUtil — Estrutura padrão dos projetos (OS) compartilhada
 ======================================================================
-Centraliza as constantes e a descoberta da estrutura de pastas dos
-projetos (OS) para reuso por mais de uma ferramenta (Contrato 7 — nenhum
-plugin importa outro). Foi promovido de
-``plugins/project_structure_manager/ProjectStructureScanner`` para
-``utils/``; o scanner passa a importar daqui e re-exporta os nomes.
+FONTE ÚNICA (single source of truth) da estrutura de pastas dos projetos (OS).
+
+Toda a estrutura — pastas, futuros ARQUIVOS BASE e a pasta de anos — é descrita
+por UM único dicionário: ``ProjectStructureUtil.PROJECT_STRUCTURE``. Alimente e
+edite apenas ele; os valores derivados (``DEFAULT_PROJECT_FOLDERS``,
+``PROJECT_FOLDER_TEMPLATES``, ``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e
+``DOCUMENT_TEMPLATE``) são calculados a partir dele e consumidos pelo
+Gerenciador de Estrutura, pelo Banco de Dados e pelas cores das pastas.
+
+Tipos de nó do dicionário (recursivo):
+    None            → pasta vazia (folha)
+    { ... }         → pasta contendo os itens do dicionário
+    "arquivo.ext"   → ARQUIVO BASE copiado de ``BASE_FILES_DIR``
+    BaseFile(...)   → ARQUIVO BASE com opções (origem/conteúdo/sobrescrever)
+    Years(...)      → pasta que se expande em uma subpasta por ano
 
 Uso:
     from utils.ProjectStructureUtil import ProjectStructureUtil
@@ -17,6 +27,7 @@ Uso:
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -24,65 +35,138 @@ from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
 
 
-# ── Constantes (nível de módulo — importáveis por outras ferramentas) ──
+# ── Tipos de nó do PROJECT_STRUCTURE ────────────────────────────────
+# Cada item do dicionário é um NOME mapeado para um NÓ:
+#   None          → pasta vazia (folha)
+#   { ... }       → pasta com itens filhos (recursivo)
+#   "arquivo.ext" → ARQUIVO BASE copiado de ProjectStructureUtil.BASE_FILES_DIR
+#   BaseFile(...) → ARQUIVO BASE com opções (origem/conteúdo/sobrescrever)
+#   Years(...)    → pasta que se expande em uma subpasta por ano
 
-# Prefixo das pastas de projeto dentro da pasta-mãe.
-PROJECT_PREFIX = "OS_"
 
-# Pastas esperadas na raiz de cada projeto.
-DEFAULT_PROJECT_FOLDERS: List[str] = [
-    "01_Acessos_Plataforma_IA_AGLIBS",
-    "02_Acompanhamento_de_Projeto_Reuniões",
-    "03_ENVIO_DE_DOCUMENTOS",
-    "04_ATIVIDADES_ATRIBUIDAS",
-    "05_ASA",
-    "06_CAR",
-    "07_MATRICULA",
-    "08_LIMITES",
-    "09_HISTORICO_COBERTURA_SOLO",
-    "10_VERRA",
-    "11_AGROROBOTICA",
-    "12_FOTOS_INICIO_PROJETO",
-    "13_ZONAS_DE_MANEJO",
-    "14_RELATORIOS",
-]
+@dataclass(frozen=True)
+class BaseFile:
+    """Arquivo base criado dentro da estrutura do projeto.
 
-# Pasta do projeto que agrupa as pastas de ano.
-DOCUMENT_YEARS_FOLDER = "03_ENVIO_DE_DOCUMENTOS"
+    ``source``: caminho relativo dentro de ``BASE_FILES_DIR`` (copiado de lá);
+    ``content``: conteúdo inline (usado quando ``source`` está vazio);
+    ``overwrite``: se ``False``, não sobrescreve um arquivo já existente.
+    """
 
-# Anos oferecidos por padrão (usados pelo diálogo de criação de anos).
-DEFAULT_YEARS: List[int] = list(range(2019, 2028))
+    source: str = ""
+    content: str = ""
+    overwrite: bool = True
 
-# Templates de subpastas para pastas de topo específicas do projeto.
-# ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas (validadas
-# na árvore e criadas junto com a pasta de topo).
-PROJECT_FOLDER_TEMPLATES: Dict[str, Dict[str, Any]] = {
-    "14_RELATORIOS": {
-        "Laudos Analises de Solo": {
-            "Fertilidade": {
-                "Excel": None,
-                "PDF": None,
-                "Recomendacao_Agronomica": None,
-            },
-            "Sustentabilidade": {
-                "Relatório": None,
-            },
-        },
-        "Relatorios Evolucao Operacional": None,
-        "Uso e Ocupacao do Solo": None,
-    },
-}
+
+@dataclass
+class Years:
+    """Pasta especial que se expande em uma subpasta por ano selecionado.
+
+    ``years``: anos oferecidos por padrão (diálogo de criação);
+    ``template``: estrutura criada (e validada) DENTRO de cada ano.
+    """
+
+    years: List[int] = field(default_factory=list)
+    template: Dict[str, Any] = field(default_factory=dict)
+
+
+def is_file_node(node: Any) -> bool:
+    """Indica se ``node`` representa um ARQUIVO base (``str`` ou ``BaseFile``)."""
+    return isinstance(node, (str, BaseFile))
+
+
+def is_years_node(node: Any) -> bool:
+    """Indica se ``node`` é a pasta especial de ANOS (``Years``)."""
+    return isinstance(node, Years)
+
+
+def file_spec(node: Any) -> BaseFile:
+    """Normaliza um nó de arquivo (``str`` | ``BaseFile``) em ``BaseFile``."""
+    if isinstance(node, BaseFile):
+        return node
+    return BaseFile(source=str(node))
 
 
 class ProjectStructureUtil(BaseUtil):
-    """Constantes e descoberta da estrutura padrão dos projetos (OS)."""
+    """FONTE ÚNICA da estrutura de pastas padrão dos projetos (OS).
 
-    # Mesmas constantes expostas via classe (ProjectStructureUtil.X).
-    PROJECT_PREFIX = PROJECT_PREFIX
-    DEFAULT_PROJECT_FOLDERS = DEFAULT_PROJECT_FOLDERS
-    DOCUMENT_YEARS_FOLDER = DOCUMENT_YEARS_FOLDER
-    DEFAULT_YEARS = DEFAULT_YEARS
-    PROJECT_FOLDER_TEMPLATES = PROJECT_FOLDER_TEMPLATES
+    Toda a estrutura — pastas, arquivos base e a pasta de anos — é descrita
+    pelo dicionário ``PROJECT_STRUCTURE``. Alimente/edite apenas ele: os valores
+    derivados (``DEFAULT_PROJECT_FOLDERS``, ``PROJECT_FOLDER_TEMPLATES``,
+    ``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e ``DOCUMENT_TEMPLATE``) são
+    calculados a partir dele e consumidos pelo Gerenciador de Estrutura, pelo
+    Banco de Dados e pelas cores das pastas.
+    """
+
+    # Prefixo das pastas de projeto dentro da pasta-mãe.
+    PROJECT_PREFIX = "OS_"
+
+    # ══════════════════════════════════════════════════════════════════
+    # ESTRUTURA — FONTE ÚNICA (alimente apenas este dicionário)
+    # ══════════════════════════════════════════════════════════════════
+    #
+    # Cada chave é um item criado na raiz da pasta do projeto (OS). O valor
+    # define o CONTEÚDO do item (ver tipos de nó no topo do módulo):
+    #   None | { ... } | "arquivo.ext" | BaseFile(...) | Years(...)
+    #
+    PROJECT_STRUCTURE: Dict[str, Any] = {
+        "01_Acessos_Plataforma_IA_AGLIBS": None,
+        "02_Acompanhamento_de_Projeto_Reuniões": None,
+        "03_ENVIO_DE_DOCUMENTOS": Years(
+            years=list(range(2019, 2028)),
+            template={
+                "01_DADOS_OPERACIONAIS": {
+                    "COMBUSTIVEL": None,
+                    "DEFENSIVOS": {"ALGODAO": None, "MILHO": None, "SOJA": None},
+                    "FERTILIZANTES": {"ALGODAO": None, "MILHO": None, "SOJA": None},
+                    "PRODUTIVIDADE": None,
+                },
+                "02_ANALISES_SOLO": None,
+                "03_NOTAS_FISCAIS": {
+                    "NF_ANIMAIS": {"FICHA_VACINACAO": None, "GTA_ANIMAL": None},
+                    "NF_COMBUSTIVEL": None,
+                    "NF_DEFENSIVOS": None,
+                    "NF_ENERGIA": None,
+                    "NF_FERTILIZANTE": {"CALCARIO": None, "KCL": None, "MAP": None},
+                    "NF_RACOES": None,
+                    "NF_SEMENTES": None,
+                },
+                "04_TICKETS_PESSAGEM_BALANCA": None,
+                "05_ANEXOS_TREINAMENTOS": None,
+            },
+        ),
+        "04_ATIVIDADES_ATRIBUIDAS": None,
+        "05_ASA": None,
+        "06_CAR": None,
+        "07_MATRICULA": None,
+        "08_LIMITES": None,
+        "09_HISTORICO_COBERTURA_SOLO": None,
+        "10_VERRA": None,
+        "11_AGROROBOTICA": None,
+        "12_FOTOS_INICIO_PROJETO": None,
+        "13_ZONAS_DE_MANEJO": None,
+        "14_RELATORIOS": {
+            "Laudos Analises de Solo": {
+                "Fertilidade": {
+                    "Excel": None,
+                    "PDF": None,
+                    "Recomendacao_Agronomica": None,
+                },
+                "Sustentabilidade": {
+                    "Relatório": None,
+                },
+            },
+            "Relatorios Evolucao Operacional": None,
+            "Uso e Ocupacao do Solo": None,
+        },
+    }
+
+    # Origem dos ARQUIVOS BASE (``BaseFile.source`` é relativo a esta pasta).
+    BASE_FILES_DIR: Path = (
+        Path(__file__).resolve().parent.parent
+        / "resources"
+        / "project_templates"
+    )
 
 
     # ── Descoberta ──────────────────────────────────────────────────
@@ -287,6 +371,40 @@ class ProjectStructureUtil(BaseUtil):
         for value in values:
             if value not in target:
                 target.append(value)
+
+
+# ── Derivados de PROJECT_STRUCTURE (NÃO edite — calculados a partir dele) ──
+def _derive_from_structure() -> None:
+    """Calcula os acessores derivados a partir de ``PROJECT_STRUCTURE``."""
+    structure = ProjectStructureUtil.PROJECT_STRUCTURE
+    years_name = next(
+        (name for name, node in structure.items() if is_years_node(node)), ""
+    )
+    years_node = structure.get(years_name) if years_name else None
+    ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS = list(structure)
+    ProjectStructureUtil.DOCUMENT_YEARS_FOLDER = years_name
+    ProjectStructureUtil.DEFAULT_YEARS = (
+        list(years_node.years) if years_node else []
+    )
+    ProjectStructureUtil.DOCUMENT_TEMPLATE = (
+        dict(years_node.template) if years_node else {}
+    )
+    ProjectStructureUtil.PROJECT_FOLDER_TEMPLATES = {
+        name: node for name, node in structure.items() if isinstance(node, dict)
+    }
+
+
+_derive_from_structure()
+
+
+# ── Atalhos de módulo (apontam para a classe — fonte única) ─────────
+PROJECT_STRUCTURE = ProjectStructureUtil.PROJECT_STRUCTURE
+PROJECT_PREFIX = ProjectStructureUtil.PROJECT_PREFIX
+DEFAULT_PROJECT_FOLDERS = ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS
+DOCUMENT_YEARS_FOLDER = ProjectStructureUtil.DOCUMENT_YEARS_FOLDER
+DEFAULT_YEARS = ProjectStructureUtil.DEFAULT_YEARS
+PROJECT_FOLDER_TEMPLATES = ProjectStructureUtil.PROJECT_FOLDER_TEMPLATES
+DOCUMENT_TEMPLATE = ProjectStructureUtil.DOCUMENT_TEMPLATE
 
 
 # ── Funções de módulo (re-exportáveis por outras ferramentas) ───────

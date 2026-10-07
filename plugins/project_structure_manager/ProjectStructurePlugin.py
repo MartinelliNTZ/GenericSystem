@@ -754,7 +754,10 @@ class ProjectStructurePlugin(BasePlugin):
         expected: List[str],
         is_year: bool = False,
     ) -> None:
-        """Renderiza um nó estrutural (ano ou pasta do template)."""
+        """Renderiza um nó estrutural (ano, pasta ou arquivo do template)."""
+        if node.is_file:
+            self._render_structure_file(node, parent_key)
+            return
         key = str(node.path)
         status_color = _status_color(node.status)
         name_color = self._folder_name_color(Path(key)) or status_color
@@ -790,6 +793,39 @@ class ProjectStructurePlugin(BasePlugin):
         )
         if is_year:
             self._request_statistics(key, node.path)
+
+    def _render_structure_file(
+        self, node: Scanner.StructureNode, parent_key: str
+    ) -> None:
+        """Renderiza um nó estrutural do tipo ARQUIVO base."""
+        key = str(node.path)
+        status_color = _status_color(node.status)
+        name_color = self._folder_name_color(Path(key)) or status_color
+        missing = node.status == Scanner.STATUS_MISSING
+        self._tree.add_node(
+            key,
+            {
+                self._COL_NAME: node.name,
+                self._COL_STATUS: node.status,
+                self._COL_FILES: "—",
+                self._COL_DIRS: "—",
+                self._COL_SIZE: "—",
+            },
+            parent_key=parent_key,
+            colors={self._COL_NAME: name_color, self._COL_STATUS: status_color},
+            kind="file",
+        )
+        if not missing:
+            self._apply_icon(key, Path(key), False)
+            self._tree.set_cell_widget(
+                key, self._COL_ACTIONS, self._build_file_actions(node.path)
+            )
+            return
+        self._tree.set_cell_widget(
+            key,
+            self._COL_ACTIONS,
+            self._build_structure_missing_actions(node),
+        )
 
     # ── Conteúdo real (subpastas + arquivos, sob demanda) ────────────
 
@@ -1370,7 +1406,16 @@ class ProjectStructurePlugin(BasePlugin):
         )
 
     def _create_structure(self, node: Scanner.StructureNode) -> None:
-        """Cria a pasta ausente e todo o template abaixo dela."""
+        """Cria a pasta/arquivo ausente e todo o template abaixo dela."""
+        if node.is_file:
+            spec = node.file_spec
+            self._run_folder_operation(
+                "create_file",
+                lambda: FsOps.create_base_file(node.path, spec),
+                lambda _value: f"Arquivo criado: {node.name}",
+                project=self._resolve_project(node.path),
+            )
+            return
         self._run_folder_operation(
             "create_template",
             lambda: FsOps.create_template(node.path, node.subtree or {}),

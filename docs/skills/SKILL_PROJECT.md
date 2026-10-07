@@ -295,7 +295,7 @@ consulta rápida.
 | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI (cards, árvore, seletores), botão ATUALIZAR DADOS, prefs, backup e varredura assíncrona |
 | `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: monta UM registro por OS (uma SubOS por pasta) + banco consolidado + `ProjectDatabaseWorker` |
 | `plugins/project_database_manager/ProjectDatabaseStore.py` | Leitura/escrita dos JSONs em `.BancoDados` (gravação atômica) |
-| `utils/ProjectStructureUtil.py` | Constantes + descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) |
+| `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) e tipos de nó (`BaseFile`, `Years`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
 ### Estrutura em disco

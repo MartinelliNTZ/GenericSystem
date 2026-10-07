@@ -1,3 +1,21 @@
+[1.7.6][2026.10.07][11:00] - Estrutura de projetos em UM dicionário (PROJECT_STRUCTURE) + suporte a arquivos base
+  - utils/ProjectStructureUtil.py: NOVO dicionário PROJECT_STRUCTURE — fonte única que descreve TODA a estrutura (pastas aninhadas, a pasta de anos e futuros arquivos base); os acessores DEFAULT_PROJECT_FOLDERS, PROJECT_FOLDER_TEMPLATES, DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS e DOCUMENT_TEMPLATE deixam de ser literais e passam a ser DERIVADOS dele (não há mais estrutura duplicada)
+  - utils/ProjectStructureUtil.py: novos tipos de nó/helpers — BaseFile (arquivo base: source/conteúdo/overwrite), Years (pasta de anos: years + template) e is_file_node/file_spec/is_years_node; novo BASE_FILES_DIR (origem dos arquivos base)
+  - plugins/project_structure_manager/ProjectStructureScanner.py: StructureNode ganha is_file/file_spec; scan_template passa a validar também ARQUIVOS base (presente→CORRETA, ausente→AUSENTE); novo _list_file_names
+  - plugins/project_structure_manager/FolderOperations.py: create_template passa a materializar nós de arquivo; novo create_base_file (copia de BASE_FILES_DIR ou grava conteúdo inline)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: render e criação de nós de ARQUIVO base (novo _render_structure_file; _create_structure cria arquivo quando is_file)
+  - docs/skills/SKILL_PROJECT.md, SKILL_UTILS.md e CatalogoClasses.md: PROJECT_STRUCTURE documentado como fonte única + tipos de nó
+
+
+
+[1.7.5][2026.10.07][10:00] - Estrutura de pastas em FONTE ÚNICA (tudo em uma só classe)
+  - utils/ProjectStructureUtil.py: TODA a estrutura de pastas passa a viver como atributos da classe ProjectStructureUtil (PROJECT_PREFIX, DEFAULT_PROJECT_FOLDERS, DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS, PROJECT_FOLDER_TEMPLATES e o agora também centralizado DOCUMENT_TEMPLATE); removida a duplicação entre constantes de módulo e classe (os nomes de módulo viraram atalhos que apontam para a classe)
+  - plugins/project_structure_manager/ProjectStructureScanner.py: DOCUMENT_TEMPLATE deixa de ser definido localmente e passa a ser importado de utils.ProjectStructureUtil (continua acessível como Scanner.DOCUMENT_TEMPLATE)
+  - plugins/project_structure_manager/FolderOperations.py: importa DOCUMENT_TEMPLATE direto da fonte única (utils.ProjectStructureUtil)
+  - docs/skills/SKILL_PROJECT.md e CatalogoClasses.md: ProjectStructureUtil documentado como FONTE ÚNICA da estrutura de pastas
+
+
+
 [1.7.4][2026.10.07][09:00] - Gerenciador de Estrutura: 14_RELATORIO renomeada para 14_RELATORIOS com hierarquia completa
   - utils/ProjectStructureUtil.py: DEFAULT_PROJECT_FOLDERS passa a usar "14_RELATORIOS"; PROJECT_FOLDER_TEMPLATES define a hierarquia da pasta (Laudos Analises de Solo > Fertilidade [Excel, PDF, Recomendacao_Agronomica] e Sustentabilidade > Relatório; Relatorios Evolucao Operacional; Uso e Ocupacao do Solo)
   - plugins/project_structure_manager/ProjectStructureScanner.py e docs/skills/CatalogoClasses.md: exemplo de referência atualizado para 14_RELATORIOS
