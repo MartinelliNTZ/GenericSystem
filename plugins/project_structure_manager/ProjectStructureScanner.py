@@ -281,9 +281,6 @@ def scan_project_full(
 ]:
     """Inspeciona um projeto por completo.
 
-    Retorna a estrutura das pastas esperadas, as pastas de ano do
-    ``03_ENVIO_DE_DOCUMENTOS`` e as subárvores de template das pastas de topo
-    (ex: ``14_RELATORIO``), todas mapeadas por caminho.
     """
     structure = scan_project(project, DEFAULT_PROJECT_FOLDERS)
     years: Dict[str, List[StructureNode]] = {}

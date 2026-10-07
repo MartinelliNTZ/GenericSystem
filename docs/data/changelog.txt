@@ -1,3 +1,9 @@
+[1.7.4][2026.10.07][09:00] - Gerenciador de Estrutura: 14_RELATORIO renomeada para 14_RELATORIOS com hierarquia completa
+  - utils/ProjectStructureUtil.py: DEFAULT_PROJECT_FOLDERS passa a usar "14_RELATORIOS"; PROJECT_FOLDER_TEMPLATES define a hierarquia da pasta (Laudos Analises de Solo > Fertilidade [Excel, PDF, Recomendacao_Agronomica] e Sustentabilidade > Relatório; Relatorios Evolucao Operacional; Uso e Ocupacao do Solo)
+  - plugins/project_structure_manager/ProjectStructureScanner.py e docs/skills/CatalogoClasses.md: exemplo de referência atualizado para 14_RELATORIOS
+
+
+
 [1.7.3][2026.10.06][19:00] - Seed SubOS passa a gravar DIRETO no Firebase (nunca em JSON)
   - add_data/seed_sub_os.py: removida toda a escrita em .BancoDados (DB_FOLDER/_write_json) e o flag --push; agora lê o estado dos documentos por OS no Firestore e grava os docs <os> + o consolidado banco_dados via FirestoreService.save_document; exige credenciais Firebase e nunca toca em JSON (que passa a ser consequência do sistema, via pull)
   - add_data/README.md e docs/skills/SKILL_DATABASE.md: seed descrito como "envia direto ao Firestore; os JSONs são consequência do sistema"

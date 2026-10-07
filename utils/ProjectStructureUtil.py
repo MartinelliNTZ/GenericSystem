@@ -44,7 +44,7 @@ DEFAULT_PROJECT_FOLDERS: List[str] = [
     "11_AGROROBOTICA",
     "12_FOTOS_INICIO_PROJETO",
     "13_ZONAS_DE_MANEJO",
-    "14_RELATORIO",
+    "14_RELATORIOS",
 ]
 
 # Pasta do projeto que agrupa as pastas de ano.
@@ -57,9 +57,19 @@ DEFAULT_YEARS: List[int] = list(range(2019, 2028))
 # ``None`` = folha (sem subpastas); ``dict`` = subpastas esperadas (validadas
 # na árvore e criadas junto com a pasta de topo).
 PROJECT_FOLDER_TEMPLATES: Dict[str, Dict[str, Any]] = {
-    "14_RELATORIO": {
+    "14_RELATORIOS": {
+        "Laudos Analises de Solo": {
+            "Fertilidade": {
+                "Excel": None,
+                "PDF": None,
+                "Recomendacao_Agronomica": None,
+            },
+            "Sustentabilidade": {
+                "Relatório": None,
+            },
+        },
+        "Relatorios Evolucao Operacional": None,
         "Uso e Ocupacao do Solo": None,
-        "Laudos Analises de Solo": None,
     },
 }
 
