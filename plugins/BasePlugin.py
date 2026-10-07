@@ -9,7 +9,6 @@ Centraliza:
 - Emissão de tool_opened e tool_closed via SignalManager
 - _build_ui() chamado automaticamente no __init__
 - load_prefs() chamado automaticamente no __init__
-- prompt_force_projection() — fluxo de projeção forçada reaproveitável
 
 Uso:
     from core.model.BasePlugin import BasePlugin
@@ -31,7 +30,7 @@ Uso:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
@@ -321,129 +320,6 @@ class BasePlugin(QWidget):
             n_output=n_output,
             n_arquivos=n_arquivos,
         )
-
-    # ══════════════════════════════════════════════════════════════════
-    # las_projection — Obtém / força projeção de um arquivo LAS
-    # ══════════════════════════════════════════════════════════════════
-
-    def las_projection(
-        self,
-        las_path: str,
-    ) -> Optional[str]:
-        """
-        Obtém a projeção de um arquivo LAS. Se não detectada, pergunta
-        ao usuário se deseja forçar uma projeção (cria .mdata).
-
-        Fluxo:
-        1. Tenta detectar CRS automaticamente via LasLayerProjection.get_crs()
-        2. Se detectou → retorna "EPSG:XXXX"
-        3. Se NÃO detectou → MessageBox perguntando se quer forçar:
-            - Sim → abre CrsSearchDialog → salva .mdata → retorna "EPSG:XXXX"
-            - Não → retorna None
-
-        Args:
-            las_path: Caminho completo do arquivo .las/.laz.
-
-        Returns:
-            String "EPSG:XXXX" se há projeção (detectada ou forçada),
-            None se não há projeção e o usuário recusou forçar.
-
-        Uso nos plugins:
-            crs = self.las_projection(path)
-            if crs:
-                # tem projeção
-            else:
-                # sem projeção
-        """
-        from utils.MessageBox import MessageBox
-        from utils.las.LasLayerProjection import LasLayerProjection
-
-        # ── 1. Tenta detectar automaticamente ───────────────────────
-        crs = LasLayerProjection.get_crs(las_path, tool_key=self.tool_key)
-        if crs:
-            self.logger.info(
-                "Projeção detectada automaticamente",
-                code="LAS_PROJ_AUTO",
-                path=las_path,
-                crs=crs,
-            )
-            return crs
-
-        # ── 2. Não detectou — pergunta ao usuário ───────────────────
-        self.logger.warning(
-            "Projeção não detectada — consultando usuário",
-            code="LAS_PROJ_NOT_FOUND",
-            path=las_path,
-        )
-
-        resposta = MessageBox.show_question(
-            (
-                "Não foi possível detectar a projeção do arquivo:\n"
-                f"{las_path}\n\n"
-                "Deseja forçar uma projeção no arquivo?\n\n"
-                "Isso criará um arquivo .mdata com a definição de projeção, "
-                "mas não modificará o arquivo LAS original."
-            ),
-            title="Projeção não detectada",
-            buttons=MessageBox.YES_NO,
-            default_button=MessageBox.YES,
-        )
-
-        if resposta != MessageBox.YES:
-            self.logger.info(
-                "Usuário recusou forçar projeção",
-                code="LAS_PROJ_DECLINED",
-                path=las_path,
-            )
-            return None
-
-        # ── 3. Abre CrsSearchDialog para escolher CRS ───────────────
-        from resources.widgets.crs.CrsSearchDialog import CrsSearchDialog
-
-        dialog = CrsSearchDialog(parent=self)
-        if not dialog.exec():
-            self.logger.info(
-                "Usuário cancelou a seleção de CRS",
-                code="LAS_PROJ_CANCELED",
-                path=las_path,
-            )
-            return None
-
-        epsg_escolhido = dialog.selected_epsg
-        if not epsg_escolhido:
-            self.logger.warning(
-                "Nenhum EPSG selecionado no diálogo",
-                code="LAS_PROJ_NO_EPSG",
-                path=las_path,
-            )
-            return None
-
-        # ── 4. Salva .mdata ─────────────────────────────────────────
-        salvo = LasLayerProjection.save_mdata(
-            las_path=las_path,
-            epsg_code=epsg_escolhido,
-            tool_key=self.tool_key,
-        )
-
-        if salvo:
-            self.logger.info(
-                "Projeção forçada salva em .mdata",
-                code="LAS_PROJ_SAVED",
-                path=las_path,
-                epsg=epsg_escolhido,
-            )
-            SignalManager.instance().console_message.emit(
-                f"Projeção forçada: {epsg_escolhido} → {las_path}"
-            )
-        else:
-            self.logger.error(
-                "Falha ao salvar .mdata para projeção forçada",
-                code="LAS_PROJ_SAVE_ERR",
-                path=las_path,
-                epsg=epsg_escolhido,
-            )
-
-        return epsg_escolhido
 
     # ── Preferences (override nos filhos) ────────────────────────────
 

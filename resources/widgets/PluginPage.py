@@ -31,7 +31,6 @@ from __future__ import annotations
 from enum import Enum
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame, QHBoxLayout
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel, QFrame, QHBoxLayout
 
 from resources.widgets.BasePage import BasePage
 from resources.widgets.ExecutionButtons import ExecutionButtons

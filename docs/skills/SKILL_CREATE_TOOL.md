@@ -4,7 +4,7 @@ Este guia descreve o processo padrão para criar e registrar uma nova ferramenta
 
 > ⚠️ **Antes de começar**, consulte:
 > - `docs/skills/widgets_skill.md` — verifique se já existe um widget pronto para sua UI
-> - `docs/ia/contracts.md` (Contrato 11) — regras sobre composição de widgets
+> - `docs/skills/SKILL_PLUGIN_CONTRACT.md` (Contrato 11) — regras sobre composição de widgets
 > - `docs/skills/preferences_skill.md` — obrigatório implementar load/save_prefs
 > - `docs/skills/log_utils_skill.md` — obrigatório logar eventos críticos
 

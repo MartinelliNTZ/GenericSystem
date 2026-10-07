@@ -28,7 +28,7 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 | `FirestoreService` | `core/firebase/FirestoreService.py` | CRUD REST no Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `delete_document`) |
 | `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Sincroniza um diretório de JSONs ↔ uma coleção Firestore (`push` / `pull`) |
 | `FirebaseWorker` | `core/firebase/FirebaseWorker.py` | Execução assíncrona (QThread) |
-| `ProjectDatabaseStore` | `plugins/project_database_manager/ProjectDatabaseStore.py` | Gravação atômica dos JSONs em `.BancoDados` |
+| `ProjectDatabaseStore` | `core/database/ProjectDatabaseStore.py` | Gravação atômica dos JSONs em `.BancoDados` (camada de banco de dados compartilhada) |
 | `ProjectDatabaseService` | `plugins/project_database_manager/ProjectDatabaseService.py` | Monta os registros + `ProjectDatabaseWorker` |
 | `ProjectDatabasePlugin` | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI: ATUALIZAR DADOS (push) + SINCRONIZAR NUVEM (pull) |
 | `ProjectDatabaseBackup` | `utils/ProjectDatabaseBackup.py` | ZIP diário do `.BancoDados` |

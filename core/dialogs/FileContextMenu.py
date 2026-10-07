@@ -10,7 +10,7 @@ para operações em arquivos (FileTreeWidget, etc.).
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 from PySide6.QtWidgets import QMenu
 

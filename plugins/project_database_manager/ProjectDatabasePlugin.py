@@ -32,9 +32,7 @@ from plugins.BasePlugin import BasePlugin
 from plugins.project_database_manager.ProjectDatabaseService import (
     ProjectDatabaseWorker,
 )
-from plugins.project_database_manager.ProjectDatabaseStore import (
-    ProjectDatabaseStore,
-)
+from core.database.ProjectDatabaseStore import ProjectDatabaseStore
 from resources.widgets.dialogs.FirebaseLoginDialog import FirebaseLoginDialog
 from resources.widgets.grid.GridCardView import GridCardView
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel

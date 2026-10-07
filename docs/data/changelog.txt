@@ -1,3 +1,23 @@
+[1.7.8][2026.10.07][13:00] - Correções das falhas graves (F1, F2, F5, F6, F7, F9, F10)
+  - utils/MdManager.py (F1): RESTAURADO — reescrito como exportador real de DoclingDocument para Markdown multi-coluna (export_by_columns: 2-6 força o nº de colunas; 0 detecta por lacunas horizontais). A versão anterior era uma cópia corrompida do MessageBox e quebrava a opção "colunas" do Docling
+  - docs (F2): corrigidas as referências a docs/ia/ (pasta inexistente) → docs/skills/SKILL_PLUGIN_CONTRACT.md e docs/skills/SKILL_AGENT.md (em SKILL_AGENT, Contrato 12, SKILL_CREATE_TOOL, PPT_CRIAR_FERRAMENTA_GENERICO e planos)
+  - plugins/BasePlugin.py (F5): removido o método LAS-específico las_projection (o software não lida mais com LAS) e o import morto Optional
+  - core/database/ NOVO (F6): ProjectDatabaseStore movido para a CAMADA DE BANCO DE DADOS compartilhada (core/database/ProjectDatabaseStore.py); project_database_manager e os_tracker passam a importar de core.database (fim do import plugin→plugin)
+  - plugins/project_structure_manager/ProjectStructurePlugin.py (F7): removida a responsabilidade excedente de backup/BD (_maybe_backup + leitura de prefs de PROJECT_DATABASE); a ferramenta agora apenas cria pastas e exibe a árvore
+  - F9: excepts silenciosos corrigidos (as e + logger) em utils/Preferences, utils/RecentProjectsManager, core/papeline/AsyncPipelineEngine, core/ui/ui_main (AppBar) e resources/widgets/FileTreeWidget; mantidos os fallbacks legítimos (ExceptionHandler, main.py, nativeEvent)
+  - resources/widgets/FileTreeWidget.py: QMessageBox direto trocado por MessageBox (Contrato 1)
+  - F10: removidos imports mortos (import duplicado em resources/widgets/PluginPage.py; Optional não usado em core/dialogs/FileContextMenu.py)
+  - docs/skills/SKILL_DATABASE.md: caminho do ProjectDatabaseStore atualizado para core/database
+
+
+[1.7.7][2026.10.07][12:00] - Análise de falhas graves (contratos, acoplamento e responsabilidades)
+  - docs/analysis/FALHAS_GRAVES.md: NOVO documento de auditoria com 11 falhas classificadas (2 críticas, 5 graves, 4 médias). Cada item traz arquivo+linha, contrato violado, diagnóstico e recomendação
+  - Falhas críticas: utils/MdManager.py corrompido (define MessageBox, sem export_by_columns → quebra o Docling) e docs/ia/ inexistente apesar de referenciado por SKILL_AGENT e Contrato 12
+  - Falhas de acoplamento: core→plugins (DoclingPipelineTask), widgets↔SignalManager/core (Firebase widgets), BasePlugin com lógica LAS, plugin→plugin (os_tracker→project_database_manager) e ProjectStructurePlugin (god object + backup de outro tool)
+  - Inclui mapa Contrato×Violação, plano de correção priorizado e nota transversal sobre singletons globais
+
+
+
 [1.7.6][2026.10.07][11:00] - Estrutura de projetos em UM dicionário (PROJECT_STRUCTURE) + suporte a arquivos base
   - utils/ProjectStructureUtil.py: NOVO dicionário PROJECT_STRUCTURE — fonte única que descreve TODA a estrutura (pastas aninhadas, a pasta de anos e futuros arquivos base); os acessores DEFAULT_PROJECT_FOLDERS, PROJECT_FOLDER_TEMPLATES, DOCUMENT_YEARS_FOLDER, DEFAULT_YEARS e DOCUMENT_TEMPLATE deixam de ser literais e passam a ser DERIVADOS dele (não há mais estrutura duplicada)
   - utils/ProjectStructureUtil.py: novos tipos de nó/helpers — BaseFile (arquivo base: source/conteúdo/overwrite), Years (pasta de anos: years + template) e is_file_node/file_spec/is_years_node; novo BASE_FILES_DIR (origem dos arquivos base)

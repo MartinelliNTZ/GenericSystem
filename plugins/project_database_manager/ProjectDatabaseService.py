@@ -22,8 +22,8 @@ from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
+from core.database.ProjectDatabaseStore import ProjectDatabaseStore
 from core.enum.ToolKey import ToolKey
-from plugins.project_database_manager.ProjectDatabaseStore import ProjectDatabaseStore
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureUtil import ProjectStructureUtil
 

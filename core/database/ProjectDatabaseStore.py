@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-ProjectDatabaseStore — Persistência do Banco de Dados de Projetos
-================================================================
-Leitura/escrita dos JSONs em ``<pasta-mãe>/.BancoDados``:
+ProjectDatabaseStore — Persistência do Banco de Dados de Projetos (.BancoDados)
+===============================================================================
+Camada de BANCO DE DADOS compartilhada do sistema (Contrato 7): a leitura/escrita
+dos JSONs em ``<pasta-mãe>/.BancoDados`` não pertence a nenhuma ferramenta — é
+consumida tanto pelo Banco de Dados quanto pelo Acompanhamento de OS.
 
 - Um JSON por OS (``<numero_os>.json``) — fonte por projeto.
 - Um JSON consolidado (``banco_dados.json``) — agregação de todas as OS.
 
 A gravação é atômica (``<arquivo>.tmp`` + ``os.replace``) para evitar JSON
-corrompido em caso de queda. Não decide regras de negócio (isso é do
-``ProjectDatabaseService``).
+corrompido em caso de queda. Não decide regras de negócio (isso é da ferramenta).
 """
 
 from __future__ import annotations
@@ -174,3 +175,4 @@ class ProjectDatabaseStore(BaseUtil):
                 error=str(e),
                 path=str(path),
             )
+

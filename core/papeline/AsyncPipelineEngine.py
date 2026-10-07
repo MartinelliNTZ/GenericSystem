@@ -16,6 +16,8 @@ from __future__ import annotations
 import threading
 from typing import Any, Callable, List, Optional
 
+from core.config.LogUtils import LogUtils
+from core.enum.ToolKey import ToolKey
 from core.governor.ResourceGovernor import ResourceGovernor
 from .ExecutionContext import ExecutionContext
 from .BaseStep import BaseStep
@@ -184,8 +186,16 @@ class AsyncPipelineEngine:
             try:
                 success = t.run()
                 t.finished(success)
-            except Exception:
-                pass
+            except Exception as e:
+                LogUtils(
+                    tool=ToolKey.UNTRACEABLE.value,
+                    class_name="AsyncPipelineEngine",
+                ).error(
+                    "Falha não tratada na execução da task",
+                    code="PIPE_TASK_ERR",
+                    error=str(e),
+                    task=t.description,
+                )
 
         thread = threading.Thread(target=_worker, args=(task, self), daemon=True,
                                   name=f"task-{task.description}")

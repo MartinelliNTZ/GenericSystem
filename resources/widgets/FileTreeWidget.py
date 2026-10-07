@@ -30,12 +30,13 @@ from PySide6.QtWidgets import (
     QFileSystemModel,
     QHBoxLayout,
     QInputDialog,
-    QMessageBox,
     QTreeView,
     QWidget,
 )
 
+from core.config.LogUtils import LogUtils
 from core.dialogs.FileContextMenu import FileAction, FileContextMenu
+from core.enum.ToolKey import ToolKey
 from utils.MessageBox import MessageBox
 
 
@@ -57,6 +58,9 @@ class FileTreeWidget(QWidget):
         super().__init__(parent)
         self._root_path: str | None = None
         self._root_index = None
+        self._logger = LogUtils(
+            tool=ToolKey.UNTRACEABLE.value, class_name="FileTreeWidget"
+        )
 
         # ── Modelo nativo do Qt ────────────────────────────────────
         self._model = QFileSystemModel(self)
@@ -184,7 +188,13 @@ class FileTreeWidget(QWidget):
         try:
             file_path.touch(exist_ok=True)
             return True
-        except Exception:
+        except OSError as e:
+            self._logger.error(
+                "Falha ao criar arquivo",
+                code="FTW_CREATE_ERR",
+                error=str(e),
+                path=str(file_path),
+            )
             return False
 
     def delete_selected(self) -> bool:
@@ -218,7 +228,13 @@ class FileTreeWidget(QWidget):
                 else:
                     os.remove(path)
                 self.file_deleted.emit(path)
-            except Exception:
+            except OSError as e:
+                self._logger.warning(
+                    "Falha ao excluir item",
+                    code="FTW_DELETE_ERR",
+                    error=str(e),
+                    path=str(path),
+                )
                 errors.append(path)
 
         if errors:
@@ -275,8 +291,13 @@ class FileTreeWidget(QWidget):
                 subprocess.Popen(f'explorer /select,"{path}"')
             else:
                 subprocess.Popen(f'explorer "{path}"')
-        except Exception:
-            pass
+        except OSError as e:
+            self._logger.error(
+                "Falha ao abrir no Explorer",
+                code="FTW_OPEN_ERR",
+                error=str(e),
+                path=str(path),
+            )
 
 
 class _FileTreeView(QTreeView):
@@ -351,20 +372,26 @@ class _FileTreeView(QTreeView):
                 continue
 
             if dst.exists():
-                reply = QMessageBox.question(
-                    self,
-                    "Substituir Arquivo",
+                reply = MessageBox.show_question(
                     f'O destino já contém "{dst.name}". Substituir?',
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No,
+                    title="Substituir Arquivo",
+                    parent=self,
+                    buttons=MessageBox.YES_NO,
+                    default_button=MessageBox.NO,
                 )
-                if reply != QMessageBox.Yes:
+                if reply != MessageBox.YES:
                     continue
 
             try:
                 shutil.move(str(src), str(dst))
                 widget.file_moved.emit(str(src), str(dst))
-            except Exception:
-                pass
+            except OSError as e:
+                self._logger.error(
+                    "Falha ao mover arquivo",
+                    code="FTW_MOVE_ERR",
+                    error=str(e),
+                    source=str(src),
+                    destination=str(dst),
+                )
 
         event.accept()

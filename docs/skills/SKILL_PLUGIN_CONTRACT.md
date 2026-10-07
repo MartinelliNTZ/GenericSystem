@@ -164,7 +164,7 @@ DEVE atualizar a documentação correspondente.
 
 **Regras:**
 - Ao criar um novo widget em `resources/widgets/`, adicione-o à skill `docs/skills/widgets_skill.md`.
-- Ao criar um novo contrato, adicione-o neste arquivo e referencie no `docs/ia/agent.md`.
+- Ao criar um novo contrato, adicione-o neste arquivo e referencie no `docs/skills/SKILL_AGENT.md`.
 - Ao modificar comportamento existente, verifique se as skills e contratos ainda refletem a realidade.
 - Documentação desatualizada é considerada bug.
 

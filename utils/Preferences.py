@@ -58,8 +58,14 @@ class _PreferencesWriteHelper:
             data = getattr(self, '_write_data', {})
             if data:
                 Preferences._write_to_disk(data)
-        except Exception:
-            pass
+        except Exception as e:
+            BaseUtil._get_logger(
+                ToolKey.UNTRACEABLE.value, "_PreferencesWriteHelper"
+            ).error(
+                "Falha ao persistir preferências (escrita pendente)",
+                code="PREFS_FLUSH_ERR",
+                error=str(e),
+            )
 
 
 class Preferences(BaseUtil):

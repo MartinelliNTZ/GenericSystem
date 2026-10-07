@@ -1,362 +1,230 @@
 # -*- coding: utf-8 -*-
 """
-MessageBox — Gerenciador centralizado de diálogos para o usuário
-==================================================================
-Centraliza todas as chamadas a QMessageBox, garantindo:
-  - Interface consistente em toda a aplicação
-  - Nenhum código acessa QMessageBox diretamente
-  - Títulos, ícones e textos padronizados
-  - Fácil manutenção e customização global
+MdManager — Exportação de DoclingDocument para Markdown multi-coluna
+====================================================================
+Reconstrói o Markdown de um ``DoclingDocument`` respeitando a leitura em
+COLUNAS (telas / diagramas multi-painel): cada bloco de texto é agrupado pela
+coluna em que está posicionado na página (posição horizontal do ``bbox``) e
+cada coluna é lida de cima para baixo, da esquerda para a direita.
 
-Uso:
-    from utils.MessageBox import MessageBox
+- ``manual_columns`` (2..6) força o número de colunas por divisão uniforme.
+- ``manual_columns`` 0 tenta detectar as colunas automaticamente pelas lacunas
+  horizontais entre os blocos; se não encontrar 2+ colunas, retorna ``""``
+  (o consumidor faz o fallback para o Markdown padrão do Docling).
 
-    # Erro
-    MessageBox.show_error("Falha ao carregar arquivo")
-    MessageBox.show_error("Falha ao conectar", title="Erro de Rede",
-                          detail="Detalhes técnicos...")
-
-    # Informação
-    MessageBox.show_info("Operação concluída com sucesso")
-
-    # Aviso
-    MessageBox.show_warning("Espaço em disco baixo")
-
-    # Pergunta (retorna True/False)
-    if MessageBox.show_question("Deseja salvar as alterações?"):
-        ...
-
-    # Pergunta com botões personalizados
-    resultado = MessageBox.show_question(
-        "O que deseja fazer?",
-        title="Salvar?",
-        buttons=MessageBox.YES_NO_CANCEL,
-    )
-    # resultado: QMessageBox.StandardButton.Yes, .No, .Cancel
+Sem dependências Qt — usa apenas LogUtils. É consumido pelo ``DoclingEngine``.
 """
 
 from __future__ import annotations
 
-import sys
-from typing import Any, Optional
+import bisect
+from typing import Any, Dict, List, Tuple
 
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication, QMessageBox
-
+from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
 
 
-class MessageBox(BaseUtil):
-    """
-    Classe estática para exibição de diálogos ao usuário.
+class MdManager(BaseUtil):
+    """Exporta um ``DoclingDocument`` em Markdown separado por colunas."""
 
-    Todos os métodos aceitam os seguintes parâmetros nomeados opcionais:
-        title      : str   — Título da janela (padrão varia por método)
-        detail     : str   — Texto detalhado (seção "Mostrar Detalhes")
-        icon       : QMessageBox.Icon — Ícone (padrão varia por método)
-        parent     : QWidget — Widget pai (padrão: janela ativa)
-        buttons    : QMessageBox.StandardButtons — Botões (padrão: OK)
-        default_btn: QMessageBox.StandardButton — Botão padrão (foco)
-    """
+    # Lacuna mínima (fração da largura da página) para separar colunas no modo
+    # automático.
+    MIN_COLUMN_GAP = 0.15
+    # Número máximo de colunas suportado.
+    MAX_COLUMNS = 6
 
-    # ── Atalhos para botões comuns ──────────────────────────────────
-    OK = QMessageBox.StandardButton.Ok
-    YES = QMessageBox.StandardButton.Yes
-    NO = QMessageBox.StandardButton.No
-    CANCEL = QMessageBox.StandardButton.Cancel
-    YES_NO = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-    YES_NO_CANCEL = (
-        QMessageBox.StandardButton.Yes
-        | QMessageBox.StandardButton.No
-        | QMessageBox.StandardButton.Cancel
-    )
-    OK_CANCEL = QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+    @classmethod
+    def export_by_columns(
+        cls,
+        doc: Any,
+        *,
+        page_no: int = 0,
+        manual_columns: int = 0,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """Exporta ``doc`` em Markdown agrupado por colunas.
 
-    # ── Títulos padrão ─────────────────────────────────────────────
-    DEFAULT_TITLE_INFO = "Informação"
-    DEFAULT_TITLE_WARNING = "Aviso"
-    DEFAULT_TITLE_ERROR = "Erro"
-    DEFAULT_TITLE_CRITICAL = "Erro Crítico"
-    DEFAULT_TITLE_QUESTION = "Confirmação"
+        Args:
+            doc: ``DoclingDocument`` convertido.
+            page_no: Página específica (1-based). ``0`` ou negativo = todas.
+            manual_columns: ``0`` = automático; ``2..6`` = força o número.
+            tool_key: Chave da ferramenta para logging (Contrato 26).
 
-    # ═════════════════════════════════════════════════════════════════
-    # API Pública
-    # ═════════════════════════════════════════════════════════════════
+        Returns:
+            Markdown separado por colunas, ou ``""`` quando não há 2+ colunas
+            (layout de coluna única) ou quando o documento é inválido.
+        """
+        logger = cls._get_logger(tool_key, "MdManager")
+        if doc is None:
+            return ""
+
+        try:
+            items_by_page = cls._collect_items(doc)
+        except Exception as e:  # noqa: BLE001 - API externa do Docling
+            logger.warning(
+                "Falha ao iterar o documento",
+                code="MDM_ITER_ERR",
+                error=str(e),
+            )
+            return ""
+
+        if not items_by_page:
+            return ""
+
+        only_page = page_no if page_no and page_no > 0 else None
+        blocks: List[str] = []
+        for number in sorted(items_by_page):
+            if only_page is not None and number != only_page:
+                continue
+            block = cls._export_page(
+                doc, number, items_by_page[number], manual_columns, logger
+            )
+            if block:
+                blocks.append(block)
+
+        return "\n\n".join(blocks).strip()
+
+    # ── Coleta ───────────────────────────────────────────────────────
 
     @staticmethod
-    def show_info(
-        text: str,
-        *,
-        title: str = DEFAULT_TITLE_INFO,
-        detail: str = "",
-        parent: Any = None,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> None:
-        """
-        Exibe uma mensagem informativa.
+    def _collect_items(doc: Any) -> Dict[int, List[Any]]:
+        """Agrupa os itens com ``prov`` pelo número da página."""
+        items_by_page: Dict[int, List[Any]] = {}
+        for item, _level in doc.iterate_items(traverse_pictures=True):
+            prov = getattr(item, "prov", None)
+            if not prov:
+                continue
+            page_number = prov[0].page_no
+            items_by_page.setdefault(page_number, []).append(item)
+        return items_by_page
 
-        Parâmetros:
-            text  : Mensagem principal a ser exibida
-            title : Título da janela (opcional, padrão: "Informação")
-            detail: Texto detalhado colapsável (opcional)
-            parent: Widget pai (opcional, padrão: janela ativa)
-            tool_key: Chave da ferramenta para logging.
-        """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.info(f"Exibindo info: {text[:80]}", code="MSG_INFO")
-        _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=QMessageBox.Icon.Information,
-            parent=parent,
-            buttons=QMessageBox.StandardButton.Ok,
-        )
+    # ── Render de uma página ─────────────────────────────────────────
 
-    @staticmethod
-    def show_warning(
-        text: str,
-        *,
-        title: str = DEFAULT_TITLE_WARNING,
-        detail: str = "",
-        parent: Any = None,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> None:
-        """
-        Exibe uma mensagem de aviso.
+    @classmethod
+    def _export_page(
+        cls,
+        doc: Any,
+        page_number: int,
+        items: List[Any],
+        manual_columns: int,
+        logger: LogUtils,
+    ) -> str:
+        """Renderiza uma página agrupada por colunas (``""`` se coluna única)."""
+        width = cls._page_width(doc, page_number)
+        entries = cls._measure(items, width)
+        if len(entries) < 2:
+            return ""
 
-        Parâmetros:
-            text  : Mensagem principal
-            title : Título da janela (opcional, padrão: "Aviso")
-            detail: Texto detalhado colapsável (opcional)
-            parent: Widget pai (opcional)
-            tool_key: Chave da ferramenta para logging.
-        """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.warning(f"Exibindo aviso: {text[:80]}", code="MSG_WARNING")
-        _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=QMessageBox.Icon.Warning,
-            parent=parent,
-            buttons=QMessageBox.StandardButton.Ok,
-        )
+        lefts = [left for left, _top, _center, _item in entries]
+        boundaries = cls._column_boundaries(lefts, manual_columns)
+        if not boundaries:
+            return ""
+
+        columns: Dict[int, List[Tuple[float, Any]]] = {}
+        for _left, top, center, item in entries:
+            index = bisect.bisect_right(boundaries, center)
+            columns.setdefault(index, []).append((top, item))
+
+        serializer = cls._make_serializer(doc, logger)
+
+        parts: List[str] = []
+        for index in sorted(columns):
+            column_md = cls._render_column(serializer, columns[index])
+            if not column_md:
+                continue
+            parts.append(f"### Coluna {index + 1}\n\n{column_md}")
+
+        if not parts:
+            return ""
+        if len(parts) == 1:
+            return parts[0]
+        return f"## Página {page_number}\n\n" + "\n\n".join(parts)
 
     @staticmethod
-    def show_error(
-        text: str,
-        *,
-        title: str = DEFAULT_TITLE_ERROR,
-        detail: str = "",
-        parent: Any = None,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> None:
-        """
-        Exibe uma mensagem de erro.
-
-        Parâmetros:
-            text  : Mensagem principal
-            title : Título da janela (opcional, padrão: "Erro")
-            detail: Texto detalhado colapsável (opcional)
-            parent: Widget pai (opcional)
-            tool_key: Chave da ferramenta para logging.
-        """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.error(f"Exibindo erro: {text[:80]}", code="MSG_ERROR")
-        _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=QMessageBox.Icon.Critical,
-            parent=parent,
-            buttons=QMessageBox.StandardButton.Ok,
-        )
+    def _measure(
+        items: List[Any], width: float
+    ) -> List[Tuple[float, float, float, Any]]:
+        """Converte itens em ``(left, top, center, item)`` normalizados."""
+        entries: List[Tuple[float, float, float, Any]] = []
+        for item in items:
+            bbox = item.prov[0].bbox
+            left = bbox.l / width
+            center = ((bbox.l + bbox.r) / 2.0) / width
+            entries.append((left, bbox.t, center, item))
+        return entries
 
     @staticmethod
-    def show_critical(
-        text: str,
-        *,
-        title: str = DEFAULT_TITLE_CRITICAL,
-        detail: str = "",
-        parent: Any = None,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> None:
-        """
-        Exibe uma mensagem de erro crítico.
+    def _page_width(doc: Any, page_number: int) -> float:
+        """Largura da página (fallback 1.0 para evitar divisão por zero)."""
+        try:
+            return float(doc.pages[page_number].size.width) or 1.0
+        except Exception:  # noqa: BLE001 - estrutura externa do Docling
+            return 1.0
 
-        Parâmetros:
-            text  : Mensagem principal
-            title : Título da janela (opcional, padrão: "Erro Crítico")
-            detail: Texto detalhado colapsável (opcional)
-            parent: Widget pai (opcional)
-            tool_key: Chave da ferramenta para logging.
+    @classmethod
+    def _column_boundaries(
+        cls, lefts: List[float], manual_columns: int
+    ) -> List[float]:
+        """Retorna as fronteiras (x normalizado) entre colunas.
+
+        ``[]`` significa "coluna única" (sem separação a fazer).
         """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.critical(f"Exibindo critico: {text[:80]}", code="MSG_CRITICAL")
-        _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=QMessageBox.Icon.Critical,
-            parent=parent,
-            buttons=QMessageBox.StandardButton.Ok,
-        )
+        if manual_columns and manual_columns >= 2:
+            count = min(int(manual_columns), cls.MAX_COLUMNS)
+            return [i / count for i in range(1, count)]
+
+        if len(lefts) < 2:
+            return []
+
+        ordered = sorted(lefts)
+        gaps: List[Tuple[float, float]] = []
+        for previous, current in zip(ordered, ordered[1:]):
+            gap = current - previous
+            if gap >= cls.MIN_COLUMN_GAP:
+                gaps.append((gap, (previous + current) / 2.0))
+        if not gaps:
+            return []
+
+        gaps.sort(reverse=True)
+        return sorted(boundary for _gap, boundary in gaps[: cls.MAX_COLUMNS - 1])
 
     @staticmethod
-    def show_question(
-        text: str,
-        *,
-        title: str = DEFAULT_TITLE_QUESTION,
-        detail: str = "",
-        parent: Any = None,
-        buttons: QMessageBox.StandardButtons = YES_NO,
-        default_button: QMessageBox.StandardButton = YES,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> QMessageBox.StandardButton:
-        """
-        Exibe uma pergunta ao usuário.
+    def _make_serializer(doc: Any, logger: LogUtils) -> Any:
+        """Cria o serializer Markdown do Docling (``None`` se indisponível)."""
+        try:
+            from docling_core.transforms.serializer.markdown import (
+                MarkdownDocSerializer,
+            )
 
-        Parâmetros:
-            text           : Mensagem da pergunta
-            title          : Título da janela (opcional, padrão: "Confirmação")
-            detail         : Texto detalhado colapsável (opcional)
-            parent         : Widget pai (opcional)
-            buttons        : Botões exibidos (padrão: Yes | No)
-            default_button : Botão com foco padrão (padrão: Yes)
-            tool_key: Chave da ferramenta para logging.
+            return MarkdownDocSerializer(doc=doc)
+        except Exception as e:  # noqa: BLE001 - API externa do Docling
+            logger.warning(
+                "Serializer Markdown indisponível",
+                code="MDM_SER_ERR",
+                error=str(e),
+            )
+            return None
 
-        Retorna:
-            QMessageBox.StandardButton pressionado pelo usuário.
-            Ex: QMessageBox.StandardButton.Yes, .No, .Cancel
-        """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.info(f"Exibindo pergunta: {text[:80]}", code="MSG_QUESTION")
-        return _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=QMessageBox.Icon.Question,
-            parent=parent,
-            buttons=buttons,
-            default_button=default_button,
-        )
-
-    # ═════════════════════════════════════════════════════════════════
-    # Método genérico (para uso interno ou casos avançados)
-    # ═════════════════════════════════════════════════════════════════
+    @classmethod
+    def _render_column(
+        cls, serializer: Any, entries: List[Tuple[float, Any]]
+    ) -> str:
+        """Renderiza uma coluna (itens já em ordem de cima para baixo)."""
+        blocks: List[str] = []
+        for _top, item in sorted(entries, key=lambda entry: entry[0]):
+            markdown = cls._item_markdown(serializer, item)
+            if markdown:
+                blocks.append(markdown)
+        return "\n\n".join(blocks)
 
     @staticmethod
-    def show(
-        text: str,
-        *,
-        title: str = "",
-        detail: str = "",
-        icon: QMessageBox.Icon = QMessageBox.Icon.NoIcon,
-        parent: Any = None,
-        buttons: QMessageBox.StandardButtons = QMessageBox.StandardButton.Ok,
-        default_button: Optional[QMessageBox.StandardButton] = None,
-        tool_key: str = ToolKey.UNTRACEABLE.value,
-    ) -> QMessageBox.StandardButton:
-        """
-        Método genérico para exibir qualquer tipo de mensagem.
+    def _item_markdown(serializer: Any, item: Any) -> str:
+        """Markdown de um item; cai para o texto cru se o serializer falhar."""
+        if serializer is not None:
+            try:
+                return serializer.serialize(item=item).text.strip()
+            except Exception:  # noqa: BLE001 - item pode não ser serializável
+                pass
+        return str(getattr(item, "text", "") or "").strip()
 
-        Parâmetros:
-            text           : Mensagem principal
-            title          : Título da janela
-            detail         : Texto detalhado colapsável
-            icon           : Ícone (QMessageBox.Icon)
-            parent         : Widget pai
-            buttons        : Botões exibidos
-            default_button : Botão com foco padrão
-            tool_key: Chave da ferramenta para logging.
-
-        Retorna:
-            QMessageBox.StandardButton pressionado pelo usuário.
-        """
-        logger = BaseUtil._get_logger(tool_key, "MessageBox")
-        logger.debug(f"Exibindo mensagem generica: {text[:80]}", code="MSG_SHOW")
-        return _show(
-            text=text,
-            title=title,
-            detail=detail,
-            icon=icon,
-            parent=parent,
-            buttons=buttons,
-            default_button=default_button,
-        )
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# Função interna de exibição
-# ═══════════════════════════════════════════════════════════════════════
-
-def _show(
-    text: str,
-    title: str,
-    detail: str,
-    icon: QMessageBox.Icon,
-    parent: Any = None,
-    buttons: QMessageBox.StandardButtons = QMessageBox.StandardButton.Ok,
-    default_button: Optional[QMessageBox.StandardButton] = None,
-) -> QMessageBox.StandardButton:
-    """
-    Constrói e exibe o QMessageBox de forma segura.
-
-    Regras:
-      1. Obtém o parent automaticamente se não fornecido
-      2. Cria QApplication se não existir (fallback para antes do startup)
-      3. Usa QMessageBox.exec() — bloqueante mas seguro
-      4. Retorna o botão pressionado
-    """
-    # ── Garante QApplication ──────────────────────────────────────
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-
-    # ── Parent automático ─────────────────────────────────────────
-    if parent is None:
-        parent = _find_active_window()
-
-    # ── Constrói a mensagem ───────────────────────────────────────
-    msg_box = QMessageBox(parent)
-    msg_box.setWindowTitle(title)
-    msg_box.setText(str(text))
-    msg_box.setIcon(icon)
-    msg_box.setStandardButtons(buttons)
-
-    if detail:
-        msg_box.setDetailedText(str(detail))
-
-    if default_button is not None:
-        msg_box.setDefaultButton(default_button)
-
-    # ── Exibe (bloqueante) ────────────────────────────────────────
-    pressed = msg_box.exec()
-
-    # Converte o resultado para StandardButton (compatível PySide6)
-    return QMessageBox.StandardButton(pressed)
-
-
-def _find_active_window() -> Any:
-    """
-    Tenta encontrar a janela principal ativa para usar como parent.
-
-    Percorre os topLevelWidgets da QApplication e retorna o primeiro
-    que esteja visível e tenha título.
-    """
-    app = QApplication.instance()
-    if app is None:
-        return None
-
-    try:
-        for widget in app.topLevelWidgets():
-            if widget.isVisible() and widget.windowTitle():
-                return widget
-    except Exception as e:
-        BaseUtil._get_logger(ToolKey.SYSTEM.value, "MessageBox").error(
-            "Falha ao buscar janela ativa", code="FIND_WIN_ERR", error=str(e)
-        )
-
-    return None

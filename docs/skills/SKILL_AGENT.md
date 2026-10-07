@@ -22,7 +22,7 @@ Agir como engenheiro de software especializado no ecossistema **Aetheris ToolBox
 | Tiling LAS | `core/papeline/task/LasTilerTask.py` | Task para dividir LAS em partes (BaseTask) |
 | Vetor/Raster | `docs/skills/SKILL_VECTOR_RASTER_LAYER_UTILS.md` | Ler dados vetoriais e raster com utilitários |
 | Estilos | `docs/skills/SKILL_STYLES.md` | Manter consistência visual e temas |
-| Contratos | `docs/ia/contracts.md` | Regras imutáveis do sistema |
+| Contratos | `docs/skills/SKILL_PLUGIN_CONTRACT.md` | Regras imutáveis do sistema |
 | Projetos | `docs/skills/SKILL_PROJECT.md` | Sistema de projetos .mtl, SaveProjectPlugin, menu Arquivo, AppBar status |
 | Banco de Dados | `docs/skills/SKILL_DATABASE.md` | Firebase (Firestore) oficial + espelho JSON offline (.BancoDados) + log desacoplado |
 | Catálogo de Classes | `docs/skills/CatalogoClasses.md` | Referência de classes do projeto |
@@ -45,7 +45,7 @@ Agir como engenheiro de software especializado no ecossistema **Aetheris ToolBox
 Antes de escrever qualquer código, você DEVE:
 
 - Confirmar que a skill `SKILL_AGENT` está marcada e que o uso das demais skills está autorizado.
-1. **Ler os contratos** (`docs/ia/contracts.md`) — sempre.
+1. **Ler os contratos** (`docs/skills/SKILL_PLUGIN_CONTRACT.md`) — sempre.
 2. **Identificar quais skills se aplicam** ao que está sendo pedido.
 3. **Consultar a skill relevante** — ler o arquivo, não assumir.
 4. **Planejar a solução** no pensamento antes de usar ferramentas.

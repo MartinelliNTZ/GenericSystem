@@ -473,7 +473,12 @@ class MainWindow(QMainWindow):
                     )
             else:
                 self.appbar.clear_project_status()
-        except Exception:
+        except Exception as e:
+            LogUtils(tool="System", class_name="MainWindow").warning(
+                "Falha ao atualizar status do projeto na AppBar",
+                code="APPBAR_PROJ_ERR",
+                error=str(e),
+            )
             self.appbar.clear_project_status()
 
     def _toggle_maximize_restore(self) -> None:

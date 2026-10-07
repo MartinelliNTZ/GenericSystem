@@ -17,9 +17,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.database.ProjectDatabaseStore import ProjectDatabaseStore
 from core.enum.ToolKey import ToolKey
 from core.model.SubOSModel import SubOS
-from plugins.project_database_manager.ProjectDatabaseStore import ProjectDatabaseStore
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureUtil import ProjectStructureUtil
 

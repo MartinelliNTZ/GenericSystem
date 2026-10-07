@@ -58,8 +58,6 @@ from resources.widgets.simple.SimpleSecondaryButton import SimpleSecondaryButton
 from resources.widgets.simple.SimpleSelector import SimpleSelector
 from utils.ColorProvider import ColorProvider
 from utils.MessageBox import MessageBox
-from utils.Preferences import Preferences
-from utils.ProjectDatabaseBackup import ProjectDatabaseBackup
 
 
 def _status_color(status: str) -> str:
@@ -180,22 +178,6 @@ class ProjectStructurePlugin(BasePlugin):
 
         self._runtime_ready = True
         QTimer.singleShot(0, lambda: self._load_projects(show_toast=False))
-        QTimer.singleShot(0, self._maybe_backup)
-
-    def _maybe_backup(self) -> None:
-        """Dispara o backup diário do banco ao iniciar (compartilhado)."""
-        if self._mother_folder is None:
-            return
-        prefs = Preferences.load_tool_prefs(
-            ToolKey.PROJECT_DATABASE,
-            caller_tool_key=ToolKey.PROJECT_STRUCTURE.value,
-        )
-        ProjectDatabaseBackup.ensure_daily_backup(
-            mother_folder=str(self._mother_folder),
-            backup_dir=prefs.get("backup_dir", ""),
-            label="BancoDados",
-            tool_key=ToolKey.PROJECT_STRUCTURE.value,
-        )
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         """Encerra workers e monitoramento antes de fechar."""

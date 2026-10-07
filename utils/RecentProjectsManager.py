@@ -84,8 +84,13 @@ class RecentProjectsManager(BaseUtil):
                             last_modified = FormatUtils.format_date(dt.timestamp(), tool_key=self._tool_key)
                         except Exception:
                             last_modified = raw[:10]  # fallback: só a data
-            except Exception:
-                pass
+            except Exception as e:
+                self._logger.warning(
+                    "Falha ao ler metadados do projeto recente",
+                    code="RECENT_META_ERR",
+                    error=str(e),
+                    path=project_path,
+                )
 
         recents.insert(0, {
             "path": project_path,
