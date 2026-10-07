@@ -1,3 +1,9 @@
+[1.8.1][2026.10.07][14:30] - Home: botão para semear a base de SubOS (seed)
+  - plugins/home/HomePlugin.py: novo botão SimpleThemeButton "SEMEAR BASE (SEED OS)" na Home que executa add_data/seed_sub_os.py em background (via FirebaseWorker — não trava a UI) e exibe o resultado em MessageBox (sucesso mostra o resumo do script em "detalhes"; falha mostra o erro); o botão é desabilitado enquanto o seed roda
+  - plugins/home/HomePlugin.py: docstring do módulo atualizada (novo botão de seed)
+
+
+
 [1.8.0][2026.10.07][14:00] - Nova regra de negócio: OS pelo seed/OS Tracker, Banco de Dados só ATUALIZA, paths RELATIVOS e persistência Firebase-first
   - core/firebase/CloudProjectDatabase.py: NOVO — CLASSE DE BANCO (Contrato 28): única porta de entrada dos registros de OS (Firestore: load_orders/get_order/save_order/rebuild_consolidated) e que GERA os backups JSON (via ProjectDatabaseStore). Plugins NUNCA tocam no JSON
   - Correção: CloudProjectDatabase.load_orders deixa de ter QUALQUER fallback para o JSON local (.BancoDados) — a leitura é EXCLUSIVAMENTE do Firestore; com a base vazia/offline a ferramenta fica VAZIA (o app nunca consulta o JSON; a classe só ESCREVE os backups). Chamadores ajustados (ProjectDatabasePlugin/OsTrackerPlugin/OsTrackerService/seed) e docs (Contrato 28 + SKILL_DATABASE)

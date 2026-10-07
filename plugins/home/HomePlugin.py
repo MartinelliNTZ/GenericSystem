@@ -6,15 +6,21 @@ Widget exibido por padrão ao abrir o software.
 Apresenta um resumo visual das ferramentas disponíveis
 e boas-vindas ao usuário. Exibe partidas de futebol do dia
 e dados climáticos lado a lado em painéis, após a conclusão
-das pipelines de fetch.
+das pipelines de fetch. Oferece também um botão para semear
+a base de SubOS (add_data/seed_sub_os.py — DEV).
 """
 
 from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QSizePolicy
 
 from core.enum.ToolKey import ToolKey
+from core.firebase.FirebaseWorker import FirebaseWorker
 from core.model.FootballModel import Fixture
 from core.model.WeatherModel import WeatherData
 from core.papeline import PipelineRunner
@@ -29,6 +35,7 @@ from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleLabel import SimpleLabel
 from resources.widgets.simple.SimpleThemeButton import SimpleThemeButton
 from utils.JsonUtil import JsonUtil
+from utils.MessageBox import MessageBox
 from utils.StringUtils import StringUtils
 
 
@@ -49,6 +56,8 @@ class HomePlugin(BasePlugin):
         self._scroll_list = None
         self._weather_runner = None
         self._weather_view = None
+        self._seed_worker = None
+        self._seed_btn = None
         super().__init__(tool_key=ToolKey.HOME.value, parent=parent)
 
     def _build_ui(self):
@@ -82,9 +91,24 @@ class HomePlugin(BasePlugin):
         self._theme_btn.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
+
+        # === Seed de SubOS (add_data/seed_sub_os.py — DEV) ===
+        self._seed_btn = SimpleThemeButton(
+            "SEMEAR BASE (SEED OS)",
+            min_width=200,
+            min_height=38,
+            shadow_enabled=True,
+            border_radius=35,
+        )
+        self._seed_btn.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+        self._seed_btn.clicked.connect(self._on_seed_clicked)
+
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         btn_layout.addWidget(self._theme_btn)
+        btn_layout.addWidget(self._seed_btn)
         self.main_layout.addLayout(btn_layout)
         print(self._theme_btn.styleSheet()) 
         print(self._theme_btn.style().metaObject().className())# Debug: imprime stylesheet do botão
@@ -130,6 +154,69 @@ class HomePlugin(BasePlugin):
         # ── Start pipelines after UI is ready ─────────────────────
         QTimer.singleShot(500, self._start_football_pipeline)
         QTimer.singleShot(600, self._start_weather_pipeline)
+
+    # ── Seed de SubOS (add_data/seed_sub_os.py — DEV) ──────────────
+
+    def _on_seed_clicked(self) -> None:
+        """Dispara o seed de SubOS em background (não bloqueia a UI)."""
+        if self._seed_worker is not None and self._seed_worker.isRunning():
+            self.logger.info(
+                "Seed de SubOS já está em execução", code="HOME_SEED_BUSY",
+            )
+            return
+
+        self._seed_btn.setEnabled(False)
+        self._seed_worker = FirebaseWorker(self._run_seed_script, parent=self)
+        self._seed_worker.finished_with_result.connect(self._on_seed_done)
+        self._seed_worker.failed.connect(self._on_seed_error)
+
+        self.logger.info("Executando seed de SubOS", code="HOME_SEED_START")
+        self._seed_worker.start()
+
+    def _run_seed_script(self) -> str:
+        """Roda add_data/seed_sub_os.py em subprocesso e devolve a saída."""
+        script = Path(__file__).resolve().parents[2] / "add_data" / "seed_sub_os.py"
+        creationflags = (
+            subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=str(script.parent.parent),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            creationflags=creationflags,
+        )
+        output = f"{result.stdout or ''}{result.stderr or ''}".strip()
+        if result.returncode != 0:
+            raise RuntimeError(
+                output or f"Seed falhou (código {result.returncode})."
+            )
+        return output
+
+    def _on_seed_done(self, output: str) -> None:
+        """Exibe o resumo do seed concluído."""
+        self._seed_btn.setEnabled(True)
+        self.logger.info("Seed de SubOS concluído", code="HOME_SEED_DONE")
+        MessageBox.show_info(
+            "Base de SubOS semeada com sucesso.",
+            title="Seed Sub OS",
+            detail=output or "O script não retornou saída.",
+            parent=self,
+        )
+
+    def _on_seed_error(self, error_msg: str) -> None:
+        """Exibe o erro do seed."""
+        self._seed_btn.setEnabled(True)
+        self.logger.error(
+            "Seed de SubOS falhou", code="HOME_SEED_ERR", error=error_msg,
+        )
+        MessageBox.show_error(
+            "Falha ao executar o seed de SubOS.",
+            title="Seed Sub OS",
+            detail=error_msg,
+            parent=self,
+        )
 
     def _start_football_pipeline(self) -> None:
         """Executa a pipeline de fetch de futebol em background."""
