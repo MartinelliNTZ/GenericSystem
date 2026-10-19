@@ -103,6 +103,7 @@ class CloudStructureDatabase(BaseUtil):
             list(current.get("folders", [])) == list(previous.get("folders", []))
             and list(current.get("files", [])) == list(previous.get("files", []))
             and dict(current.get("modified", {})) == dict(previous.get("modified", {}))
+            and dict(current.get("sizes", {})) == dict(previous.get("sizes", {}))
         )
 
     @classmethod

@@ -42,8 +42,12 @@ class ProjectStructureChangelog(BaseUtil):
     HEADER_PARAGRAPHS = 3
 
     _CHANGE_LABELS = (
+        ("Pasta renomeada", "folder_renames"),
+        ("Pasta movida", "folder_moves"),
         ("Pasta criada", "added_folders"),
         ("Pasta removida", "removed_folders"),
+        ("Arquivo renomeado", "renamed_files"),
+        ("Arquivo movido", "moved_files"),
         ("Arquivo criado", "added_files"),
         ("Arquivo removido", "removed_files"),
         ("Arquivo modificado", "modified_files"),
@@ -172,9 +176,15 @@ class ProjectStructureChangelog(BaseUtil):
 
     @classmethod
     def _item_text(cls, item: Any, tool_key: str) -> str:
-        """Formata uma alteração (texto simples ou arquivo com data)."""
+        """Formata uma alteração (texto, renomeado/movido ou data)."""
         if not isinstance(item, dict):
             return str(item)
+        if "old_path" in item and "new_path" in item:
+            text = f"{item['old_path']} → {item['new_path']}"
+            count = item.get("file_count")
+            if isinstance(count, int):
+                text += f" ({count} arquivo(s))"
+            return text
         path = str(item.get("path", ""))
         date = cls._format_date(str(item.get("modified_at", "")), tool_key)
         return f"{path} (modificado em {date})" if date else path

@@ -1,3 +1,14 @@
+[1.8.3][2026.10.19][17:30] - Detecção isolada + identificação inteligente de renomeações/movimentações
+  - utils/ProjectStructureChangeDetector.py: NOVO — componente ISOLADO (sem Qt, banco e UI) que compara snapshots e classifica: pastas/arquivos criados e removidos, arquivos modificados, `renamed_files` (mesma pasta + mesmo tamanho), `moved_files` (mesmo nome + mesmo tamanho, pasta diferente) e `folder_renames`/`folder_moves` (validação por ÁRVORE: subpastas + arquivos + tamanhos; só pares únicos — se houver ambiguidade, os arquivos são comparados individualmente)
+  - utils/ProjectStructureSnapshot.py: agora é SÓ scanner (`scan`) — grava `sizes` (tamanho em bytes) e `modified` (data da última modificação) por arquivo; `diff` e a detecção foram removidos daqui
+  - plugins/project_structure_manager/StructureSyncService.py: usa o detector isolado e concentra o relatório (`summary`/`detail`) das alterações em background
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: removidos `_change_item`, `_structure_sync_summary` e `_structure_sync_detail` — o plugin apenas agenda, dispara o worker e exibe o modal
+  - utils/ProjectStructureChangelog.py: novos rótulos (Pasta renomeada/movida, Arquivo renomeado/movido) e formatação "antigo → novo" (com a quantidade de arquivos nas pastas)
+  - core/firebase/CloudStructureDatabase.py: `_unchanged` também compara `sizes` (mudança de tamanho força a regravação do snapshot)
+  - docs/skills/SKILL_PROJECT.md, SKILL_UTILS.md, SKILL_DATABASE.md e CatalogoClasses.md: documentação da detecção isolada e dos novos tipos de alteração
+
+
+
 [1.8.2][2026.10.19][10:00] - Gerenciador de Estrutura: snapshot no banco + changelog Word por OS + alerta modal
   - utils/ProjectStructureSnapshot.py: NOVO — scan recursivo (pastas + arquivos) de cada pasta OS_* com a DATA DA ÚLTIMA MODIFICAÇÃO de cada arquivo (mapa `modified`) e diff contra o snapshot anterior (arquivos criados, removidos e MODIFICADOS); ignora temporários do Office (~$*) e o próprio arquivo de changelog
   - utils/ProjectStructureChangelog.py: NOVO — cria/atualiza <pasta da OS>/11_AGROROBOTICA/OS_NNN_CHANGELOG.DOCX (python-docx), com um bloco por execução listando pastas/arquivos criados, removidos e modificados (com a data da modificação); o bloco MAIS RECENTE fica no topo (ordem decrescente)

@@ -4,9 +4,12 @@ StructureSyncService — Snapshot da estrutura + changelog (background)
 =====================================================================
 Lógica pura (sem widgets Qt) executada quando o Gerenciador de Estrutura abre:
 
-1. lê a estrutura atual em disco (pastas + arquivos de cada OS);
+1. lê a estrutura atual em disco (pastas + arquivos de cada OS, com tamanho
+   e data de modificação);
 2. carrega o snapshot anterior da fonte oficial (Firestore);
-3. compara e monta a lista de alterações (pastas/arquivos criados/removidos);
+3. classifica as alterações com o componente ISOLADO
+   ``ProjectStructureChangeDetector`` (criados/removidos, renomeados, movidos
+   e modificados — inclusive renomeação/movimentação de pastas por árvore);
 4. grava o changelog em Word dentro de cada OS
    (``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``);
 5. grava as alterações e o novo snapshot no banco.
@@ -20,6 +23,7 @@ bloquear a interface (rede + varredura de disco).
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -28,6 +32,7 @@ from PySide6.QtCore import QObject, QRunnable, Signal
 from core.enum.ToolKey import ToolKey
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
 from utils.BaseUtil import BaseUtil
+from utils.ProjectStructureChangeDetector import ProjectStructureChangeDetector
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
 from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
 
@@ -36,6 +41,20 @@ _TOOL_KEY = ToolKey.PROJECT_STRUCTURE.value
 
 class StructureSyncService(BaseUtil):
     """Compara a estrutura em disco com o snapshot salvo e registra mudanças."""
+
+    _DETAIL_LABELS = (
+        ("Pasta renomeada", "folder_renames"),
+        ("Pasta movida", "folder_moves"),
+        ("Pasta criada", "added_folders"),
+        ("Pasta removida", "removed_folders"),
+        ("Arquivo renomeado", "renamed_files"),
+        ("Arquivo movido", "moved_files"),
+        ("Arquivo criado", "added_files"),
+        ("Arquivo removido", "removed_files"),
+        ("Arquivo modificado", "modified_files"),
+    )
+    _MAX_SUMMARY_OS = 10
+    _MAX_DETAIL_LINES = 120
 
     @classmethod
     def sync(
@@ -51,7 +70,7 @@ class StructureSyncService(BaseUtil):
         baseline = not previous
         changes = (
             [] if baseline
-            else ProjectStructureSnapshot.diff(previous, current)
+            else ProjectStructureChangeDetector.detect(previous, current)
         )
 
         written = cls._write_changelogs(mother, changes, current, tool_key)
@@ -83,6 +102,67 @@ class StructureSyncService(BaseUtil):
             "changes_saved": changes_saved,
             "snapshots_saved": snapshots_saved,
         }
+
+    # ── Relatório (apresentação) ────────────────────────────────────
+
+    @classmethod
+    def summary(cls, changes: List[Dict[str, Any]]) -> str:
+        """Resumo curto exibido no corpo do modal."""
+        total = sum(
+            len(change.get(key, []) or [])
+            for change in changes
+            for _, key in cls._DETAIL_LABELS
+        )
+        listed = [
+            f"• OS {change.get('os', '')} — {change.get('scope', '')}"
+            for change in changes[: cls._MAX_SUMMARY_OS]
+        ]
+        if len(changes) > cls._MAX_SUMMARY_OS:
+            listed.append(f"... e mais {len(changes) - cls._MAX_SUMMARY_OS} OS.")
+        return (
+            f"{len(changes)} OS com alterações ({total} mudança(s)):\n\n"
+            + "\n".join(listed)
+            + "\n\nO registro foi salvo no banco de dados e no changelog Word "
+            "de cada OS."
+        )
+
+    @classmethod
+    def detail(cls, changes: List[Dict[str, Any]]) -> str:
+        """Detalhamento (colapsável) das alterações, por OS."""
+        lines: List[str] = []
+        for change in changes:
+            lines.append(f"OS {change.get('os', '')} — {change.get('scope', '')}")
+            for label, key in cls._DETAIL_LABELS:
+                for item in change.get(key, []) or []:
+                    lines.append(f"  {label}: {cls._item_text(item)}")
+            lines.append("")
+        if len(lines) > cls._MAX_DETAIL_LINES:
+            remaining = len(lines) - cls._MAX_DETAIL_LINES
+            lines = lines[: cls._MAX_DETAIL_LINES]
+            lines.append(f"... e mais {remaining} linha(s).")
+        return "\n".join(lines)
+
+    @classmethod
+    def _item_text(cls, item: Any) -> str:
+        """Formata um item (nome, renomeado/movido ou modificado com data)."""
+        if not isinstance(item, dict):
+            return str(item)
+        if "old_path" in item and "new_path" in item:
+            return f"{item['old_path']} → {item['new_path']}"
+        path = str(item.get("path", ""))
+        date = str(item.get("modified_at", ""))
+        if not date:
+            return path
+        try:
+            date = datetime.fromisoformat(date).strftime("%d/%m/%Y %H:%M:%S")
+        except ValueError as e:
+            cls._get_logger(_TOOL_KEY, "StructureSyncService").warning(
+                "Data de modificação inválida",
+                code="SSYNC_DATE_ERR",
+                error=str(e),
+                value=date,
+            )
+        return f"{path} ({date})"
 
     @staticmethod
     def _previous_by_scope(

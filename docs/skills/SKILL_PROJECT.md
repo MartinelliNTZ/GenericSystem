@@ -364,11 +364,13 @@ Ao abrir o **Gerenciador de Estrutura** (`ToolKey.PROJECT_STRUCTURE`), a
 ferramenta agenda em background a conferência da estrutura:
 
 1. `ProjectStructureSnapshot.scan` percorre cada pasta `OS_*` e lista **todas**
-   as pastas e arquivos (recursivo, caminhos relativos à OS), guardando também
-   a **data da última modificação** de cada arquivo (mapa `modified`).
+   as pastas e arquivos (recursivo, caminhos relativos à OS), guardando o
+   **tamanho** e a **data da última modificação** de cada arquivo (mapas
+   `sizes` e `modified`).
 2. `CloudStructureDatabase.load_snapshots` lê o snapshot anterior do Firestore.
-3. `ProjectStructureSnapshot.diff` gera a lista de alterações (pasta/arquivo
-   criado ou removido e arquivo **modificado**).
+3. `ProjectStructureChangeDetector.detect` (componente ISOLADO, sem Qt/banco/UI)
+   classifica as alterações: criados/removidos, modificados, **renomeados**,
+   **movidos** e **renomeação/movimentação de pastas** (validação por árvore).
 4. `ProjectStructureChangelog.append_changes` grava/atualiza
    `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (blocos em ordem
    decrescente — o mais recente fica no topo).
@@ -385,7 +387,8 @@ colapsáveis) lista as OS alteradas.
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `utils/ProjectStructureSnapshot.py` | Scan recursivo + diff (puro, sem banco/UI) |
+| `utils/ProjectStructureSnapshot.py` | Scanner recursivo (pastas, arquivos, tamanho e data) — sem detecção |
+| `utils/ProjectStructureChangeDetector.py` | **Detecção ISOLADA**: classifica criados/removidos/modificados/renomeados/movidos e renomeação/movimentação de pastas |
 | `utils/ProjectStructureChangelog.py` | Documento Word `11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` |
 | `core/firebase/CloudStructureDatabase.py` | Classe de banco (Firestore): snapshots + histórico |
 | `plugins/project_structure_manager/StructureSyncService.py` | Orquestração + `StructureSyncWorker` (background) |
@@ -395,10 +398,13 @@ colapsáveis) lista as OS alteradas.
 
 - O próprio `.DOCX` do changelog e os temporários do Office (`~$*`) são
   ignorados no snapshot — evita "alteração" causada pela escrita do documento.
-- O mapa `modified` guarda `caminho → data da última modificação (ISO)`; um
-  arquivo presente nos dois snapshots com data diferente vira
-  `modified_files`. Snapshots antigos sem esse mapa **não** geram falsos
-  positivos (a comparação só ocorre quando os dois lados têm as datas).
+- Os mapas `sizes` e `modified` guardam, por arquivo, o tamanho (bytes) e a
+  data da última modificação (ISO). Eles alimentam a classificação de
+  renomeação/movimentação (mesmo tamanho) e de arquivos modificados (data
+  diferente). Snapshots antigos sem esses mapas **não** geram falsos positivos.
+- A renomeação/movimentação só é declarada quando o par é **inequívoco**
+  (1 antigo × 1 novo). Em caso de ambiguidade, o arquivo aparece como
+  criado + removido — nunca é "chutado".
 - A pasta `11_AGROROBOTICA`, quando criada junto com o documento, é incluída
   no snapshot atual para não aparecer como pasta adicionada na próxima execução.
 - A conferência roda no máximo 1 vez a cada **5 minutos** por ferramenta

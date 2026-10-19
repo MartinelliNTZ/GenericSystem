@@ -31,7 +31,6 @@ from __future__ import annotations
 import os
 import time
 from collections import deque
-from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
@@ -43,7 +42,10 @@ from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.project_structure_manager import FolderOperations as FsOps
 from plugins.project_structure_manager import ProjectStructureScanner as Scanner
-from plugins.project_structure_manager.StructureSyncService import StructureSyncWorker
+from plugins.project_structure_manager.StructureSyncService import (
+    StructureSyncService,
+    StructureSyncWorker,
+)
 from resources.IconManager import IconManager
 from resources.styles.AppStyles import AppStyles
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
@@ -96,7 +98,6 @@ class ProjectStructurePlugin(BasePlugin):
     # execuções e atraso para não competir com a varredura da árvore.
     _SYNC_INTERVAL = 300.0
     _SYNC_DELAY_MS = 1200
-    _MAX_DETAIL_LINES = 120
 
     def __init__(self, parent=None) -> None:
         super().__init__(
@@ -283,9 +284,9 @@ class ProjectStructurePlugin(BasePlugin):
         if not changes:
             return
         MessageBox.show_info(
-            self._structure_sync_summary(changes),
+            StructureSyncService.summary(changes),
             title="Alterações na estrutura",
-            detail=self._structure_sync_detail(changes),
+            detail=StructureSyncService.detail(changes),
             parent=self,
         )
 
@@ -305,74 +306,6 @@ class ProjectStructurePlugin(BasePlugin):
             is_error=True,
             parent=self,
         )
-
-    def _change_item(self, item: Any) -> str:
-        """Formata um item de alteração (texto simples ou arquivo com data)."""
-        if not isinstance(item, dict):
-            return str(item)
-        path = str(item.get("path", ""))
-        date = str(item.get("modified_at", ""))
-        if not date:
-            return path
-        try:
-            date = datetime.fromisoformat(date).strftime("%d/%m/%Y %H:%M:%S")
-        except ValueError as e:
-            self.logger.warning(
-                "Data de modificação inválida",
-                code="PSM_DATE_ERR",
-                error=str(e),
-                value=date,
-            )
-        return f"{path} ({date})"
-
-    @staticmethod
-    def _structure_sync_summary(changes: List[Dict[str, Any]]) -> str:
-        """Resumo curto exibido no corpo do modal."""
-        total = 0
-        for change in changes:
-            total += sum(
-                len(change.get(key, []) or [])
-                for key in (
-                    "added_folders",
-                    "removed_folders",
-                    "added_files",
-                    "removed_files",
-                    "modified_files",
-                )
-            )
-        listed = [
-            f"• OS {change.get('os', '')} — {change.get('scope', '')}"
-            for change in changes[:10]
-        ]
-        if len(changes) > 10:
-            listed.append(f"... e mais {len(changes) - 10} OS.")
-        return (
-            f"{len(changes)} OS com alterações ({total} mudança(s)):\n\n"
-            + "\n".join(listed)
-            + "\n\nO registro foi salvo no banco de dados e no changelog Word "
-            "de cada OS."
-        )
-
-    def _structure_sync_detail(self, changes: List[Dict[str, Any]]) -> str:
-        """Lista detalhada (colapsável) das pastas/arquivos alterados."""
-        lines: List[str] = []
-        for change in changes:
-            lines.append(f"OS {change.get('os', '')} — {change.get('scope', '')}")
-            for label, key in (
-                ("+ pasta", "added_folders"),
-                ("- pasta", "removed_folders"),
-                ("+ arquivo", "added_files"),
-                ("- arquivo", "removed_files"),
-                ("~ arquivo", "modified_files"),
-            ):
-                for item in change.get(key, []) or []:
-                    lines.append(f"  {label}: {self._change_item(item)}")
-            lines.append("")
-        if len(lines) > self._MAX_DETAIL_LINES:
-            remaining = len(lines) - self._MAX_DETAIL_LINES
-            lines = lines[: self._MAX_DETAIL_LINES]
-            lines.append(f"... e mais {remaining} linha(s).")
-        return "\n".join(lines)
 
     def load_prefs(self) -> None:
         """Carrega a pasta-mãe e as preferências de exibição (Contrato 4)."""

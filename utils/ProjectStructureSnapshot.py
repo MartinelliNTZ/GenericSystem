@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-ProjectStructureSnapshot — Snapshot e diff da estrutura de pastas das OS
-=======================================================================
-Lógica pura (sem widgets e sem banco) usada pelo Gerenciador de Estrutura:
+ProjectStructureSnapshot — Snapshot da estrutura de pastas das OS
+================================================================
+Scanner ISOLADO da estrutura (sem widgets, sem banco e sem regra de negócio):
 
 - ``scan`` percorre a pasta-mãe e devolve, para cada pasta de OS, a lista
   COMPLETA (recursiva) de pastas e arquivos, com caminhos RELATIVOS à pasta
-  da OS e separador ``/`` (portável entre computadores). Para cada arquivo é
-  gravada a data da ÚLTIMA MODIFICAÇÃO (``modified``).
-- ``diff`` compara o snapshot salvo no banco com o snapshot atual e devolve
-  apenas as OS que mudaram (pastas/arquivos criados, removidos e arquivos
-  modificados).
+  da OS e separador ``/`` (portável entre computadores).
+- Para cada arquivo são gravados o TAMANHO (``sizes``) e a data da ÚLTIMA
+  MODIFICAÇÃO (``modified``).
+
+A comparação/classificação das alterações (renomeações, movimentações etc.)
+fica em ``utils.ProjectStructureChangeDetector`` — este módulo apenas LÊ o
+disco.
 
 O changelog gerado pela ferramenta (``11_AGROROBOTICA/
 OS_<numero>_CHANGELOG.DOCX``) e os temporários do Office (``~$*``) são
@@ -21,7 +23,6 @@ Uso:
     from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
 
     snapshot = ProjectStructureSnapshot.scan(mother)
-    changes = ProjectStructureSnapshot.diff(previous, snapshot)
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
@@ -38,15 +39,7 @@ from utils.ProjectStructureUtil import ProjectStructureUtil
 
 
 class ProjectStructureSnapshot(BaseUtil):
-    """Lê a estrutura das OS em disco e compara snapshots."""
-
-    _CHANGE_KEYS = (
-        "added_folders",
-        "removed_folders",
-        "added_files",
-        "removed_files",
-        "modified_files",
-    )
+    """Lê a estrutura das OS em disco (pastas, arquivos, tamanho e data)."""
 
     # ── Leitura ─────────────────────────────────────────────────────
 
@@ -80,6 +73,7 @@ class ProjectStructureSnapshot(BaseUtil):
             "folders": [],
             "files": [],
             "modified": {},
+            "sizes": {},
         }
 
     @classmethod
@@ -113,24 +107,33 @@ class ProjectStructureSnapshot(BaseUtil):
                 if cls._is_ignored(name, relative, ignored):
                     continue
                 entry["files"].append(relative)
-                entry["modified"][relative] = cls._modified_at(
-                    current_path / name, logger
-                )
+                info = cls._file_info(current_path / name, logger)
+                entry["sizes"][relative] = info["size"]
+                entry["modified"][relative] = info["modified_at"]
 
     @classmethod
-    def _modified_at(cls, path: Path, logger: Any) -> str:
-        """Data da última modificação do arquivo (ISO, segundos) ou ``""``."""
+    def _file_info(cls, path: Path, logger: Any) -> Dict[str, Any]:
+        """Tamanho (bytes) e data da última modificação (ISO) do arquivo.
+
+        Em caso de falha de ``stat`` o tamanho fica ``-1`` (desconhecido) e a
+        data fica vazia; a detecção ignora tamanhos desconhecidos.
+        """
         try:
-            timestamp = path.stat().st_mtime
+            stat = path.stat()
         except OSError as e:
             logger.warning(
-                "Falha ao ler a data de modificação",
-                code="PSS_MTIME_ERR",
+                "Falha ao ler tamanho/data do arquivo",
+                code="PSS_STAT_ERR",
                 error=str(e),
                 path=str(path),
             )
-            return ""
-        return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
+            return {"size": -1, "modified_at": ""}
+        return {
+            "size": int(stat.st_size),
+            "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(
+                timespec="seconds"
+            ),
+        }
 
     @classmethod
     def _ignored_files(cls, root: Path) -> set[str]:
@@ -143,69 +146,3 @@ class ProjectStructureSnapshot(BaseUtil):
         """Indica se o arquivo é temporário do Office ou o próprio changelog."""
         return name.startswith("~$") or relative.lower() in ignored
 
-    # ── Comparação ──────────────────────────────────────────────────
-
-    @classmethod
-    def diff(
-        cls,
-        previous: Dict[str, Dict[str, Any]],
-        current: Dict[str, Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        """Compara dois snapshots e devolve apenas as OS com alterações.
-
-        Args:
-            previous: snapshot salvo no banco (``{scope: registro}``).
-            current: snapshot atual gerado por ``scan``.
-
-        Returns:
-            Lista de registros com ``scope``, ``os`` e as quatro listas de
-            mudanças (pastas/arquivos criados e removidos).
-        """
-        changes: List[Dict[str, Any]] = []
-        for scope in sorted(set(previous) | set(current), key=str.lower):
-            before = previous.get(scope) or {}
-            after = current.get(scope) or {}
-            change = {
-                "scope": str(after.get("scope") or before.get("scope") or scope),
-                "os": str(after.get("os") or before.get("os") or ""),
-                "added_folders": cls._difference(after, before, "folders"),
-                "removed_folders": cls._difference(before, after, "folders"),
-                "added_files": cls._difference(after, before, "files"),
-                "removed_files": cls._difference(before, after, "files"),
-                "modified_files": cls._modified_files(after, before),
-            }
-            if any(change[key] for key in cls._CHANGE_KEYS):
-                changes.append(change)
-        return changes
-
-    @staticmethod
-    def _difference(
-        source: Dict[str, Any],
-        reference: Dict[str, Any],
-        key: str,
-    ) -> List[str]:
-        """Itens de ``source[key]`` que não existem em ``reference[key]``."""
-        current = set(source.get(key, []) or [])
-        previous = set(reference.get(key, []) or [])
-        return sorted(current - previous, key=str.lower)
-
-    @staticmethod
-    def _modified_files(
-        current: Dict[str, Any],
-        previous: Dict[str, Any],
-    ) -> List[Dict[str, str]]:
-        """Arquivos presentes nos dois snapshots cuja data de modificação mudou.
-
-        Snapshots antigos (sem o mapa ``modified``) não geram falsos positivos:
-        a comparação só acontece quando os DOIS lados têm as datas.
-        """
-        current_dates = current.get("modified") or {}
-        previous_dates = previous.get("modified") or {}
-        if not current_dates or not previous_dates:
-            return []
-        changed = [
-            {"path": path, "modified_at": date}
-            for path, date in current_dates.items()
-            if path in previous_dates and previous_dates[path] != date
-        ]
-        return sorted(changed, key=lambda item: item["path"].lower())

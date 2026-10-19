@@ -230,8 +230,8 @@ pastas** de cada OS e o histórico das alterações detectadas:
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
-| `estrutura_projetos` | `<nome da pasta da OS>` | `scope`, `os`, `folders`, `files`, `modified` (data da última modificação por arquivo), `updated_at` |
-| `estrutura_changelog` | `<scope>_<AAAAMMDDHHMMSS><seq>` | `scope`, `os`, listas de pastas/arquivos criados e removidos, `detected_at` |
+| `estrutura_projetos` | `<nome da pasta da OS>` | `scope`, `os`, `folders`, `files`, `sizes` (tamanho por arquivo), `modified` (data da última modificação por arquivo), `updated_at` |
+| `estrutura_changelog` | `<scope>_<AAAAMMDDHHMMSS><seq>` | `scope`, `os`, listas de criados/removidos/modificados, `renamed_files`/`moved_files` e `folder_renames`/`folder_moves`, `detected_at` |
 
 - Gravadas **exclusivamente** por `CloudStructureDatabase` (os plugins não
   tocam no Firestore).

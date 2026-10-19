@@ -420,21 +420,40 @@ data = ProjectStructureUtil.collect_created_data(project)
 
 ### `utils.ProjectStructureSnapshot`
 
-Snapshot e diff da estrutura das OS (puro — sem banco e sem UI). O scan lista
+Scanner ISOLADO da estrutura das OS (puro — sem banco e sem UI). O scan lista
 **todas** as pastas e arquivos de cada pasta `OS_*` (recursivo, caminhos
-relativos), guarda a **data da última modificação** de cada arquivo (mapa
-`modified`) e o diff devolve apenas as OS que mudaram — incluindo os arquivos
-**modificados** (`modified_files`):
+relativos) e guarda, por arquivo, o **tamanho** (`sizes`) e a **data da última
+modificação** (`modified`):
 
 ```python
 from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
 
-snapshot = ProjectStructureSnapshot.scan(mother)     # {scope: {folders, files}}
-changes = ProjectStructureSnapshot.diff(previous, snapshot)
+snapshot = ProjectStructureSnapshot.scan(mother)
+# {scope: {"folders": [...], "files": [...], "sizes": {...}, "modified": {...}}}
 ```
 
 Ignora os temporários do Office (`~$*`) e o próprio arquivo de changelog da OS
 (`11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`).
+
+### `utils.ProjectStructureChangeDetector`
+
+Componente ISOLADO de detecção/classificação (sem Qt, sem banco e sem UI).
+Compara o snapshot anterior com o atual e classifica as mudanças:
+
+```python
+from utils.ProjectStructureChangeDetector import ProjectStructureChangeDetector
+
+changes = ProjectStructureChangeDetector.detect(previous, snapshot)
+```
+
+- `added_folders` / `removed_folders`;
+- `folder_renames` / `folder_moves` — validação por árvore (subpastas +
+  arquivos + tamanhos); só declara quando o par é único;
+- `added_files` / `removed_files` / `modified_files`;
+- `renamed_files` (mesma pasta + mesmo tamanho) e `moved_files` (mesmo nome +
+  mesmo tamanho, pasta diferente).
+
+Só classifica pares não ambíguos (1 antigo × 1 novo no mesmo grupo).
 
 ### `utils.ProjectStructureChangelog`
 
