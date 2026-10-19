@@ -422,7 +422,9 @@ data = ProjectStructureUtil.collect_created_data(project)
 
 Snapshot e diff da estrutura das OS (puro — sem banco e sem UI). O scan lista
 **todas** as pastas e arquivos de cada pasta `OS_*` (recursivo, caminhos
-relativos) e o diff devolve apenas as OS que mudaram:
+relativos), guarda a **data da última modificação** de cada arquivo (mapa
+`modified`) e o diff devolve apenas as OS que mudaram — incluindo os arquivos
+**modificados** (`modified_files`):
 
 ```python
 from utils.ProjectStructureSnapshot import ProjectStructureSnapshot

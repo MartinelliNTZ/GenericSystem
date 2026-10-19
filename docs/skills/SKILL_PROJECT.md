@@ -364,10 +364,11 @@ Ao abrir o **Gerenciador de Estrutura** (`ToolKey.PROJECT_STRUCTURE`), a
 ferramenta agenda em background a conferência da estrutura:
 
 1. `ProjectStructureSnapshot.scan` percorre cada pasta `OS_*` e lista **todas**
-   as pastas e arquivos (recursivo, caminhos relativos à OS).
+   as pastas e arquivos (recursivo, caminhos relativos à OS), guardando também
+   a **data da última modificação** de cada arquivo (mapa `modified`).
 2. `CloudStructureDatabase.load_snapshots` lê o snapshot anterior do Firestore.
 3. `ProjectStructureSnapshot.diff` gera a lista de alterações (pasta/arquivo
-   criado ou removido).
+   criado ou removido e arquivo **modificado**).
 4. `ProjectStructureChangelog.append_changes` grava/atualiza
    `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (blocos em ordem
    decrescente — o mais recente fica no topo).
@@ -394,6 +395,10 @@ colapsáveis) lista as OS alteradas.
 
 - O próprio `.DOCX` do changelog e os temporários do Office (`~$*`) são
   ignorados no snapshot — evita "alteração" causada pela escrita do documento.
+- O mapa `modified` guarda `caminho → data da última modificação (ISO)`; um
+  arquivo presente nos dois snapshots com data diferente vira
+  `modified_files`. Snapshots antigos sem esse mapa **não** geram falsos
+  positivos (a comparação só ocorre quando os dois lados têm as datas).
 - A pasta `11_AGROROBOTICA`, quando criada junto com o documento, é incluída
   no snapshot atual para não aparecer como pasta adicionada na próxima execução.
 - A conferência roda no máximo 1 vez a cada **5 minutos** por ferramenta

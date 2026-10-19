@@ -31,6 +31,7 @@ from __future__ import annotations
 import os
 import time
 from collections import deque
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
@@ -305,6 +306,25 @@ class ProjectStructurePlugin(BasePlugin):
             parent=self,
         )
 
+    def _change_item(self, item: Any) -> str:
+        """Formata um item de alteração (texto simples ou arquivo com data)."""
+        if not isinstance(item, dict):
+            return str(item)
+        path = str(item.get("path", ""))
+        date = str(item.get("modified_at", ""))
+        if not date:
+            return path
+        try:
+            date = datetime.fromisoformat(date).strftime("%d/%m/%Y %H:%M:%S")
+        except ValueError as e:
+            self.logger.warning(
+                "Data de modificação inválida",
+                code="PSM_DATE_ERR",
+                error=str(e),
+                value=date,
+            )
+        return f"{path} ({date})"
+
     @staticmethod
     def _structure_sync_summary(changes: List[Dict[str, Any]]) -> str:
         """Resumo curto exibido no corpo do modal."""
@@ -317,6 +337,7 @@ class ProjectStructurePlugin(BasePlugin):
                     "removed_folders",
                     "added_files",
                     "removed_files",
+                    "modified_files",
                 )
             )
         listed = [
@@ -332,8 +353,7 @@ class ProjectStructurePlugin(BasePlugin):
             "de cada OS."
         )
 
-    @classmethod
-    def _structure_sync_detail(cls, changes: List[Dict[str, Any]]) -> str:
+    def _structure_sync_detail(self, changes: List[Dict[str, Any]]) -> str:
         """Lista detalhada (colapsável) das pastas/arquivos alterados."""
         lines: List[str] = []
         for change in changes:
@@ -343,13 +363,14 @@ class ProjectStructurePlugin(BasePlugin):
                 ("- pasta", "removed_folders"),
                 ("+ arquivo", "added_files"),
                 ("- arquivo", "removed_files"),
+                ("~ arquivo", "modified_files"),
             ):
                 for item in change.get(key, []) or []:
-                    lines.append(f"  {label}: {item}")
+                    lines.append(f"  {label}: {self._change_item(item)}")
             lines.append("")
-        if len(lines) > cls._MAX_DETAIL_LINES:
-            remaining = len(lines) - cls._MAX_DETAIL_LINES
-            lines = lines[: cls._MAX_DETAIL_LINES]
+        if len(lines) > self._MAX_DETAIL_LINES:
+            remaining = len(lines) - self._MAX_DETAIL_LINES
+            lines = lines[: self._MAX_DETAIL_LINES]
             lines.append(f"... e mais {remaining} linha(s).")
         return "\n".join(lines)
 

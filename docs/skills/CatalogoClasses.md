@@ -150,7 +150,7 @@
 | `Preferences` | Gerenciador de preferências do usuário com persistência em `config/<APP_SLUG>_preferences.json` |
 | `StringUtils` | Fonte única da identidade da aplicação (`APP_NAME`, `APP_SLUG`, `APP_ID`) e catálogo de extensões |
 | `ProjectStructureUtil` | **Fonte única da estrutura dos projetos (OS)**: o dicionário `PROJECT_STRUCTURE` descreve TODA a estrutura (pastas aninhadas, a pasta de anos e futuros arquivos base) — tipos de nó `None` / `{...}` / `"arquivo"` / `BaseFile(...)` / `Years(...)`. Os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são derivados dele. Reúne também a descoberta/agrupamento de OS (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) |
-| `ProjectStructureSnapshot` | Scan recursivo (pastas + arquivos) das pastas `OS_*` e `diff` entre o snapshot salvo e o atual; ignora `~$*` e o próprio changelog |
+| `ProjectStructureSnapshot` | Scan recursivo (pastas + arquivos) das pastas `OS_*` e `diff` entre o snapshot salvo e o atual; grava a data de última modificação por arquivo (`modified`) e detecta arquivos modificados; ignora `~$*` e o próprio changelog |
 | `ProjectStructureChangelog` | Cria/atualiza `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (python-docx) com um bloco por execução contendo as pastas/arquivos criados e removidos; blocos em ordem decrescente (mais recente no topo) |
 
 ---

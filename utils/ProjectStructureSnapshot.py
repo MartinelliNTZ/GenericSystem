@@ -6,9 +6,11 @@ Lógica pura (sem widgets e sem banco) usada pelo Gerenciador de Estrutura:
 
 - ``scan`` percorre a pasta-mãe e devolve, para cada pasta de OS, a lista
   COMPLETA (recursiva) de pastas e arquivos, com caminhos RELATIVOS à pasta
-  da OS e separador ``/`` (portável entre computadores).
+  da OS e separador ``/`` (portável entre computadores). Para cada arquivo é
+  gravada a data da ÚLTIMA MODIFICAÇÃO (``modified``).
 - ``diff`` compara o snapshot salvo no banco com o snapshot atual e devolve
-  apenas as OS que mudaram (pastas/arquivos criados e removidos).
+  apenas as OS que mudaram (pastas/arquivos criados, removidos e arquivos
+  modificados).
 
 O changelog gerado pela ferramenta (``11_AGROROBOTICA/
 OS_<numero>_CHANGELOG.DOCX``) e os temporários do Office (``~$*``) são
@@ -25,6 +27,7 @@ Uso:
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -42,6 +45,7 @@ class ProjectStructureSnapshot(BaseUtil):
         "removed_folders",
         "added_files",
         "removed_files",
+        "modified_files",
     )
 
     # ── Leitura ─────────────────────────────────────────────────────
@@ -75,6 +79,7 @@ class ProjectStructureSnapshot(BaseUtil):
             "os": number,
             "folders": [],
             "files": [],
+            "modified": {},
         }
 
     @classmethod
@@ -108,6 +113,24 @@ class ProjectStructureSnapshot(BaseUtil):
                 if cls._is_ignored(name, relative, ignored):
                     continue
                 entry["files"].append(relative)
+                entry["modified"][relative] = cls._modified_at(
+                    current_path / name, logger
+                )
+
+    @classmethod
+    def _modified_at(cls, path: Path, logger: Any) -> str:
+        """Data da última modificação do arquivo (ISO, segundos) ou ``""``."""
+        try:
+            timestamp = path.stat().st_mtime
+        except OSError as e:
+            logger.warning(
+                "Falha ao ler a data de modificação",
+                code="PSS_MTIME_ERR",
+                error=str(e),
+                path=str(path),
+            )
+            return ""
+        return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
 
     @classmethod
     def _ignored_files(cls, root: Path) -> set[str]:
@@ -149,6 +172,7 @@ class ProjectStructureSnapshot(BaseUtil):
                 "removed_folders": cls._difference(before, after, "folders"),
                 "added_files": cls._difference(after, before, "files"),
                 "removed_files": cls._difference(before, after, "files"),
+                "modified_files": cls._modified_files(after, before),
             }
             if any(change[key] for key in cls._CHANGE_KEYS):
                 changes.append(change)
@@ -164,3 +188,24 @@ class ProjectStructureSnapshot(BaseUtil):
         current = set(source.get(key, []) or [])
         previous = set(reference.get(key, []) or [])
         return sorted(current - previous, key=str.lower)
+
+    @staticmethod
+    def _modified_files(
+        current: Dict[str, Any],
+        previous: Dict[str, Any],
+    ) -> List[Dict[str, str]]:
+        """Arquivos presentes nos dois snapshots cuja data de modificação mudou.
+
+        Snapshots antigos (sem o mapa ``modified``) não geram falsos positivos:
+        a comparação só acontece quando os DOIS lados têm as datas.
+        """
+        current_dates = current.get("modified") or {}
+        previous_dates = previous.get("modified") or {}
+        if not current_dates or not previous_dates:
+            return []
+        changed = [
+            {"path": path, "modified_at": date}
+            for path, date in current_dates.items()
+            if path in previous_dates and previous_dates[path] != date
+        ]
+        return sorted(changed, key=lambda item: item["path"].lower())

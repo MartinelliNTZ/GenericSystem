@@ -46,6 +46,7 @@ class ProjectStructureChangelog(BaseUtil):
         ("Pasta removida", "removed_folders"),
         ("Arquivo criado", "added_files"),
         ("Arquivo removido", "removed_files"),
+        ("Arquivo modificado", "modified_files"),
     )
 
     # ── Caminho do documento ────────────────────────────────────────
@@ -95,7 +96,7 @@ class ProjectStructureChangelog(BaseUtil):
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             document = cls._load_document(path, os_folder, logger)
-            cls._append_event(document, change)
+            cls._append_event(document, change, tool_key)
             document.save(str(path))
         except (OSError, ValueError) as e:
             logger.error(
@@ -137,7 +138,12 @@ class ProjectStructureChangelog(BaseUtil):
         return document
 
     @classmethod
-    def _append_event(cls, document: Document, change: Dict[str, Any]) -> None:
+    def _append_event(
+        cls,
+        document: Document,
+        change: Dict[str, Any],
+        tool_key: str,
+    ) -> None:
         """Insere o bloco de alterações logo após o cabeçalho.
 
         A ordem é DECRESCENTE: o bloco mais recente fica no topo (logo abaixo do
@@ -152,8 +158,9 @@ class ProjectStructureChangelog(BaseUtil):
         registered = False
         for label, key in cls._CHANGE_LABELS:
             for item in change.get(key, []) or []:
+                text = cls._item_text(item, tool_key)
                 created.append(
-                    document.add_paragraph(f"{label}: {item}", style="List Bullet")
+                    document.add_paragraph(f"{label}: {text}", style="List Bullet")
                 )
                 registered = True
         if not registered:
@@ -162,3 +169,28 @@ class ProjectStructureChangelog(BaseUtil):
             anchor = document.paragraphs[cls.HEADER_PARAGRAPHS]._p
             for paragraph in created:
                 anchor.addprevious(paragraph._p)
+
+    @classmethod
+    def _item_text(cls, item: Any, tool_key: str) -> str:
+        """Formata uma alteração (texto simples ou arquivo com data)."""
+        if not isinstance(item, dict):
+            return str(item)
+        path = str(item.get("path", ""))
+        date = cls._format_date(str(item.get("modified_at", "")), tool_key)
+        return f"{path} (modificado em {date})" if date else path
+
+    @classmethod
+    def _format_date(cls, value: str, tool_key: str) -> str:
+        """Converte ISO (``2026-10-19T15:42:10``) em ``19/10/2026 15:42:10``."""
+        if not value:
+            return ""
+        try:
+            return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M:%S")
+        except ValueError as e:
+            cls._get_logger(tool_key, "ProjectStructureChangelog").warning(
+                "Data de modificação inválida",
+                code="PSCH_DATE_ERR",
+                error=str(e),
+                value=value,
+            )
+            return value
