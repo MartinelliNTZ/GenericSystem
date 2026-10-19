@@ -357,3 +357,46 @@ A chave (`os`) — que também dá nome ao arquivo — é o número normalizado
    **esta ferramenta** (`ProjectDatabaseBackup.ensure_daily_backup`).
 5. Código compartilhado vive em `utils/` (Contrato 7) — nenhum plugin importa
    outro plugin.
+
+## Snapshot e changelog da estrutura (Gerenciador de Estrutura)
+
+Ao abrir o **Gerenciador de Estrutura** (`ToolKey.PROJECT_STRUCTURE`), a
+ferramenta agenda em background a conferência da estrutura:
+
+1. `ProjectStructureSnapshot.scan` percorre cada pasta `OS_*` e lista **todas**
+   as pastas e arquivos (recursivo, caminhos relativos à OS).
+2. `CloudStructureDatabase.load_snapshots` lê o snapshot anterior do Firestore.
+3. `ProjectStructureSnapshot.diff` gera a lista de alterações (pasta/arquivo
+   criado ou removido).
+4. `ProjectStructureChangelog.append_changes` grava/atualiza
+   `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (blocos em ordem
+   decrescente — o mais recente fica no topo).
+5. `CloudStructureDatabase.save_changes` grava o histórico em
+   `estrutura_changelog` e `save_snapshots` atualiza `estrutura_projetos`
+   (podando OS que não existem mais em disco).
+
+Na primeira execução (banco vazio) só a **linha de base** é salva — nenhuma
+alteração é reportada e nenhum Word é criado. Nas execuções seguintes, se
+houver mudanças, um **modal** (`MessageBox.show_info`, com detalhes
+colapsáveis) lista as OS alteradas.
+
+### Arquivos
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `utils/ProjectStructureSnapshot.py` | Scan recursivo + diff (puro, sem banco/UI) |
+| `utils/ProjectStructureChangelog.py` | Documento Word `11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` |
+| `core/firebase/CloudStructureDatabase.py` | Classe de banco (Firestore): snapshots + histórico |
+| `plugins/project_structure_manager/StructureSyncService.py` | Orquestração + `StructureSyncWorker` (background) |
+| `plugins/project_structure_manager/ProjectStructurePlugin.py` | Dispara na abertura/refresh e exibe o modal |
+
+### Observações
+
+- O próprio `.DOCX` do changelog e os temporários do Office (`~$*`) são
+  ignorados no snapshot — evita "alteração" causada pela escrita do documento.
+- A pasta `11_AGROROBOTICA`, quando criada junto com o documento, é incluída
+  no snapshot atual para não aparecer como pasta adicionada na próxima execução.
+- A conferência roda no máximo 1 vez a cada **5 minutos** por ferramenta
+  (`_SYNC_INTERVAL`), além do gatilho do botão ATUALIZAR.
+- `python-docx` é dependência declarada em `requirements.txt`.
+

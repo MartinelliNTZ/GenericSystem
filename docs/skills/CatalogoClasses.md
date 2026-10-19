@@ -87,6 +87,7 @@
 | `ProjectStructurePlugin` | Gerenciador de Estrutura de Projetos (herda de BasePlugin). Árvore de projetos/pastas, cards de resumo, filtro, atualização automática via QFileSystemWatcher e ações de pasta; as pastas de ano do `03_ENVIO_DE_DOCUMENTOS` são criadas por diálogo de checkboxes e as subpastas de template de uma pasta de topo (ex: `14_RELATORIOS`) são validadas na árvore e criadas junto com a pasta; toda pasta com conteúdo em disco aparece expansível (subpastas/arquivos carregados sob demanda via `set_node_expandable`) |
 | `ProjectStructureScanner` (módulo) | Descoberta de projetos, validação (recursiva, incluindo as pastas de ano, o template completo de documentos e o template de subpastas das pastas de topo via `scan_project_trees`) e estatísticas; `folder_has_items(path)` indica se uma pasta tem conteúdo (indicador de expansão); `StatisticsWorker` calcula em background |
 | `FolderOperations` (módulo) | Renomeação e mesclagem de pastas + abertura no explorer; re-exporta a criação (delegada a `utils/ProjectStructureCreator`); `RenameFolderWorker` |
+| `StructureSyncService` (módulo) | Conferência da estrutura ao abrir a ferramenta: scan + diff + changelog Word + gravação no banco; `StructureSyncWorker` executa em background |
 
 ### plugins/project_database_manager/
 | Classe | Descrição |
@@ -95,6 +96,7 @@
 | `ProjectDatabaseService` (módulo) | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
 | `CloudProjectDatabase` (core/firebase) | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore: `load_orders`/`get_order`/`save_order`/`rebuild_consolidated`) + geração dos backups JSON |
 | `ProjectDatabaseStore` (core/database) | Leitura/escrita atômica dos backups JSON em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) — usada só pela `CloudProjectDatabase` |
+| `CloudStructureDatabase` (core/firebase) | Classe de banco dos snapshots da estrutura (`estrutura_projetos`) e do histórico de alterações (`estrutura_changelog`) no Firestore; `load_snapshots`, `save_snapshots`, `save_changes` |
 
 ### plugins/os_tracker/
 | Classe | Descrição |
@@ -148,6 +150,8 @@
 | `Preferences` | Gerenciador de preferências do usuário com persistência em `config/<APP_SLUG>_preferences.json` |
 | `StringUtils` | Fonte única da identidade da aplicação (`APP_NAME`, `APP_SLUG`, `APP_ID`) e catálogo de extensões |
 | `ProjectStructureUtil` | **Fonte única da estrutura dos projetos (OS)**: o dicionário `PROJECT_STRUCTURE` descreve TODA a estrutura (pastas aninhadas, a pasta de anos e futuros arquivos base) — tipos de nó `None` / `{...}` / `"arquivo"` / `BaseFile(...)` / `Years(...)`. Os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são derivados dele. Reúne também a descoberta/agrupamento de OS (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) |
+| `ProjectStructureSnapshot` | Scan recursivo (pastas + arquivos) das pastas `OS_*` e `diff` entre o snapshot salvo e o atual; ignora `~$*` e o próprio changelog |
+| `ProjectStructureChangelog` | Cria/atualiza `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (python-docx) com um bloco por execução contendo as pastas/arquivos criados e removidos; blocos em ordem decrescente (mais recente no topo) |
 
 ---
 

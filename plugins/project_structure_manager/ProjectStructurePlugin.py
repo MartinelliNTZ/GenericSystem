@@ -42,6 +42,7 @@ from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.project_structure_manager import FolderOperations as FsOps
 from plugins.project_structure_manager import ProjectStructureScanner as Scanner
+from plugins.project_structure_manager.StructureSyncService import StructureSyncWorker
 from resources.IconManager import IconManager
 from resources.styles.AppStyles import AppStyles
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
@@ -90,6 +91,11 @@ class ProjectStructurePlugin(BasePlugin):
     _PROGRESS_RESET_MS = 800
     # Intervalo mínimo (s) entre refreshes automáticos de um projeto ao abrir.
     _EXPAND_REFRESH_INTERVAL = 5.0
+    # Conferência da estrutura (snapshot + changelog): intervalo mínimo entre
+    # execuções e atraso para não competir com a varredura da árvore.
+    _SYNC_INTERVAL = 300.0
+    _SYNC_DELAY_MS = 1200
+    _MAX_DETAIL_LINES = 120
 
     def __init__(self, parent=None) -> None:
         super().__init__(
@@ -150,6 +156,12 @@ class ProjectStructurePlugin(BasePlugin):
         self._filter_text = ""
         self._scan_worker: Optional[Scanner.ScanWorker] = None
 
+        # Conferência da estrutura (snapshot no banco + changelog Word).
+        self._sync_running = False
+        self._sync_generation = 0
+        self._last_sync_at = 0.0
+        self._sync_worker: Optional[StructureSyncWorker] = None
+
         # Refresh incremental por projeto.
         self._pending_changes: Set[str] = set()
         self._refreshing: Set[str] = set()
@@ -176,6 +188,11 @@ class ProjectStructurePlugin(BasePlugin):
         self._content_timer.setSingleShot(True)
         self._content_timer.timeout.connect(self._render_content_batch)
 
+        self._sync_timer = QTimer(self)
+        self._sync_timer.setSingleShot(True)
+        self._sync_timer.setInterval(self._SYNC_DELAY_MS)
+        self._sync_timer.timeout.connect(self._run_structure_sync)
+
         self._runtime_ready = True
         QTimer.singleShot(0, lambda: self._load_projects(show_toast=False))
 
@@ -184,6 +201,7 @@ class ProjectStructurePlugin(BasePlugin):
         self._refresh_timer.stop()
         self._render_timer.stop()
         self._content_timer.stop()
+        self._sync_timer.stop()
         self._render_queue.clear()
         self._content_queue.clear()
         if self._scan_worker is not None:
@@ -201,6 +219,139 @@ class ProjectStructurePlugin(BasePlugin):
         self._work_pool.clear()
         self._scan_pool.clear()
         super().closeEvent(event)
+
+    def showEvent(self, event) -> None:  # type: ignore[override]
+        """Agenda a conferência da estrutura sempre que a ferramenta abre."""
+        super().showEvent(event)
+        if getattr(self, "_runtime_ready", False):
+            self._schedule_structure_sync()
+
+    # ── Conferência da estrutura (snapshot + changelog) ─────────────
+
+    def _schedule_structure_sync(self, force: bool = False) -> None:
+        """Agenda a conferência com debounce (evita varreduras repetidas)."""
+        mother = self._mother_folder
+        if mother is None or not mother.exists():
+            return
+        if self._sync_running or self._sync_timer.isActive():
+            return
+        elapsed = time.monotonic() - self._last_sync_at
+        if not force and elapsed < self._SYNC_INTERVAL:
+            return
+        self._sync_timer.start()
+
+    def _run_structure_sync(self) -> None:
+        """Executa a conferência em background (rede + disco fora da UI)."""
+        mother = self._mother_folder
+        if mother is None or not mother.exists() or self._sync_running:
+            return
+        self._sync_running = True
+        self._last_sync_at = time.monotonic()
+        self._sync_generation += 1
+        worker = StructureSyncWorker(
+            self._sync_generation, str(mother), tool_key=self.tool_key
+        )
+        self._sync_worker = worker
+        worker.signals.finished.connect(self._on_structure_sync_finished)
+        worker.signals.failed.connect(self._on_structure_sync_failed)
+        self._work_pool.start(worker)
+
+    def _on_structure_sync_finished(
+        self, generation: int, result: Dict[str, Any]
+    ) -> None:
+        """Trata o resultado da conferência e dispara o modal de alterações."""
+        if generation != self._sync_generation:
+            return
+        self._sync_running = False
+        self._sync_worker = None
+        if result.get("baseline"):
+            if result.get("snapshots_saved", 0):
+                MessageBox.show_toast(
+                    f"Estrutura inicial salva no banco: "
+                    f"{result.get('scopes', 0)} OS.",
+                    parent=self,
+                )
+            else:
+                MessageBox.show_toast(
+                    "Não foi possível salvar a estrutura no banco de dados.",
+                    is_error=True,
+                    parent=self,
+                )
+            return
+        changes = result.get("changes", []) or []
+        if not changes:
+            return
+        MessageBox.show_info(
+            self._structure_sync_summary(changes),
+            title="Alterações na estrutura",
+            detail=self._structure_sync_detail(changes),
+            parent=self,
+        )
+
+    def _on_structure_sync_failed(self, generation: int, message: str) -> None:
+        """Mantém a ferramenta utilizável quando a conferência falha."""
+        if generation != self._sync_generation:
+            return
+        self._sync_running = False
+        self._sync_worker = None
+        self.logger.error(
+            "Falha na conferência da estrutura",
+            code="PSM_SYNC_ERR",
+            error=message,
+        )
+        MessageBox.show_toast(
+            "Não foi possível conferir a estrutura no banco de dados.",
+            is_error=True,
+            parent=self,
+        )
+
+    @staticmethod
+    def _structure_sync_summary(changes: List[Dict[str, Any]]) -> str:
+        """Resumo curto exibido no corpo do modal."""
+        total = 0
+        for change in changes:
+            total += sum(
+                len(change.get(key, []) or [])
+                for key in (
+                    "added_folders",
+                    "removed_folders",
+                    "added_files",
+                    "removed_files",
+                )
+            )
+        listed = [
+            f"• OS {change.get('os', '')} — {change.get('scope', '')}"
+            for change in changes[:10]
+        ]
+        if len(changes) > 10:
+            listed.append(f"... e mais {len(changes) - 10} OS.")
+        return (
+            f"{len(changes)} OS com alterações ({total} mudança(s)):\n\n"
+            + "\n".join(listed)
+            + "\n\nO registro foi salvo no banco de dados e no changelog Word "
+            "de cada OS."
+        )
+
+    @classmethod
+    def _structure_sync_detail(cls, changes: List[Dict[str, Any]]) -> str:
+        """Lista detalhada (colapsável) das pastas/arquivos alterados."""
+        lines: List[str] = []
+        for change in changes:
+            lines.append(f"OS {change.get('os', '')} — {change.get('scope', '')}")
+            for label, key in (
+                ("+ pasta", "added_folders"),
+                ("- pasta", "removed_folders"),
+                ("+ arquivo", "added_files"),
+                ("- arquivo", "removed_files"),
+            ):
+                for item in change.get(key, []) or []:
+                    lines.append(f"  {label}: {item}")
+            lines.append("")
+        if len(lines) > cls._MAX_DETAIL_LINES:
+            remaining = len(lines) - cls._MAX_DETAIL_LINES
+            lines = lines[: cls._MAX_DETAIL_LINES]
+            lines.append(f"... e mais {remaining} linha(s).")
+        return "\n".join(lines)
 
     def load_prefs(self) -> None:
         """Carrega a pasta-mãe e as preferências de exibição (Contrato 4)."""
@@ -322,6 +473,7 @@ class ProjectStructurePlugin(BasePlugin):
     # ── Carregamento ─────────────────────────────────────────────────
 
     def _on_refresh_clicked(self) -> None:
+        self._schedule_structure_sync(force=True)
         self._load_projects(show_toast=True)
 
     def _on_expand_all(self) -> None:
@@ -598,6 +750,9 @@ class ProjectStructurePlugin(BasePlugin):
             )
         self._pending_toast = False
         self._loading = False
+
+        if success:
+            self._schedule_structure_sync()
 
         if self._reload_pending:
             self._reload_pending = False
@@ -1071,6 +1226,7 @@ class ProjectStructurePlugin(BasePlugin):
             return
         self.save_prefs()
         self._load_projects(show_toast=False)
+        self._schedule_structure_sync(force=True)
 
     def _configure_watcher(self, projects: List[Path]) -> None:
         """Monitora a pasta-mãe e cada projeto, sem acumular watches."""

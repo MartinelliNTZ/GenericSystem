@@ -418,6 +418,37 @@ projects = ProjectStructureUtil.discover_projects(mother)
 data = ProjectStructureUtil.collect_created_data(project)
 ```
 
+### `utils.ProjectStructureSnapshot`
+
+Snapshot e diff da estrutura das OS (puro — sem banco e sem UI). O scan lista
+**todas** as pastas e arquivos de cada pasta `OS_*` (recursivo, caminhos
+relativos) e o diff devolve apenas as OS que mudaram:
+
+```python
+from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
+
+snapshot = ProjectStructureSnapshot.scan(mother)     # {scope: {folders, files}}
+changes = ProjectStructureSnapshot.diff(previous, snapshot)
+```
+
+Ignora os temporários do Office (`~$*`) e o próprio arquivo de changelog da OS
+(`11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`).
+
+### `utils.ProjectStructureChangelog`
+
+Grava o changelog da estrutura em Word, por OS, criando o documento sob
+demanda e inserindo cada novo bloco no topo (o mais recente primeiro):
+
+```python
+from utils.ProjectStructureChangelog import ProjectStructureChangelog
+
+result = ProjectStructureChangelog.append_changes(os_folder, change)
+# result -> {"written": bool, "created_folder": bool, "path": str}
+```
+
+Caminho: `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`.
+
+
 
 ## ✅ Regras de uso
 

@@ -1,3 +1,14 @@
+[1.8.2][2026.10.19][10:00] - Gerenciador de Estrutura: snapshot no banco + changelog Word por OS + alerta modal
+  - utils/ProjectStructureSnapshot.py: NOVO — scan recursivo (pastas + arquivos) de cada pasta OS_* e diff contra o snapshot anterior; ignora temporários do Office (~$*) e o próprio arquivo de changelog
+  - utils/ProjectStructureChangelog.py: NOVO — cria/atualiza <pasta da OS>/11_AGROROBOTICA/OS_NNN_CHANGELOG.DOCX (python-docx), com um bloco por execução listando pastas/arquivos criados e removidos; o bloco MAIS RECENTE fica no topo (ordem decrescente)
+  - core/firebase/CloudStructureDatabase.py: NOVO — classe de banco dos snapshots (coleção estrutura_projetos) e do histórico de alterações (coleção estrutura_changelog) no Firestore; poda snapshots de OS que não existem mais em disco
+  - plugins/project_structure_manager/StructureSyncService.py: NOVO — orquestra scan + diff + changelog Word + gravação no banco em background (StructureSyncWorker/QRunnable); primeira execução apenas salva a linha de base
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: conferência automática ao abrir a ferramenta (showEvent) e no ATUALIZAR (debounce de 5 min); modal MessageBox.show_info com as OS alteradas e detalhes colapsáveis
+  - requirements.txt: python-docx>=1.1.0
+  - docs/skills/SKILL_PROJECT.md, SKILL_DATABASE.md, SKILL_UTILS.md e CatalogoClasses.md: documentação do snapshot/changelog da estrutura
+
+
+
 [1.8.1][2026.10.07][14:30] - Home: botão para semear a base de SubOS (seed)
   - plugins/home/HomePlugin.py: novo botão SimpleThemeButton "SEMEAR BASE (SEED OS)" na Home que executa add_data/seed_sub_os.py em background (via FirebaseWorker — não trava a UI) e exibe o resultado em MessageBox (sucesso mostra o resumo do script em "detalhes"; falha mostra o erro); o botão é desabilitado enquanto o seed roda
   - plugins/home/HomePlugin.py: docstring do módulo atualizada (novo botão de seed)

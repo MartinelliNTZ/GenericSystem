@@ -31,6 +31,7 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 | `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Materializa os documentos da coleção como JSONs locais (`pull`) |
 | `FirebaseWorker` | `core/firebase/FirebaseWorker.py` | Execução assíncrona (QThread) |
 | `ProjectDatabaseStore` | `core/database/ProjectDatabaseStore.py` | Gravação atômica dos backups JSON em `.BancoDados` (usada SÓ pela `CloudProjectDatabase`) |
+| `CloudStructureDatabase` | `core/firebase/CloudStructureDatabase.py` | Classe de banco dos **snapshots da estrutura de pastas** (`estrutura_projetos`) e do **histórico de alterações** (`estrutura_changelog`) |
 | `ProjectDatabaseService` | `plugins/project_database_manager/ProjectDatabaseService.py` | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years` + `ProjectDatabaseWorker` |
 | `ProjectDatabasePlugin` | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI: ATUALIZAR DADOS (consulta Firebase + re-escaneia, com modal de resumo) + SINCRONIZAR NUVEM (pull) |
 | `ProjectDatabaseBackup` | `utils/ProjectDatabaseBackup.py` | ZIP diário do `.BancoDados` |
@@ -221,6 +222,22 @@ res = CloudDatabaseSync.pull(local_dir, "banco_dados", overwrite=True,
 
 meta = CloudDatabaseSync.read_meta(local_dir)
 ```
+
+## Snapshots da estrutura de pastas (changelog)
+
+Além dos registros de OS, o Firestore guarda o retrato da **estrutura de
+pastas** de cada OS e o histórico das alterações detectadas:
+
+| Coleção | Documento | Conteúdo |
+|---|---|---|
+| `estrutura_projetos` | `<nome da pasta da OS>` | `scope`, `os`, `folders`, `files`, `updated_at` |
+| `estrutura_changelog` | `<scope>_<AAAAMMDDHHMMSS><seq>` | `scope`, `os`, listas de pastas/arquivos criados e removidos, `detected_at` |
+
+- Gravadas **exclusivamente** por `CloudStructureDatabase` (os plugins não
+  tocam no Firestore).
+- Os snapshots são lidos na abertura do Gerenciador de Estrutura para comparar
+  com o disco e gerar o changelog (banco + `.DOCX` dentro de cada OS).
+- Snapshots de pastas que não existem mais são removidos (`delete_document`).
 
 ## Regras
 

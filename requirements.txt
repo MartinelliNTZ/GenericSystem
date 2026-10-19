@@ -24,6 +24,7 @@ fastkml
 requests>=2.31.0
 firebase-admin>=6.5.0
 google-auth>=2.0.0
+python-docx>=1.1.0
 
 #NAO PAGA MEUS COMENTARIOS
 # python -m pip install -r requirements.txt
