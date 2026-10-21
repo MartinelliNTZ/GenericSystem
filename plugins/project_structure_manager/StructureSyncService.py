@@ -37,6 +37,7 @@ from core.enum.ToolKey import ToolKey
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
 from core.firebase.FirebaseAuthService import FirebaseAuthService
 from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
+from core.manager.SignalManager import SignalManager
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureChangeDetector import ProjectStructureChangeDetector
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
@@ -324,9 +325,18 @@ class StructureSyncWorker(QRunnable):
 
     def run(self) -> None:
         """Executa a conferência e emite o resultado."""
+        SignalManager.instance().console_message.emit(
+            "Conferindo a estrutura das OS (snapshot + banco de dados)..."
+        )
         try:
             result = StructureSyncService.sync(
                 Path(self.mother), tool_key=self.tool_key
+            )
+            SignalManager.instance().console_message.emit(
+                f"Conferência concluída: {result['scopes']} OS lidas, "
+                f"{len(result['changes'])} com alterações, "
+                f"{result['changelogs_written']} changelog(s) e "
+                f"{result['snapshots_saved']} snapshot(s) gravados."
             )
             self.signals.finished.emit(self.generation, result)
         except Exception as e:
@@ -337,5 +347,8 @@ class StructureSyncWorker(QRunnable):
                 code="SSYNC_WORKER_ERR",
                 error=str(e),
                 path=self.mother,
+            )
+            SignalManager.instance().console_message.emit(
+                f"Falha na conferência da estrutura: {e}"
             )
             self.signals.failed.emit(self.generation, str(e))

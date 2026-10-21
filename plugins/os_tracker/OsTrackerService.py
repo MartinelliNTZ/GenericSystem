@@ -6,8 +6,8 @@ Lógica pura (sem widgets Qt):
 
 - ``load_orders`` lê os registros de OS da FONTE OFICIAL (Firebase) via a
   classe de banco ``CloudProjectDatabase`` (o plugin NUNCA toca no JSON).
-- ``load_dashboard`` lê a base + as últimas alterações registradas no banco
-  (coluna ``estrutura_changelog``, via ``CloudStructureDatabase.load_changes``).
+- ``load_changes`` lê as alterações de UMA OS (changelog da estrutura) via
+  ``CloudStructureDatabase.load_changes``.
 - ``build_sub_os`` converte as entradas ``sub_os`` em modelos ``SubOS``.
 - ``create_order`` / ``add_sub_os`` criam OS/SubOS na base (grava no Firebase).
 - ``add_folders`` cria as pastas padrão selecionadas dentro da pasta da OS.
@@ -15,8 +15,8 @@ Lógica pura (sem widgets Qt):
 Uso:
     from plugins.os_tracker.OsTrackerService import OsTrackerService
 
-    data = OsTrackerService.load_dashboard()
-    orders, changes = data["orders"], data["changes"]
+    orders = OsTrackerService.load_orders()
+    changes = OsTrackerService.load_changes("171")
     sub_os = OsTrackerService.build_sub_os(record)
 """
 
@@ -61,25 +61,19 @@ class OsTrackerService(BaseUtil):
         return CloudProjectDatabase.load_orders(tool_key=tool_key)
 
     @classmethod
-    def load_dashboard(
+    def load_changes(
         cls,
-        tool_key: str = ToolKey.OS_TRACKER.value,
-        limit: int = RECENT_CHANGES_LIMIT,
-    ) -> Dict[str, Any]:
-        """Lê, numa única passada de background, a base e as últimas alterações."""
-        return {
-            "orders": cls.load_orders(tool_key=tool_key),
-            "changes": cls.load_recent_changes(limit=limit, tool_key=tool_key),
-        }
-
-    @classmethod
-    def load_recent_changes(
-        cls,
+        os_number: str,
         limit: int = RECENT_CHANGES_LIMIT,
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> List[Dict[str, Any]]:
-        """Últimas alterações registradas no banco (mais recentes primeiro)."""
-        return CloudStructureDatabase.load_changes(limit=limit, tool_key=tool_key)
+        """Alterações registradas para UMA OS (mais recentes primeiro)."""
+        number = ProjectStructureUtil.normalize_os(str(os_number or ""))
+        if not number:
+            return []
+        return CloudStructureDatabase.load_changes(
+            limit=limit, os_number=number, tool_key=tool_key
+        )
 
     # ── Apresentação das alterações ─────────────────────────────────
 

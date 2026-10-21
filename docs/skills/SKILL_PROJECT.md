@@ -366,8 +366,12 @@ ferramenta agenda em background a conferência da estrutura:
 1. `ProjectStructureSnapshot.scan` percorre cada pasta `OS_*` e lista **todas**
    as pastas e arquivos (recursivo, caminhos relativos à OS), guardando o
    **tamanho** e a **data da última modificação** de cada arquivo (mapas
-   `sizes` e `modified`).
-2. `CloudStructureDatabase.load_snapshots` lê o snapshot anterior do Firestore.
+   `sizes` e `modified`). Ficam FORA do scan as pastas internas (`.git`,
+   `.svn`, `.hg`, `__pycache__`, `.venv`, `venv`, `node_modules`) e arquivos de
+   sistema (`desktop.ini`, `Thumbs.db`).
+2. `CloudStructureDatabase.load_snapshots` lê o snapshot anterior do Firestore
+   (**com paginação** — `list_documents` percorre `nextPageToken`) e
+   descompacta o `blob` (gzip+base64).
 3. `ProjectStructureChangeDetector.detect` (componente ISOLADO, sem Qt/banco/UI)
    classifica as alterações: criados/removidos, modificados, **renomeados**,
    **movidos** e **renomeação/movimentação de pastas** (validação por árvore).
@@ -377,7 +381,9 @@ ferramenta agenda em background a conferência da estrutura:
    conferência** na linha `Conferido por: Nome (email) — MAQUINA`.
 5. `CloudStructureDatabase.save_changes` grava o histórico em
    `estrutura_changelog` e `save_snapshots` atualiza `estrutura_projetos`
-   (podando OS que não existem mais em disco).
+   (snapshot compactado; poda OS que não existem mais em disco). O
+   `StructureSyncWorker` emite o andamento no **Console**
+   (`SignalManager.console_message`): início, resumo final e falhas.
 
 Na primeira execução (banco vazio) só a **linha de base** é salva — nenhuma
 alteração é reportada e nenhum Word é criado. Cada OS vista pela **primeira
@@ -418,15 +424,25 @@ alteradas.
   no snapshot atual para não aparecer como pasta adicionada na próxima execução.
 - A conferência roda no máximo 1 vez a cada **5 minutos** por ferramenta
   (`_SYNC_INTERVAL`), além do gatilho do botão ATUALIZAR.
+- **Snapshot no Firestore**: o documento de `estrutura_projetos` guarda o
+  snapshot COMPACTADO (`blob` gzip+base64 + `scope`, `os`, `folders_count`,
+  `files_count`, `updated_at`). Sem isso, OS grandes passavam de **1 MiB**
+  (limite por documento), a gravação falhava (`CSDB_SAVE_PARTIAL`) e a OS
+  voltava eternamente como "primeira inicialização". `load_snapshots` também
+  pagina a leitura (`nextPageToken`) — antes só a 1ª página era lida e as OS
+  restantes pareciam novas a cada abertura.
+- **Filtro por nome** (`Pesquisa`) usa **debounce de 350 ms**
+  (`_FILTER_DELAY_MS`): a busca só é aplicada depois da última tecla, evitando
+  expandir/ler dezenas de projetos a cada caractere digitado.
 - **Autoria**: cada bloco do `.DOCX` e cada documento de `estrutura_changelog`
   registram o **operador que executou a conferência**
   (`StructureSyncService._operator`: nome/e-mail da sessão Firebase, fallback
   para o nome salvo nas credenciais + `COMPUTERNAME`). O filesystem **não**
   guarda quem criou/renomeou/removeu cada arquivo — apenas a data da última
   modificação (`modified`); não existe autoria por arquivo.
-- O **Acompanhamento de OS** (`OsTrackerPlugin`) exibe as últimas entradas do
-  `estrutura_changelog` no painel **"Últimas alterações no banco"**
-  (`CloudStructureDatabase.load_changes(limit)` → `FirestoreService.query_documents`
-  com `orderBy: detected_at DESC`).
+- O **Acompanhamento de OS** (`OsTrackerPlugin`) exibe, no painel **"Últimas
+  alterações da OS"**, apenas as entradas da **OS selecionada**
+  (`CloudStructureDatabase.load_changes(limit, os_number=...)` — igualdade em
+  `os`, sem índice composto, ordenada em memória por `detected_at`).
 - `python-docx` é dependência declarada em `requirements.txt`.
 

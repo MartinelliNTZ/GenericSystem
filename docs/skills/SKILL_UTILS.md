@@ -432,9 +432,15 @@ snapshot = ProjectStructureSnapshot.scan(mother)
 # {scope: {"folders": [...], "files": [...], "sizes": {...}, "modified": {...}}}
 ```
 
-Ignora os temporários do Office (`~$*`) e **qualquer** changelog em
-`11_AGROROBOTICA/*_CHANGELOG.DOCX` (case-insensitive) — o documento não entra
-como criado, removido nem modificado.
+Ignora os temporários do Office (`~$*`), **qualquer** changelog em
+`11_AGROROBOTICA/*_CHANGELOG.DOCX` (case-insensitive), pastas internas (`.git`,
+`.svn`, `.hg`, `__pycache__`, `.venv`, `venv`, `node_modules`) e arquivos de
+sistema (`desktop.ini`, `Thumbs.db`) — o documento não entra como criado,
+removido nem modificado.
+
+`encode(entry)`/`decode(payload)` compactam o snapshot em **um** documento do
+Firestore (`blob` gzip+base64): sem isso, OS grandes passavam do limite de
+1 MiB e o snapshot nunca era gravado.
 
 ### `utils.ProjectStructureChangeDetector`
 

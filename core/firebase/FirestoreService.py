@@ -9,6 +9,8 @@ Inclui conversão automática entre tipos Python e Firestore fields.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
+
 import requests
 
 from core.config.LogUtils import LogUtils
@@ -20,6 +22,9 @@ from utils.BaseUtil import BaseUtil
 
 class FirestoreService(BaseUtil):
     """Serviço de manipulação de documentos no Cloud Firestore."""
+
+    # Limite de segurança de páginas ao listar uma coleção (300 docs/página).
+    _MAX_PAGES = 50
 
     @classmethod
     def _base_url(cls) -> str:
@@ -158,65 +163,73 @@ class FirestoreService(BaseUtil):
         page_size: int = 300,
         tool_key: str = ToolKey.FIREBASE.value,
     ) -> Dict[str, Dict[str, Any]]:
-        """Lista os documentos da coleção. Retorna ``{doc_id: dados}``."""
+        """Lista TODOS os documentos da coleção (pagina até o fim).
+
+        O Firestore pode devolver MENOS documentos que o ``pageSize`` pedido
+        (resposta grande) e sinaliza o restante em ``nextPageToken``. Ignorar o
+        token fazia coleções grandes parecerem vazias/incompletas.
+        """
         logger = cls._get_logger(tool_key, "FirestoreService", channel=LogUtils.DATABASE_CHANNEL)
-        url = f"{cls._base_url()}/{collection}?pageSize={page_size}"
+        size = max(1, min(int(page_size), 1000))
+        base = f"{cls._base_url()}/{collection}?pageSize={size}"
+        result: Dict[str, Dict[str, Any]] = {}
+        token = ""
 
-        try:
-            resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
-            if resp.status_code == 401:
-                new_token = FirebaseTokenProvider.refresh()
-                if new_token:
-                    resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
+        for _ in range(cls._MAX_PAGES):
+            url = f"{base}&pageToken={quote(token)}" if token else base
+            try:
+                resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
+                if resp.status_code == 401:
+                    if FirebaseTokenProvider.refresh():
+                        resp = requests.get(url, headers=cls._auth_headers(), timeout=20)
+                if resp.status_code != 200:
+                    logger.warning(f"Falha ao listar coleção {collection}", code="FS_LIST_FAIL", status=resp.status_code)
+                    return result
+                data = resp.json()
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Erro ao listar coleção {collection}", code="FS_LIST_NET_ERR", error=str(e))
+                return result
 
-            if resp.status_code != 200:
-                logger.warning(f"Falha ao listar coleção {collection}", code="FS_LIST_FAIL", status=resp.status_code)
-                return {}
-
-            documents = resp.json().get("documents", [])
-            result: Dict[str, Dict[str, Any]] = {}
-            for doc in documents:
+            for doc in data.get("documents", []):
                 doc_id = str(doc.get("name", "")).rsplit("/", 1)[-1]
                 if doc_id:
                     result[doc_id] = cls.firestore_to_dict(doc)
-            logger.info(f"Coleção {collection} listada: {len(result)} documento(s)", code="FS_LIST_OK")
-            return result
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Erro ao listar coleção {collection}", code="FS_LIST_NET_ERR", error=str(e))
-            return {}
+            token = str(data.get("nextPageToken", "") or "")
+            if not token:
+                break
+
+        logger.info(f"Coleção {collection} listada: {len(result)} documento(s)", code="FS_LIST_OK")
+        return result
 
     @classmethod
     def query_documents(
         cls,
         collection: str,
-        order_by: str,
-        limit: int = 20,
+        order_by: Optional[str] = None,
+        limit: Optional[int] = None,
         descending: bool = True,
+        equals: Optional[Dict[str, str]] = None,
         tool_key: str = ToolKey.FIREBASE.value,
     ) -> List[Dict[str, Any]]:
-        """Consulta documentos ordenados por um campo (``documents:runQuery``).
+        """Consulta documentos por igualdade e/ou ordem (``documents:runQuery``).
 
         Diferente de ``list_documents`` (ordem por ``doc_id``), aqui a ordem vem
         do Firestore — necessário para obter os registros mais recentes de
         coleções grandes.
+
+        Args:
+            order_by: campo de ordenação (``None`` = sem ordenação).
+            limit: limite aplicado NO SERVIDOR (``None`` = sem limite).
+            equals: filtros de igualdade ``{campo: string}`` (usa índice de campo
+                único automático). Evite combinar com ``order_by`` em outro campo:
+                o Firestore exigiria um índice composto.
 
         Returns:
             Lista de ``{"doc_id": ..., **campos}`` na ordem solicitada.
         """
         logger = cls._get_logger(tool_key, "FirestoreService", channel=LogUtils.DATABASE_CHANNEL)
         url = f"{cls._base_url()}:runQuery"
-        payload = {
-            "structuredQuery": {
-                "from": [{"collectionId": collection}],
-                "orderBy": [
-                    {
-                        "field": {"fieldPath": order_by},
-                        "direction": "DESCENDING" if descending else "ASCENDING",
-                    }
-                ],
-                "limit": max(1, int(limit)),
-            }
-        }
+        payload = {"structuredQuery": cls._build_query(collection, order_by, limit, descending, equals)}
 
         try:
             resp = requests.post(url, headers=cls._auth_headers(), json=payload, timeout=20)
@@ -247,6 +260,44 @@ class FirestoreService(BaseUtil):
                 error=str(e),
             )
             return []
+
+    @staticmethod
+    def _build_query(
+        collection: str,
+        order_by: Optional[str],
+        limit: Optional[int],
+        descending: bool,
+        equals: Optional[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        """Monta a ``structuredQuery`` do ``runQuery``."""
+        query: Dict[str, Any] = {"from": [{"collectionId": collection}]}
+        if order_by:
+            query["orderBy"] = [
+                {
+                    "field": {"fieldPath": order_by},
+                    "direction": "DESCENDING" if descending else "ASCENDING",
+                }
+            ]
+        if limit:
+            query["limit"] = max(1, int(limit))
+        filters = [
+            {
+                "fieldFilter": {
+                    "field": {"fieldPath": field},
+                    "op": "EQUAL",
+                    "value": {"stringValue": str(value)},
+                }
+            }
+            for field, value in (equals or {}).items()
+            if field
+        ]
+        if len(filters) == 1:
+            query["where"] = filters[0]
+        elif filters:
+            query["where"] = {
+                "compositeFilter": {"op": "AND", "filters": filters}
+            }
+        return query
 
     @classmethod
     def _documents_from_query(

@@ -26,12 +26,12 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 | `FirebaseAuthService` | `core/firebase/FirebaseAuthService.py` | Login/logout/refresh (Identity Toolkit) |
 | `FirebaseServiceAccountAuth` | `core/firebase/FirebaseServiceAccountAuth.py` | Token OAuth2 da conta de serviço (Admin SDK) — cache + renovação |
 | `FirebaseTokenProvider` | `core/firebase/FirebaseTokenProvider.py` | Resolve o token Bearer (conta de serviço ou usuário) |
-| `FirestoreService` | `core/firebase/FirestoreService.py` | CRUD REST no Firestore (`get_document`, `save_document`, `save_documents`, `list_documents`, `query_documents` — ordenado/limitado via `documents:runQuery`, `delete_document`) |
+| `FirestoreService` | `core/firebase/FirestoreService.py` | CRUD REST no Firestore (`get_document`, `save_document`, `save_documents`, `list_documents` — **paginado** via `nextPageToken`, `query_documents` — `runQuery` com ordenação/limite/igualdade, `delete_document`) |
 | `CloudProjectDatabase` | `core/firebase/CloudProjectDatabase.py` | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS — lê/grava o Firestore (`load_orders`/`get_order`/`save_order`/`rebuild_consolidated`) e GERA os backups JSON |
 | `CloudDatabaseSync` | `core/firebase/CloudDatabaseSync.py` | Materializa os documentos da coleção como JSONs locais (`pull`) |
 | `FirebaseWorker` | `core/firebase/FirebaseWorker.py` | Execução assíncrona (QThread) |
 | `ProjectDatabaseStore` | `core/database/ProjectDatabaseStore.py` | Gravação atômica dos backups JSON em `.BancoDados` (usada SÓ pela `CloudProjectDatabase`) |
-| `CloudStructureDatabase` | `core/firebase/CloudStructureDatabase.py` | Classe de banco dos **snapshots da estrutura de pastas** (`estrutura_projetos`) e do **histórico de alterações** (`estrutura_changelog`): `load_snapshots`, `save_snapshots`, `save_changes`, `load_changes(limit)` |
+| `CloudStructureDatabase` | `core/firebase/CloudStructureDatabase.py` | Classe de banco dos **snapshots da estrutura de pastas** (`estrutura_projetos`) e do **histórico de alterações** (`estrutura_changelog`): `load_snapshots`, `save_snapshots`, `save_changes`, `load_changes(limit, os_number="")` |
 | `ProjectDatabaseService` | `plugins/project_database_manager/ProjectDatabaseService.py` | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years` + `ProjectDatabaseWorker` |
 | `ProjectDatabasePlugin` | `plugins/project_database_manager/ProjectDatabasePlugin.py` | UI: ATUALIZAR DADOS (consulta Firebase + re-escaneia, com modal de resumo) + SINCRONIZAR NUVEM (pull) |
 | `ProjectDatabaseBackup` | `utils/ProjectDatabaseBackup.py` | ZIP diário do `.BancoDados` |
@@ -232,7 +232,7 @@ pastas** de cada OS e o histórico das alterações detectadas:
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
-| `estrutura_projetos` | `<nome da pasta da OS>` | `scope`, `os`, `folders`, `files`, `sizes` (tamanho por arquivo), `modified` (data da última modificação por arquivo), `updated_at` |
+| `estrutura_projetos` | `<nome da pasta da OS>_<hash>` | `scope`, `os`, `folders_count`, `files_count`, `updated_at` e `blob` (gzip+base64 com `folders`, `files`, `sizes` e `modified`). O `blob` mantém o documento abaixo do limite de **1 MiB** do Firestore |
 | `estrutura_changelog` | `<scope>_<AAAAMMDDHHMMSS><seq>` | `scope`, `os`, listas de criados/removidos/modificados, `renamed_files`/`moved_files` e `folder_renames`/`folder_moves`, `detected_at`, `detected_by`/`detected_by_email` (quem executou a conferência) e `machine`; na PRIMEIRA detecção da OS o documento é compacto (`first_run: true`, sem as listas) |
 
 - Gravadas **exclusivamente** por `CloudStructureDatabase` (os plugins não
@@ -240,8 +240,9 @@ pastas** de cada OS e o histórico das alterações detectadas:
 - Os snapshots são lidos na abertura do Gerenciador de Estrutura para comparar
   com o disco e gerar o changelog (banco + `.DOCX` dentro de cada OS).
 - `load_changes(limit)` devolve as últimas alterações **mais recentes primeiro**
-  (`query_documents` com `orderBy: detected_at DESC`) — é o que alimenta o
-  painel "Últimas alterações no banco" do Acompanhamento de OS.
+  (`query_documents` com `orderBy: detected_at DESC`). Com `os_number`, filtra
+  por igualdade em `os` (índice de campo único) e ordena em memória — é o que
+  alimenta o painel **"Últimas alterações da OS"** do Acompanhamento de OS.
 - Snapshots de pastas que não existem mais são removidos (`delete_document`).
 
 ## Regras

@@ -1,3 +1,13 @@
+[1.8.7][2026.10.21][14:32] - Correções: debounce do filtro, snapshot que não persistia e painel de alterações por OS
+  - plugins/project_structure_manager/ProjectStructurePlugin.py: filtro por nome com DEBOUNCE de 350 ms (`_FILTER_DELAY_MS`/`_filter_timer` + `_apply_filter`) — não expande/ler mais os projetos a cada tecla; limpar a busca aplica na hora; timer encerrado no closeEvent
+  - core/firebase/FirestoreService.py: `list_documents` agora PAGINA por `nextPageToken` (a 1ª página podia trazer só ~11 docs e as demais OS pareciam novas a cada abertura); `query_documents` aceita `order_by`/`limit` opcionais e `equals` (filtro de igualdade) via `_build_query`
+  - utils/ProjectStructureSnapshot.py: validação de tamanho — o snapshot é gravado COMPACTADO (`encode`/`decode` gzip+base64, campos `folders_count`/`files_count`); ignora `.git`/`.svn`/`.hg`/`__pycache__`/`.venv`/`venv`/`node_modules` e `desktop.ini`/`Thumbs.db`
+  - core/firebase/CloudStructureDatabase.py: `save_snapshots` grava o snapshot compactado e loga `CSDB_SAVE_PARTIAL` quando alguma OS não é salva; `load_snapshots` descompacta (docs antigos continuam legíveis); `load_changes` aceita `os_number` (igualdade em `os`, sem índice composto, ordenação em memória)
+  - plugins/project_structure_manager/StructureSyncService.py: `StructureSyncWorker` emite início/resumo final/falha no Console (`SignalManager.console_message`) — dá para ver que a conferência está rodando
+  - plugins/os_tracker/OsTrackerPlugin.py + OsTrackerService.py: painel "Últimas alterações da OS" mostra SOMENTE as alterações da OS selecionada (recarrega na troca de OS, com geração para descartar respostas antigas); título/tooltip/legenda ajustados
+  - core/config/ToolRegistry.py: tooltip do Acompanhamento de OS ajustado
+  - docs/skills/SKILL_PROJECT.md, SKILL_DATABASE.md, SKILL_UTILS.md e CatalogoClasses.md: documentação das correções
+
 [1.8.6][2026.10.21][13:54] - Acompanhamento de OS: painel de SubOS substituído por "Últimas alterações no banco"
   - core/firebase/FirestoreService.py: novo `query_documents(collection, order_by, limit, descending)` via `documents:runQuery` (ordenação e limite no servidor) + `_documents_from_query` (inclui o `doc_id` no resultado)
   - core/firebase/CloudStructureDatabase.py: novo `load_changes(limit)` — últimas alterações de `estrutura_changelog` ordenadas por `detected_at` (mais recentes primeiro)

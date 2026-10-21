@@ -96,13 +96,13 @@
 | `ProjectDatabaseService` (módulo) | **NÃO cria OS**: re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
 | `CloudProjectDatabase` (core/firebase) | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore: `load_orders`/`get_order`/`save_order`/`rebuild_consolidated`) + geração dos backups JSON |
 | `ProjectDatabaseStore` (core/database) | Leitura/escrita atômica dos backups JSON em `<pasta-mãe>/.BancoDados` (`load_consolidated`, `load_project`) — usada só pela `CloudProjectDatabase` |
-| `CloudStructureDatabase` (core/firebase) | Classe de banco dos snapshots da estrutura (`estrutura_projetos`) e do histórico de alterações (`estrutura_changelog`) no Firestore; `load_snapshots`, `save_snapshots`, `save_changes(changes, operator=...)` — grava também `detected_by`/`detected_by_email`/`machine`; `load_changes(limit)` — últimas alterações ordenadas por `detected_at` |
+| `CloudStructureDatabase` (core/firebase) | Classe de banco dos snapshots da estrutura (`estrutura_projetos`, com `blob` gzip+base64) e do histórico de alterações (`estrutura_changelog`) no Firestore; `load_snapshots`, `save_snapshots`, `save_changes(changes, operator=...)` — grava também `detected_by`/`detected_by_email`/`machine`; `load_changes(limit, os_number="")` — últimas alterações (filtradas por OS quando informado) |
 
 ### plugins/os_tracker/
 | Classe | Descrição |
 |---|---|
-| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS, exibe os dados gerais e o painel **Últimas alterações no banco** (changelog da estrutura); cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase`/`CloudStructureDatabase` |
-| `OsTrackerService` (módulo) | Lê a base (Firebase) + as últimas alterações (`load_dashboard`/`load_recent_changes`, com `change_summary`/`change_when`); monta os modelos `SubOS`; cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
+| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS, exibe os dados gerais e o painel **Últimas alterações da OS** (changelog da estrutura filtrado pelo número da OS); cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase`/`CloudStructureDatabase` |
+| `OsTrackerService` (módulo) | Lê a base (Firebase) e as alterações de UMA OS (`load_changes(os_number)`, com `change_summary`/`change_when`); monta os modelos `SubOS`; cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
 
 ---
 
@@ -150,7 +150,7 @@
 | `Preferences` | Gerenciador de preferências do usuário com persistência em `config/<APP_SLUG>_preferences.json` |
 | `StringUtils` | Fonte única da identidade da aplicação (`APP_NAME`, `APP_SLUG`, `APP_ID`) e catálogo de extensões |
 | `ProjectStructureUtil` | **Fonte única da estrutura dos projetos (OS)**: o dicionário `PROJECT_STRUCTURE` descreve TODA a estrutura (pastas aninhadas, a pasta de anos e futuros arquivos base) — tipos de nó `None` / `{...}` / `"arquivo"` / `BaseFile(...)` / `Years(...)`. Os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são derivados dele. Reúne também a descoberta/agrupamento de OS (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) |
-| `ProjectStructureSnapshot` | Scanner recursivo (pastas + arquivos) das pastas `OS_*`; grava tamanho (`sizes`) e data de última modificação (`modified`) por arquivo; ignora `~$*` e o próprio changelog. Não contém detecção |
+| `ProjectStructureSnapshot` | Scanner recursivo (pastas + arquivos) das pastas `OS_*`; grava tamanho (`sizes`) e data de última modificação (`modified`) por arquivo; ignora `~$*`, o próprio changelog e pastas/arquivos internos (`.git`, `__pycache__`, `.venv`, `node_modules`, `desktop.ini`…). `encode`/`decode` compactam o snapshot para o documento Firestore (gzip+base64) |
 | `ProjectStructureChangeDetector` | **Detecção isolada**: compara snapshots e classifica criados/removidos/modificados, `renamed_files`, `moved_files`, `folder_renames` e `folder_moves` (validação por árvore + tamanho; pares não ambíguos) |
 | `ProjectStructureChangelog` | Cria/atualiza `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (python-docx) com um bloco por execução contendo as pastas/arquivos criados, removidos e modificados + a linha `Conferido por:` (operador recebido em `operator`); na primeira detecção da OS grava só "Primeira inicialização" (`first_run`); blocos em ordem decrescente (mais recente no topo) |
 | `ProjectStructureSnapshot` (ignore) | Fora do snapshot: temporários `~$*` e qualquer `11_AGROROBOTICA/*_CHANGELOG.DOCX` — o próprio documento nunca conta como criado/removido/modificado |

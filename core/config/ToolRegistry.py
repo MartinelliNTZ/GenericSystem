@@ -207,7 +207,7 @@ class ToolRegistry:
                 "plugins.os_tracker.OsTrackerPlugin",
                 "OsTrackerPlugin",
             ),
-            tooltip="Escolha uma OS e veja os dados + as últimas alterações do banco",
+            tooltip="Escolha uma OS e veja os dados + as últimas alterações dela",
             tool_type=ToolType.VERRA,
             category=CategoryTool.CENTRAL,
             show_in_toolbar=True,

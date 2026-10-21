@@ -98,6 +98,8 @@ class ProjectStructurePlugin(BasePlugin):
     # execuções e atraso para não competir com a varredura da árvore.
     _SYNC_INTERVAL = 300.0
     _SYNC_DELAY_MS = 1200
+    # Debounce do filtro por nome (ms) — aplica a busca só após a última tecla.
+    _FILTER_DELAY_MS = 350
 
     def __init__(self, parent=None) -> None:
         super().__init__(
@@ -195,6 +197,13 @@ class ProjectStructurePlugin(BasePlugin):
         self._sync_timer.setInterval(self._SYNC_DELAY_MS)
         self._sync_timer.timeout.connect(self._run_structure_sync)
 
+        # Filtro por nome: espera o usuário parar de digitar (evita expandir e
+        # ler o conteúdo de dezenas de projetos a cada tecla).
+        self._filter_timer = QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.setInterval(self._FILTER_DELAY_MS)
+        self._filter_timer.timeout.connect(self._apply_filter)
+
         self._runtime_ready = True
         QTimer.singleShot(0, lambda: self._load_projects(show_toast=False))
 
@@ -204,6 +213,7 @@ class ProjectStructurePlugin(BasePlugin):
         self._render_timer.stop()
         self._content_timer.stop()
         self._sync_timer.stop()
+        self._filter_timer.stop()
         self._render_queue.clear()
         self._content_queue.clear()
         if self._scan_worker is not None:
@@ -735,7 +745,7 @@ class ProjectStructurePlugin(BasePlugin):
     def _apply_current_filter(self) -> None:
         """Reaplica o filtro atual após o render incremental."""
         if self._filter_text:
-            self._on_filter_changed("busca", self._filter_text)
+            self._apply_filter()
 
     def _reset_tree_view(self) -> None:
         """Limpa árvore e cards (usado quando não há pasta-mãe válida)."""
@@ -1156,9 +1166,17 @@ class ProjectStructurePlugin(BasePlugin):
             self._tree.set_node_expanded(key, True)
 
     def _on_filter_changed(self, _key: str, text: str) -> None:
-        """Filtra os projetos pelo nome digitado."""
+        """Agenda o filtro (debounce) a cada tecla digitada."""
         self._filter_text = text or ""
-        needle = (text or "").strip().lower()
+        if not self._filter_text.strip():
+            self._filter_timer.stop()
+            self._apply_filter()
+            return
+        self._filter_timer.start()
+
+    def _apply_filter(self) -> None:
+        """Filtra os projetos pelo nome digitado (aplicado após o debounce)."""
+        needle = self._filter_text.strip().lower()
         for key in self._tree.keys():
             if self._tree.node_kind(key) != "project":
                 continue

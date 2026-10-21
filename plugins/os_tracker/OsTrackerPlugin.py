@@ -3,8 +3,8 @@
 OsTrackerPlugin — Acompanhamento de OS
 ======================================
 Ferramenta CENTRAL de OS. Lê a FONTE OFICIAL (Firebase) e, para a OS/SubOS
-selecionada, exibe os dados gerais e as ÚLTIMAS ALTERAÇÕES registradas no banco
-de dados (changelog da estrutura). Permite também:
+selecionada, exibe os dados gerais e as ÚLTIMAS ALTERAÇÕES DA OS (changelog da
+estrutura, filtrado pelo número da OS). Permite também:
 
 - **CRIAR OS** — pede os dados básicos (só o NÚMERO é obrigatório) e cria a
   SubOS ``A`` automaticamente. A OS é lançada DIRETO no Firebase.
@@ -51,7 +51,9 @@ class OsTrackerPlugin(BasePlugin):
         self._mother_folder: Optional[Path] = None
         self._orders: List[Dict[str, Any]] = []
         self._changes: List[Dict[str, Any]] = []
+        self._changes_generation = 0
         self._load_worker: Optional[FirebaseWorker] = None
+        self._changes_worker: Optional[FirebaseWorker] = None
         super().__init__(
             tool_key=ToolKey.OS_TRACKER.value,
             parent=parent,
@@ -163,7 +165,7 @@ class OsTrackerPlugin(BasePlugin):
         }, columns=2)
         grupo_geral.group_layout.addWidget(self._general)
 
-        grupo_alteracoes = GroupPainel("Últimas alterações no banco")
+        grupo_alteracoes = GroupPainel("Últimas alterações da OS")
         self._change_cards = GridCardView({"items_per_row": 2, "cards": []})
         grupo_alteracoes.group_layout.addWidget(self._change_cards)
 
@@ -182,11 +184,11 @@ class OsTrackerPlugin(BasePlugin):
     # ── Carga ────────────────────────────────────────────────────────
 
     def _load_from_disk(self) -> None:
-        """Lê a base e as últimas alterações do banco, em background."""
+        """Lê a base de OS do banco, em background."""
         self._orders = []
         self._changes = []
         self._load_worker = FirebaseWorker(
-            OsTrackerService.load_dashboard,
+            OsTrackerService.load_orders,
             tool_key=self.tool_key,
             parent=self,
         )
@@ -194,24 +196,66 @@ class OsTrackerPlugin(BasePlugin):
         self._load_worker.failed.connect(self._on_load_failed)
         self._load_worker.start()
 
-    def _on_data_loaded(self, result: Optional[dict]) -> None:
-        """Aplica a base de OS e as últimas alterações lidas do banco."""
-        payload = result if isinstance(result, dict) else {}
-        self._orders = list(payload.get("orders") or [])
-        self._changes = list(payload.get("changes") or [])
+    def _on_data_loaded(self, result: Optional[list]) -> None:
+        """Aplica a base de OS e carrega as alterações da OS selecionada."""
+        self._orders = list(result or [])
+        self._changes = []
         self._populate_selector()
         self._render()
+        self._load_changes()
         self.page.set_badge(self.page.PRONTA if self._orders else self.page.INFO)
 
     def _on_load_failed(self, message: str) -> None:
-        """Trata falha ao ler o banco (mantém o estado atual)."""
+        """Trata falha ao ler o banco (mantém a base atual em tela)."""
         self.logger.warning(
             "Falha ao ler a base do Firebase", code="OST_LOAD_ERR", error=message
         )
-        self._on_data_loaded({
-            "orders": list(self._orders),
-            "changes": list(self._changes),
-        })
+        self._on_data_loaded(list(self._orders))
+
+    def _load_changes(self) -> None:
+        """Lê as alterações da OS selecionada (background, com geração)."""
+        record = self._current_record()
+        number = str(record.get("os", "")).strip() if record else ""
+        self._changes = []
+        self._changes_generation += 1
+        generation = self._changes_generation
+        if not number:
+            self._render_changes()
+            self._render_legend(record)
+            return
+        worker = FirebaseWorker(
+            OsTrackerService.load_changes,
+            number,
+            tool_key=self.tool_key,
+            parent=self,
+        )
+        worker.finished_with_result.connect(
+            lambda result: self._on_changes_loaded(generation, result)
+        )
+        worker.failed.connect(
+            lambda message: self._on_changes_failed(generation, message)
+        )
+        self._changes_worker = worker
+        worker.start()
+
+    def _on_changes_loaded(self, generation: int, result: Optional[list]) -> None:
+        """Aplica as alterações da OS (ignora respostas de seleções antigas)."""
+        if generation != self._changes_generation:
+            return
+        self._changes = list(result or [])
+        self._render_changes()
+        self._render_legend(self._current_record())
+
+    def _on_changes_failed(self, generation: int, message: str) -> None:
+        """Trata falha ao ler as alterações da OS selecionada."""
+        if generation != self._changes_generation:
+            return
+        self.logger.warning(
+            "Falha ao ler as alterações da OS", code="OST_CHANGES_ERR", error=message
+        )
+        self._changes = []
+        self._render_changes()
+        self._render_legend(self._current_record())
 
     def _populate_selector(self) -> None:
         """Preenche o combo de OS e restaura a última seleção."""
@@ -249,10 +293,12 @@ class OsTrackerPlugin(BasePlugin):
         return f"SubOS {code} — {client}" if client else f"SubOS {code}"
 
     def _on_os_changed(self, os_key: str) -> None:
-        """Reage à troca de OS: repopula as SubOS e re-renderiza."""
+        """Reage à troca de OS: repopula as SubOS, re-renderiza e busca alterações."""
         self.preferences["selected_os"] = os_key or ""
         self._populate_sub_selector()
+        self._changes = []
         self._render()
+        self._load_changes()
 
     def _on_sub_changed(self, sub_key: str) -> None:
         """Reage à troca de SubOS."""
@@ -370,9 +416,9 @@ class OsTrackerPlugin(BasePlugin):
     def _render_legend(self, record: Optional[Dict[str, Any]]) -> None:
         """Atualiza a legenda/estado vazio."""
         if self._changes:
-            text = "● Últimas alterações do banco — OS, data, resumo e operador"
+            text = "● Últimas alterações desta OS — data, resumo e operador"
         elif record and record.get("sub_os"):
-            text = "Nenhuma alteração registrada no banco de dados."
+            text = "Nenhuma alteração registrada para esta OS."
         elif self._mother_folder is None:
             text = "Defina a pasta-mãe no Gerenciador de Estrutura."
         else:

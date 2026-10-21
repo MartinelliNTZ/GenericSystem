@@ -9,7 +9,8 @@ acessam o Firestore diretamente — sempre passam por esta classe.
 Coleções:
 
 - ``estrutura_projetos`` — um documento por pasta de OS com o último snapshot
-  (``scope``, ``os``, ``folders``, ``files`` e ``updated_at``);
+  (``scope``, ``os``, ``folders_count``, ``files_count``, ``updated_at`` e o
+  ``blob`` gzip+base64 com ``folders``/``files``/``sizes``/``modified``);
 - ``estrutura_changelog`` — um documento por evento de alteração detectada
   (``scope``, ``os``, listas de mudanças, ``detected_at`` e o operador em
   ``detected_by``/``detected_by_email``/``machine``).
@@ -33,6 +34,7 @@ from core.config.LogUtils import LogUtils
 from core.enum.ToolKey import ToolKey
 from core.firebase.FirestoreService import FirestoreService
 from utils.BaseUtil import BaseUtil
+from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
 
 
 class CloudStructureDatabase(BaseUtil):
@@ -47,28 +49,57 @@ class CloudStructureDatabase(BaseUtil):
     def load_snapshots(
         cls, tool_key: str = ToolKey.PROJECT_DATABASE.value
     ) -> Dict[str, Dict[str, Any]]:
-        """Retorna ``{doc_id: snapshot}`` da coleção de snapshots."""
-        return FirestoreService.list_documents(
+        """Retorna ``{doc_id: snapshot}`` da coleção de snapshots.
+
+        O documento guarda o snapshot compactado (``blob`` gzip+base64); docs
+        antigos (campos soltos) continuam legíveis.
+        """
+        documents = FirestoreService.list_documents(
             cls.SNAPSHOT_COLLECTION, tool_key=tool_key
         )
+        snapshots: Dict[str, Dict[str, Any]] = {}
+        for doc_id, payload in documents.items():
+            data = ProjectStructureSnapshot.decode(payload, tool_key=tool_key)
+            if not data:
+                continue
+            if not payload.get(ProjectStructureSnapshot.ENCODED_KEY):
+                # Documento antigo (campos soltos): força a regravação compacta.
+                data["legacy_payload"] = True
+            snapshots[doc_id] = data
+        return snapshots
 
     @classmethod
     def load_changes(
         cls,
         limit: int = 20,
+        os_number: str = "",
         tool_key: str = ToolKey.PROJECT_DATABASE.value,
     ) -> List[Dict[str, Any]]:
-        """Retorna as últimas alterações registradas (mais recentes primeiro).
+        """Últimas alterações registradas (mais recentes primeiro).
 
-        Usa consulta ordenada por ``detected_at`` no Firestore — não depende da
-        ordem do ``doc_id`` (que começa pelo escopo da OS).
+        Args:
+            limit: quantidade máxima devolvida.
+            os_number: quando informado, filtra as alterações daquela OS
+                (igualdade em ``os`` — índice de campo único, sem composto) e
+                ordena em memória por ``detected_at``.
         """
-        return FirestoreService.query_documents(
+        number = str(os_number or "").strip()
+        if not number:
+            return FirestoreService.query_documents(
+                cls.CHANGELOG_COLLECTION,
+                order_by="detected_at",
+                limit=limit,
+                tool_key=tool_key,
+            )
+
+        rows = FirestoreService.query_documents(
             cls.CHANGELOG_COLLECTION,
-            order_by="detected_at",
-            limit=limit,
+            equals={"os": number},
+            limit=1000,
             tool_key=tool_key,
         )
+        rows.sort(key=lambda item: str(item.get("detected_at", "")), reverse=True)
+        return rows[: max(1, int(limit))]
 
     # ── Escrita ─────────────────────────────────────────────────────
 
@@ -94,21 +125,30 @@ class CloudStructureDatabase(BaseUtil):
         """
         logger = cls._logger(tool_key)
         saved = 0
+        failed: List[str] = []
         keep: set[str] = set()
         updated_at = datetime.now().isoformat(timespec="seconds")
         for scope, data in snapshots.items():
             doc_id = cls._doc_id(scope)
             keep.add(doc_id)
-            if cls._unchanged(data, (previous or {}).get(scope)):
+            before = (previous or {}).get(scope) or {}
+            if cls._unchanged(data, before) and not before.get("legacy_payload"):
                 continue
-            payload = dict(data)
-            payload["scope"] = str(data.get("scope") or scope)
-            payload["updated_at"] = updated_at
+            payload = ProjectStructureSnapshot.encode(data, updated_at)
             if FirestoreService.save_document(
                 cls.SNAPSHOT_COLLECTION, doc_id, payload, tool_key=tool_key
             ):
                 saved += 1
+            else:
+                failed.append(str(scope))
         cls._prune(set(existing_doc_ids) - keep, tool_key=tool_key, logger=logger)
+        if failed:
+            logger.warning(
+                "Snapshots não gravados — a OS voltará como primeira inicialização",
+                code="CSDB_SAVE_PARTIAL",
+                failed=len(failed),
+                scopes=failed[:10],
+            )
         return saved
 
     @staticmethod
