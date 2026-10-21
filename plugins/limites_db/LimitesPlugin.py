@@ -11,6 +11,10 @@ base de limites:
 Fluxo: seleciona o vetor → mapeia o campo do TALHÃO (obrigatório) e,
 opcionalmente, FAZENDA/OS/SUB_OS/CLIENTE/ÁREA INFORMADA → informa manualmente
 o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a área e grava).
+
+A OS manual é preenchida automaticamente pelo padrão do caminho de origem
+(`OS_<numero>` na pasta ou `P<numero>` no arquivo) quando identificado; um valor
+digitado pelo usuário é preservado.
 """
 
 from __future__ import annotations
@@ -64,6 +68,9 @@ class LimitesPlugin(BasePlugin):
         self._running = False
         self._inspect_worker = None
         self._import_worker = None
+        self._auto_os = ""
+        self._os_locked = False
+        self._setting_auto_os = False
 
         super().__init__(
             tool_key=ToolKey.LIMITES_DB.value,
@@ -111,6 +118,8 @@ class LimitesPlugin(BasePlugin):
                 block_signals=True,
             )
 
+        self._os_locked = False
+
         path = self.preferences.get("vector_path", "") or ""
         if not path:
             return
@@ -120,6 +129,10 @@ class LimitesPlugin(BasePlugin):
             self._selector[self._SELECTOR_KEY].set_path(path)
         finally:
             self._restoring = False
+
+        guess = LimitesService.guess_os_from_path(path)
+        if guess and self._manual.get("os").strip() == guess:
+            self._auto_os = guess
 
     def save_prefs(self) -> None:
         """Persiste vetor, mapeamento de campos e valores manuais."""
@@ -171,6 +184,7 @@ class LimitesPlugin(BasePlugin):
             },
         })
         painel_manual.group_layout.addWidget(self._manual)
+        self._manual.changed.connect(self._on_manual_changed)
 
         self._resumo = GridLabel({
             "arquivo": {"label": "Arquivo", "value": "—"},
@@ -178,6 +192,7 @@ class LimitesPlugin(BasePlugin):
             "crs": {"label": "CRS", "value": "—"},
             "geometria": {"label": "Geometria", "value": "—"},
             "campos": {"label": "Campos", "value": "—"},
+            "os_caminho": {"label": "OS no caminho", "value": "—"},
             "base": {"label": "Base", "value": BASE_ROOT},
         }, columns=2)
         painel_resumo = GroupPainel("Resumo da Origem")
@@ -192,10 +207,14 @@ class LimitesPlugin(BasePlugin):
     # ── Inspeção do vetor ───────────────────────────────────────────
 
     def _inspect_saved_path(self) -> None:
-        """Inspeciona o vetor restaurado das preferências."""
+        """Inspeciona o vetor restaurado das preferências (sem sobrescrever a OS salva)."""
         path = self._selector[self._SELECTOR_KEY].path()
-        if path and os.path.isfile(path):
-            self._start_inspect(path)
+        if not (path and os.path.isfile(path)):
+            return
+
+        if not self._manual.get("os").strip():
+            self._autofill_os(path)
+        self._start_inspect(path)
 
     def _on_input_changed(self, label: str, paths: list) -> None:
         """Reage à troca do vetor de entrada."""
@@ -207,7 +226,41 @@ class LimitesPlugin(BasePlugin):
             self._reset_meta()
             return
 
+        self._autofill_os(path)
         self._start_inspect(path)
+
+    def _on_manual_changed(self, key: str, value: str) -> None:
+        """Marca a OS manual como digitada pelo usuário (impede o auto-preenchimento)."""
+        if key == "os" and not self._setting_auto_os:
+            self._os_locked = bool(value.strip())
+
+    def _autofill_os(self, path: str) -> None:
+        """Preenche a OS manual pelo padrão do caminho (apenas quando identificado)."""
+        guess = LimitesService.guess_os_from_path(path)
+        if not guess:
+            return
+
+        current = self._manual.get("os").strip()
+        if self._os_locked and current and current != self._auto_os:
+            self.logger.info(
+                f"OS manual mantida ({current}) — o caminho sugere {guess}",
+                code="LIM_OS_KEPT",
+            )
+            return
+
+        self._setting_auto_os = True
+        try:
+            self._manual.set("os", guess)
+        finally:
+            self._setting_auto_os = False
+
+        self._auto_os = guess
+        self._os_locked = False
+
+        self.logger.info(
+            f"OS preenchida pelo caminho de origem: {guess}",
+            code="LIM_OS_GUESS",
+        )
 
     def _start_inspect(self, path: str) -> None:
         """Dispara a leitura do vetor em background."""
@@ -269,6 +322,9 @@ class LimitesPlugin(BasePlugin):
             "crs": self._meta.get("crs") or "—",
             "geometria": self._meta.get("geometry") or "—",
             "campos": ", ".join(self._meta.get("fields", [])[:8]) or "—",
+            "os_caminho": (
+                LimitesService.guess_os_from_path(self._meta.get("path", "")) or "—"
+            ),
         })
 
     def _reset_meta(self) -> None:
@@ -286,6 +342,7 @@ class LimitesPlugin(BasePlugin):
             "crs": "—",
             "geometria": "—",
             "campos": "—",
+            "os_caminho": "—",
         })
 
     # ── Configuração da importação ──────────────────────────────────

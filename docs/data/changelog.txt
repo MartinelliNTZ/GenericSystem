@@ -1,3 +1,10 @@
+[1.9.0][2026.10.21][17:27] - Base de Limites: OS automática pelo caminho e área informada 0/vazia não bloqueia
+  - plugins/limites_db/LimitesService.py: novo `guess_os_from_path` — identifica a OS pela pasta mais próxima no padrão `OS_<numero>...` (ex.: `Z:/PROJETOS_2025/OS_210_EDUARDO_ZAGO_BB/...` → 210), pelo prefixo do arquivo `P<numero>` (ex.: `P210_001_01_FAZ_ELDORADO.shp` → 210) ou por `OS_<numero>` no nome do arquivo; ignora falsos positivos como `PROJETOS_2025`
+  - plugins/limites_db/LimitesPlugin.py: ao TROCAR o vetor, a **OS manual** é preenchida automaticamente quando o padrão é identificado; a OS salva NÃO é sobrescrita ao abrir a ferramenta (só é preenchida se estiver vazia); se o usuário DIGITAR a OS, o valor digitado é preservado (`LIM_OS_KEPT`) e o caminho não sobrescreve mais; o painel de resumo ganhou o campo **OS no caminho** para conferência
+  - plugins/limites_db/LimitesService.py: área informada `0`, vazia ou negativa passa a ser tratada como NÃO informada (`AREA_INF` fica vazio) — não gera mais "área informada inválida"; `AREA_HA` continua SEMPRE calculada e a área informada nunca impede a gravação/cópia
+  - docs/skills/CatalogoClasses.md: comportamento da OS automática e da área informada documentado
+
+
 [1.8.9][2026.10.21][16:57] - Base de Limites: SubOS na KEY, cópia em 08_LIMITES/TALHOES e registro no banco
   - plugins/limites_db/LimitesService.py: `KEY` passa a incluir a SubOS quando ela NÃO é "A" (ex.: `39-FAZENDA_SAO_JOAO-P3` para SubOS A e `39-FAZENDA_SAO_JOAO-P3-B` para SubOS B) — permite o mesmo talhão em SubOS diferentes
   - plugins/limites_db/LimitesService.py: `_publish_to_projects` copia os limites de cada OS/SubOS para `<pasta da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp` (append + gravação atômica), localizando a pasta pela `path` relativa da SubOS no banco e, como fallback, pela pasta-mãe em disco (`ProjectStructureUtil.assign_sub_os_letters`)

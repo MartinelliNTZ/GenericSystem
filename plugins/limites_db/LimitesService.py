@@ -217,6 +217,46 @@ class LimitesService(BaseUtil):
 
         return ""
 
+    @staticmethod
+    def guess_os_from_path(path: str) -> str:
+        """
+        Identifica o número da OS no caminho de origem (vazio quando não há padrão).
+
+        Prioridade:
+          1. pasta ``OS_<numero>...`` mais próxima do arquivo
+             (ex.: ``OS_210_EDUARDO_ZAGO_BB``);
+          2. prefixo do arquivo ``P<numero>`` (ex.: ``P210_001_01_FAZ_...``);
+          3. token ``OS_<numero>`` no nome do arquivo.
+        """
+        if not path:
+            return ""
+
+        candidate = Path(path)
+
+        for folder in candidate.parents:
+            match = re.search(
+                r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6})(?=\D|$)",
+                folder.name,
+                re.IGNORECASE,
+            )
+            if match:
+                return ProjectStructureUtil.normalize_os(match.group(1))
+
+        stem = candidate.stem
+        match = re.match(r"^P(\d{1,6})(?=\D|$)", stem, re.IGNORECASE)
+        if match:
+            return ProjectStructureUtil.normalize_os(match.group(1))
+
+        match = re.search(
+            r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6})(?=\D|$)",
+            stem,
+            re.IGNORECASE,
+        )
+        if match:
+            return ProjectStructureUtil.normalize_os(match.group(1))
+
+        return ""
+
     # ── Importação ──────────────────────────────────────────────────
 
     @classmethod
@@ -362,7 +402,10 @@ class LimitesService(BaseUtil):
                     f"{label}: SubOS '{sub_os}' inválida — informe uma única letra (ex.: A)."
                 )
 
-            areas.append(cls.parse_float(columns["area"][index]))
+            area = cls.parse_float(columns["area"][index])
+            if area is not None and area <= 0:
+                area = None
+            areas.append(area)
             talhoes.append(talhao)
             fazendas.append(fazenda)
             sub_os_list.append(sub_os)
@@ -415,12 +458,11 @@ class LimitesService(BaseUtil):
                 continue
 
             informed = float(informed)
+            if informed <= 0:
+                continue
+
             calculated = float(row[FIELD_AREA_CALC])
             key = str(row[FIELD_KEY])
-
-            if informed <= 0:
-                warnings.append(f"{key}: área informada inválida ({informed}).")
-                continue
 
             diff_pct = abs(calculated - informed) / informed * 100.0
             if diff_pct > tolerance_pct:

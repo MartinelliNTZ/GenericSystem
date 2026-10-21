@@ -107,7 +107,7 @@
 ### plugins/limites_db/
 | Classe | Descrição |
 |---|---|
-| `LimitesPlugin` | Ferramenta CENTRAL da Base de Limites: seleciona um vetor (SHP/GPKG/KML/KMZ/GeoJSON), mapeia o campo do **talhão** (obrigatório) e, opcionalmente, fazenda/OS/SubOS/cliente/área informada; VALIDAR (não grava) e IMPORTAR (calcula a área e grava) |
+| `LimitesPlugin` | Ferramenta CENTRAL da Base de Limites: seleciona um vetor (SHP/GPKG/KML/KMZ/GeoJSON), mapeia o campo do **talhão** (obrigatório) e, opcionalmente, fazenda/OS/SubOS/cliente/área informada; preenche a **OS manual** automaticamente pelo padrão do caminho de origem (`OS_<n>` na pasta ou `P<n>` no arquivo) quando identificado — valor digitado pelo usuário é preservado; VALIDAR (não grava) e IMPORTAR (calcula a área e grava) |
 | `LimitesService` (módulo) | Regras de negócio: normalização (`TALHÃO`/`FAZENDA` em maiúsculas), área calculada em hectares (`AREA_HA`) + área informada (`AREA_INF`), divergência por tolerância (%), bloqueio de duplicidade pela `KEY` (`OS-FAZENDA-TALHÃO`, com sufixo `-<SubOS>` quando a SubOS não é `A`), gravação atômica do completão `limites.shp` e de `<OS>/<OS>_limites.shp`, cópia em `<projeto da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp` e registro da chave `limites` na SubOS via `CloudProjectDatabase`; `LimitesInspectWorker` e `LimitesImportWorker` (QRunnable) |
 
 ---
