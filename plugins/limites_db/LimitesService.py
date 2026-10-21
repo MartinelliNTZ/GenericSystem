@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-LimitesService — Regras de negócio da Base de Limites
-=====================================================
-Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) para a base de limites:
+LimitesService — Regras de negócio da Base de Limites e das Zonas de Manejo
+==========================================================================
+Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
 
+**Limites** (``MODE_LIMITES``):
     <BASE_DADOS>/limites/limites.shp                       → completão (todas as OS)
     <BASE_DADOS>/limites/<OS>/<OS>_limites.shp             → um arquivo por OS
     <pasta da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp   → cópia no projeto
 
-Regras de negócio:
+**Zonas de Manejo** (``MODE_ZONAS``):
+    <BASE_DADOS>/limites/zonas_manejo.shp                  → completão de zonas
+    <BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp        → um arquivo por OS
+    <pasta da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+
+Regras de negócio (limites):
 - TALHÃO é obrigatório (sempre vem de um campo do vetor).
 - FAZENDA e OS são obrigatórios (campo mapeado OU valor manual).
 - SUB_OS é ``A`` por padrão; aceita campo mapeado ou valor manual (letra única).
@@ -19,6 +25,12 @@ Regras de negócio:
 - Divergência entre área informada e calculada apenas ALERTA (tolerância em %).
 - Depois de gravar, cada OS/SubOS ganha a cópia no projeto e o registro
   ``limites`` na SubOS do banco (via ``CloudProjectDatabase`` — Contrato 28).
+
+Regras de negócio (zonas de manejo):
+- ZONA é obrigatória; FAZENDA e OS também (campo mapeado ou valor manual).
+- TALHÃO é OPCIONAL e NÃO há regra de duplicidade.
+- AREA_HA continua sendo CALCULADA em hectares.
+- O registro vai para a chave ``zonas_manejo`` da SubOS.
 
 A leitura/escrita vetorial é delegada para ``utils.vector`` (Contrato 25).
 """
@@ -55,11 +67,18 @@ OS_FILE_SUFFIX = "_limites"
 DEFAULT_SUB_OS = "A"
 DEFAULT_TOLERANCE_PCT = 1.0
 
-# Estrutura Verra: <projeto da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp
+MODE_LIMITES = "limites"
+MODE_ZONAS = "zonas"
+
+# Estrutura Verra:
+#   <projeto>/08_LIMITES/TALHOES/<OS>_limites.shp
+#   <projeto>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 LIMITES_FOLDER = "08_LIMITES"
 TALHOES_FOLDER = "TALHOES"
+ZONAS_FOLDER = "13_ZONAS_DE_MANEJO"
 
 FIELD_TALHAO = "TALHAO"
+FIELD_ZONA = "ZONA"
 FIELD_FAZENDA = "FAZENDA"
 FIELD_OS = "OS"
 FIELD_SUB_OS = "SUB_OS"
@@ -68,7 +87,7 @@ FIELD_KEY = "KEY"
 FIELD_AREA_CALC = "AREA_HA"
 FIELD_AREA_INF = "AREA_INF"
 
-OUTPUT_FIELDS = [
+LIMITES_FIELDS = [
     FIELD_TALHAO,
     FIELD_FAZENDA,
     FIELD_OS,
@@ -79,12 +98,45 @@ OUTPUT_FIELDS = [
     FIELD_AREA_INF,
 ]
 
-PREPARE_FIELDS = [field for field in OUTPUT_FIELDS if field != FIELD_AREA_CALC]
+ZONAS_FIELDS = [
+    FIELD_ZONA,
+    FIELD_FAZENDA,
+    FIELD_OS,
+    FIELD_SUB_OS,
+    FIELD_TALHAO,
+    FIELD_CLIENTE,
+    FIELD_AREA_CALC,
+    FIELD_AREA_INF,
+]
 
-SEMANTIC_KEYS = ("talhao", "fazenda", "os", "subos", "cliente", "area")
+MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
+    MODE_LIMITES: {
+        "label": "Limites",
+        "consolidated": CONSOLIDATED_FILENAME,
+        "os_suffix": OS_FILE_SUFFIX,
+        "project_folder": LIMITES_FOLDER,
+        "project_subfolder": TALHOES_FOLDER,
+        "db_key": "limites",
+        "fields": LIMITES_FIELDS,
+        "semantic": ("talhao", "fazenda", "os", "subos", "cliente", "area"),
+        "unique": True,
+    },
+    MODE_ZONAS: {
+        "label": "Zonas de Manejo",
+        "consolidated": "zonas_manejo.shp",
+        "os_suffix": "_zonas_manejo",
+        "project_folder": ZONAS_FOLDER,
+        "project_subfolder": "",
+        "db_key": "zonas_manejo",
+        "fields": ZONAS_FIELDS,
+        "semantic": ("zona", "fazenda", "os", "subos", "talhao", "cliente", "area"),
+        "unique": False,
+    },
+}
 
 GUESS_TOKENS = {
     "talhao": ("TALHAO", "TALH"),
+    "zona": ("ZONA", "ZONE"),
     "fazenda": ("FAZENDA", "PROPRIEDADE"),
     "os": ("OS", "ORDEM"),
     "subos": ("SUBOS", "SUB_OS", "SUB"),
@@ -95,13 +147,14 @@ GUESS_TOKENS = {
 
 @dataclass
 class LimitesImportConfig:
-    """Configuração de uma importação da Base de Limites."""
+    """Configuração de uma importação (limites ou zonas de manejo)."""
 
     vector_path: str
     field_map: Dict[str, str] = field(default_factory=dict)
     manual: Dict[str, str] = field(default_factory=dict)
     tolerance_pct: float = DEFAULT_TOLERANCE_PCT
     output_root: str = BASE_ROOT
+    mode: str = MODE_LIMITES
 
 
 class LimitesValidationError(Exception):
@@ -282,6 +335,9 @@ class LimitesService(BaseUtil):
             ValueError: Falhas de leitura/área (CRS ausente, geometria inválida).
         """
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        settings = cls.settings(config.mode)
+        fields = settings["fields"]
+
         cls._notify(progress_cb, 5, "Lendo vetor...")
 
         gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
@@ -292,20 +348,21 @@ class LimitesService(BaseUtil):
 
         cls._notify(progress_cb, 25, "Validando atributos...")
         prepared = cls._prepare(gdf, config)
-        warnings: List[str] = []
 
         cls._notify(progress_cb, 55, "Calculando área...")
         prepared = VectorLayerMetrics.calculate_area_hectares(
             prepared, FIELD_AREA_CALC, 4, _TOOL_KEY
         )
-        prepared = prepared[OUTPUT_FIELDS + [prepared.geometry.name]]
-        warnings.extend(cls._area_warnings(prepared, config.tolerance_pct))
+        prepared = prepared[fields + [prepared.geometry.name]]
+        warnings: List[str] = cls._area_warnings(prepared, config)
 
-        cls._notify(progress_cb, 70, "Verificando duplicidades...")
-        consolidated = os.path.join(config.output_root, CONSOLIDATED_FILENAME)
-        cls._check_duplicates(prepared, consolidated)
+        consolidated = os.path.join(config.output_root, settings["consolidated"])
+        if settings["unique"]:
+            cls._notify(progress_cb, 70, "Verificando duplicidades...")
+            cls._check_duplicates(prepared, consolidated)
 
         payload: Dict[str, Any] = {
+            "mode": config.mode,
             "dry_run": dry_run,
             "n_features": int(len(prepared)),
             "crs": str(prepared.crs),
@@ -323,7 +380,7 @@ class LimitesService(BaseUtil):
         }
 
         if dry_run:
-            warnings.extend(cls._structure_warnings(prepared))
+            warnings.extend(cls._structure_warnings(prepared, config))
             cls._notify(progress_cb, 100, "Validação concluída.")
             logger.info(
                 "Validação da importação concluída",
@@ -334,13 +391,15 @@ class LimitesService(BaseUtil):
             return payload
 
         cls._notify(progress_cb, 85, "Gravando base...")
-        cls._append_and_write(consolidated, prepared)
+        cls._append_and_write(consolidated, prepared, fields)
 
         os_files: List[str] = []
         for os_number, group in prepared.groupby(FIELD_OS, sort=True):
             os_dir = os.path.join(config.output_root, str(int(os_number)))
-            target = os.path.join(os_dir, f"{int(os_number)}{OS_FILE_SUFFIX}.shp")
-            cls._append_and_write(target, group)
+            target = os.path.join(
+                os_dir, f"{int(os_number)}{settings['os_suffix']}.shp"
+            )
+            cls._append_and_write(target, group, fields)
             os_files.append(target)
 
         payload["os_files"] = os_files
@@ -351,8 +410,9 @@ class LimitesService(BaseUtil):
         cls._notify(progress_cb, 100, "Importação concluída.")
 
         logger.info(
-            "Importação concluída",
+            f"Importação concluída ({settings['label']})",
             code="LIM_IMPORT_DONE",
+            mode=config.mode,
             n_features=payload["n_features"],
             n_os=len(os_files),
             n_copies=len(payload["copies"]),
@@ -364,15 +424,26 @@ class LimitesService(BaseUtil):
         return payload
 
     @classmethod
+    def settings(cls, mode: str) -> Dict[str, Any]:
+        """Configuração do modo (``limites`` ou ``zonas``)."""
+        return MODE_SETTINGS.get(mode, MODE_SETTINGS[MODE_LIMITES])
+
+    @classmethod
     def _prepare(
         cls,
         gdf: Any,
         config: LimitesImportConfig,
     ) -> Any:
         """Resolve os valores de cada feição e devolve o GeoDataFrame canônico."""
-        columns = {key: cls._resolve_series(gdf, config, key) for key in SEMANTIC_KEYS}
+        settings = cls.settings(config.mode)
+        semantic = settings["semantic"]
+        is_zonas = config.mode == MODE_ZONAS
+
+        columns = {key: cls._resolve_series(gdf, config, key) for key in semantic}
+        empty = [""] * len(gdf)
 
         talhoes: List[str] = []
+        zonas: List[str] = []
         fazendas: List[str] = []
         os_numbers: List[int] = []
         sub_os_list: List[str] = []
@@ -384,9 +455,13 @@ class LimitesService(BaseUtil):
         for index in range(len(gdf)):
             label = f"Feição {index + 1}"
 
-            talhao = cls.normalize_text(columns["talhao"][index])
-            if not talhao:
+            talhao = cls.normalize_text(columns.get("talhao", empty)[index])
+            if not talhao and not is_zonas:
                 problems.append(f"{label}: TALHÃO vazio (obrigatório).")
+
+            zona = cls.normalize_text(columns.get("zona", empty)[index])
+            if is_zonas and not zona:
+                problems.append(f"{label}: ZONA vazia (obrigatória).")
 
             fazenda = cls.normalize_text(columns["fazenda"][index])
             if not fazenda:
@@ -407,16 +482,26 @@ class LimitesService(BaseUtil):
                 area = None
             areas.append(area)
             talhoes.append(talhao)
+            zonas.append(zona)
             fazendas.append(fazenda)
             sub_os_list.append(sub_os)
             clientes.append(cls.normalize_text(columns["cliente"][index]))
 
-            if os_number is None or not talhao or not fazenda:
+            if os_number is None or not fazenda:
                 os_numbers.append(0)
                 keys.append("")
                 continue
 
             os_numbers.append(int(os_number))
+
+            if is_zonas:
+                keys.append("")
+                continue
+
+            if not talhao:
+                keys.append("")
+                continue
+
             key = f"{int(os_number)}-{fazenda}-{talhao}"
             if sub_os != DEFAULT_SUB_OS:
                 key = f"{key}-{sub_os}"
@@ -426,14 +511,19 @@ class LimitesService(BaseUtil):
             raise LimitesValidationError(cls._limit_problems(problems))
 
         prepared = gdf.copy()
+        if is_zonas:
+            prepared[FIELD_ZONA] = zonas
         prepared[FIELD_TALHAO] = talhoes
         prepared[FIELD_FAZENDA] = fazendas
         prepared[FIELD_OS] = os_numbers
         prepared[FIELD_SUB_OS] = sub_os_list
         prepared[FIELD_CLIENTE] = clientes
         prepared[FIELD_AREA_INF] = pd.Series(areas, index=prepared.index, dtype="float64")
-        prepared[FIELD_KEY] = keys
-        return prepared[PREPARE_FIELDS + [prepared.geometry.name]]
+        if not is_zonas:
+            prepared[FIELD_KEY] = keys
+
+        prepare_fields = [f for f in settings["fields"] if f != FIELD_AREA_CALC]
+        return prepared[prepare_fields + [prepared.geometry.name]]
 
     @staticmethod
     def _resolve_series(gdf: Any, config: LimitesImportConfig, key: str) -> List[Any]:
@@ -447,10 +537,11 @@ class LimitesService(BaseUtil):
 
     # ── Verificações ────────────────────────────────────────────────
 
-    @staticmethod
-    def _area_warnings(gdf: Any, tolerance_pct: float) -> List[str]:
+    @classmethod
+    def _area_warnings(cls, gdf: Any, config: LimitesImportConfig) -> List[str]:
         """Compara a área informada com a calculada e devolve os avisos de divergência."""
         warnings: List[str] = []
+        is_zonas = config.mode == MODE_ZONAS
 
         for _, row in gdf.iterrows():
             informed = row[FIELD_AREA_INF]
@@ -462,10 +553,13 @@ class LimitesService(BaseUtil):
                 continue
 
             calculated = float(row[FIELD_AREA_CALC])
-            key = str(row[FIELD_KEY])
+            if is_zonas:
+                key = f"{int(row[FIELD_OS])}-{row[FIELD_FAZENDA]}-{row[FIELD_ZONA]}"
+            else:
+                key = str(row[FIELD_KEY])
 
             diff_pct = abs(calculated - informed) / informed * 100.0
-            if diff_pct > tolerance_pct:
+            if diff_pct > config.tolerance_pct:
                 warnings.append(
                     f"{key}: informada {informed:.2f} ha × calculada {calculated:.2f} ha "
                     f"(diferença {diff_pct:.1f}%)."
@@ -525,7 +619,7 @@ class LimitesService(BaseUtil):
     # ── Escrita ─────────────────────────────────────────────────────
 
     @classmethod
-    def _append_and_write(cls, target: str, new_gdf: Any) -> None:
+    def _append_and_write(cls, target: str, new_gdf: Any, fields: List[str]) -> None:
         """Anexa o lote ao arquivo de destino (quando existe) e grava de forma atômica."""
         if os.path.exists(target):
             existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
@@ -534,12 +628,12 @@ class LimitesService(BaseUtil):
                 FIELD_AREA_CALC: 0.0,
                 FIELD_AREA_INF: float("nan"),
             }
-            for column in OUTPUT_FIELDS:
+            for column in fields:
                 if column not in existing.columns:
                     existing[column] = defaults.get(column, "")
-            existing = existing[OUTPUT_FIELDS + [existing.geometry.name]]
+            existing = existing[fields + [existing.geometry.name]]
             merged = VectorLayerSource.concat_geodataframes(existing, new_gdf, tool_key=_TOOL_KEY)
-            merged = merged[OUTPUT_FIELDS + [merged.geometry.name]]
+            merged = merged[fields + [merged.geometry.name]]
         else:
             merged = new_gdf
 
@@ -555,14 +649,15 @@ class LimitesService(BaseUtil):
         payload: Dict[str, Any],
         logger: Any,
     ) -> None:
-        """Copia os limites para ``<projeto da SubOS>/08_LIMITES/TALHOES`` e registra no banco."""
+        """Copia o resultado para a pasta do projeto da SubOS e registra no banco."""
+        settings = cls.settings(config.mode)
         warnings: List[str] = payload["warnings"]
 
         mother = cls._load_mother_folder()
         if mother is None:
             warnings.append(
                 "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
-                f"{LIMITES_FOLDER}/{TALHOES_FOLDER} não foi gerada."
+                f"{settings['project_folder']} não foi gerada."
             )
             return
 
@@ -591,7 +686,7 @@ class LimitesService(BaseUtil):
                 continue
 
             try:
-                copy_path = cls._write_project_copy(folder, number, group)
+                copy_path = cls._write_project_copy(folder, number, group, config.mode)
             except Exception as e:
                 logger.error(
                     "Falha ao gravar a copia no projeto",
@@ -609,7 +704,7 @@ class LimitesService(BaseUtil):
             if record is None:
                 warnings.append(
                     f"OS {number} · SubOS {letter}: OS não encontrada no banco — "
-                    "o limite não foi registrado."
+                    "o resultado não foi registrado."
                 )
                 continue
 
@@ -617,17 +712,18 @@ class LimitesService(BaseUtil):
                 payload["db_updated"] += 1
             else:
                 warnings.append(
-                    f"OS {number} · SubOS {letter}: falha ao registrar o limite no banco."
+                    f"OS {number} · SubOS {letter}: falha ao registrar no banco."
                 )
 
     @classmethod
-    def _structure_warnings(cls, prepared: Any) -> List[str]:
+    def _structure_warnings(cls, prepared: Any, config: LimitesImportConfig) -> List[str]:
         """Antes de gravar, avisa sobre projetos/SubOS que não receberão a cópia."""
+        settings = cls.settings(config.mode)
         mother = cls._load_mother_folder()
         if mother is None:
             return [
                 "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
-                f"{LIMITES_FOLDER}/{TALHOES_FOLDER} não será gerada."
+                f"{settings['project_folder']} não será gerada."
             ]
 
         projects_by_os = ProjectStructureUtil.group_projects_by_os(
@@ -694,13 +790,21 @@ class LimitesService(BaseUtil):
         return None, f"pasta da SubOS {sub_os} não encontrada em {mother}"
 
     @classmethod
-    def _write_project_copy(cls, project_folder: Path, os_number: str, group: Any) -> Path:
-        """Grava a cópia do limite em ``<projeto>/08_LIMITES/TALHOES/<OS>_limites.shp``."""
-        target = (
-            project_folder / LIMITES_FOLDER / TALHOES_FOLDER
-            / f"{os_number}{OS_FILE_SUFFIX}.shp"
-        )
-        cls._append_and_write(str(target), group)
+    def _write_project_copy(
+        cls,
+        project_folder: Path,
+        os_number: str,
+        group: Any,
+        mode: str,
+    ) -> Path:
+        """Grava a cópia na pasta do projeto conforme o modo (limites ou zonas)."""
+        settings = cls.settings(mode)
+        target_dir = project_folder / settings["project_folder"]
+        if settings["project_subfolder"]:
+            target_dir = target_dir / settings["project_subfolder"]
+
+        target = target_dir / f"{os_number}{settings['os_suffix']}.shp"
+        cls._append_and_write(str(target), group, settings["fields"])
         return target
 
     @classmethod
@@ -728,7 +832,10 @@ class LimitesService(BaseUtil):
             entries.sort(key=lambda item: str(item.get("sub_os", "")))
             record["sub_os"] = entries
 
-        entry["limites"] = {
+        settings = cls.settings(config.mode)
+        db_key = settings["db_key"]
+
+        entry[db_key] = {
             "inserted_at": datetime.now().isoformat(timespec="seconds"),
             "file": ProjectStructureUtil.to_relative_path(mother, file_path),
             "source": os.path.basename(config.vector_path),
@@ -742,10 +849,11 @@ class LimitesService(BaseUtil):
             )
         except Exception as e:
             cls._get_logger(_TOOL_KEY, "LimitesService").error(
-                "Falha ao registrar o limite no banco",
+                "Falha ao registrar no banco",
                 code="LIM_DB_SAVE_ERR",
                 os_number=str(record.get("os", "")),
                 sub_os=sub_os,
+                db_key=db_key,
                 error=str(e),
             )
             return False

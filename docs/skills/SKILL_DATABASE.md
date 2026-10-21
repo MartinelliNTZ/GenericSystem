@@ -111,6 +111,10 @@ guarda apenas o número + a lista de SubOS:
     dentro do projeto (`08_LIMITES/TALHOES`).
   - O **ATUALIZAR DADOS** do Banco de Dados preserva `limites` — ele só reescreve
     `folders`/`years` de cada SubOS.
+- No modo **Zonas de Manejo** a mesma ferramenta grava a chave **`zonas_manejo`**
+  na SubOS (mesma estrutura, com `file` apontando para
+  `13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`). As duas chaves convivem na SubOS
+  e também são preservadas pelo ATUALIZAR DADOS.
 - O seed **cria a base de OS** (OS + SubOS + pasta, garantindo a SubOS A) direto
   no Firestore via `CloudProjectDatabase`. Novas OS são criadas pelo
   **Acompanhamento de OS** (botão CRIAR OS; só o número é obrigatório).

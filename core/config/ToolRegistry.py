@@ -219,7 +219,7 @@ class ToolRegistry:
                 "plugins.limites_db.LimitesPlugin",
                 "LimitesPlugin",
             ),
-            tooltip="Importa vetores (SHP, KML, KMZ, GeoJSON) e grava os limites por OS",
+            tooltip="Importa limites e zonas de manejo (SHP, KML, KMZ, GeoJSON) por OS",
             tool_type=ToolType.VECTOR,
             category=CategoryTool.CENTRAL,
             show_in_toolbar=True,

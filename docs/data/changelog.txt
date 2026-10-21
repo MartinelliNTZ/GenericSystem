@@ -1,3 +1,13 @@
+[1.10.0][2026.10.21][17:45] - Base de Limites ganha o modo "Zonas de Manejo" (13_ZONAS_DE_MANEJO)
+  - plugins/limites_db/LimitesService.py: novos modos `limites`/`zonas` (`MODE_SETTINGS`) — o service passou a ser genérico por modo (campos, arquivo completão, sufixo por OS, pasta do projeto, chave do banco e regra de unicidade)
+  - Zonas de manejo: completão `<BASE_DADOS>/limites/zonas_manejo.shp`, arquivo por OS `<BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp` e cópia em `<projeto da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`
+  - Regras das zonas: **ZONA obrigatória**, FAZENDA e OS obrigatórias (campo ou manual), **TALHÃO opcional** e **SEM regra de duplicidade**; `AREA_HA` continua sempre calculada
+  - Registro no banco: além de `limites`, a SubOS passa a receber a chave `zonas_manejo` (`inserted_at`, `file` relativo, `source`, `features`, `area_ha`)
+  - plugins/limites_db/LimitesPlugin.py: seletor de modo (GridRadio "Limites" / "Zonas de Manejo"), mapeamento de campos por modo (seções alternáveis), `zona` sugerida automaticamente para campos `Zone`/`ZONA`/`ZONE_*`, e resumo/console/modal exibindo o modo usado
+  - core/config/ToolRegistry.py: tooltip da ferramenta atualizado (limites + zonas de manejo)
+  - docs/skills/CatalogoClasses.md e SKILL_DATABASE.md: modos, arquivos e chave `zonas_manejo` documentados
+
+
 [1.9.0][2026.10.21][17:27] - Base de Limites: OS automática pelo caminho e área informada 0/vazia não bloqueia
   - plugins/limites_db/LimitesService.py: novo `guess_os_from_path` — identifica a OS pela pasta mais próxima no padrão `OS_<numero>...` (ex.: `Z:/PROJETOS_2025/OS_210_EDUARDO_ZAGO_BB/...` → 210), pelo prefixo do arquivo `P<numero>` (ex.: `P210_001_01_FAZ_ELDORADO.shp` → 210) ou por `OS_<numero>` no nome do arquivo; ignora falsos positivos como `PROJETOS_2025`
   - plugins/limites_db/LimitesPlugin.py: ao TROCAR o vetor, a **OS manual** é preenchida automaticamente quando o padrão é identificado; a OS salva NÃO é sobrescrita ao abrir a ferramenta (só é preenchida se estiver vazia); se o usuário DIGITAR a OS, o valor digitado é preservado (`LIM_OS_KEPT`) e o caminho não sobrescreve mais; o painel de resumo ganhou o campo **OS no caminho** para conferência

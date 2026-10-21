@@ -1,16 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-LimitesPlugin — Base de Limites
-===============================
-Ferramenta CENTRAL que importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) para a
-base de limites:
+LimitesPlugin — Base de Limites e Zonas de Manejo
+=================================================
+Ferramenta CENTRAL com DOIS modos de importação:
 
-    <BASE_DADOS>/limites/limites.shp              → completão (todas as OS)
-    <BASE_DADOS>/limites/<OS>/<OS>_limites.shp    → um arquivo por OS
+- **Limites** (``08_LIMITES/TALHOES``): talhão obrigatório, duplicidade bloqueada;
+- **Zonas de Manejo** (``13_ZONAS_DE_MANEJO``): zona obrigatória, talhão opcional
+  e SEM regra de duplicidade.
 
-Fluxo: seleciona o vetor → mapeia o campo do TALHÃO (obrigatório) e,
-opcionalmente, FAZENDA/OS/SUB_OS/CLIENTE/ÁREA INFORMADA → informa manualmente
-o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a área e grava).
+Ambos gravam:
+
+    <BASE_DADOS>/limites/limites.shp          → completão de limites
+    <BASE_DADOS>/limites/<OS>/<OS>_limites.shp
+    <BASE_DADOS>/limites/zonas_manejo.shp     → completão de zonas
+    <BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp
+    <projeto da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp
+    <projeto da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+
+Fluxo: escolhe o modo → seleciona o vetor → mapeia os campos → informa
+manualmente o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a
+área, grava na base, copia para o projeto e registra no banco).
 
 A OS manual é preenchida automaticamente pelo padrão do caminho de origem
 (`OS_<numero>` na pasta ou `P<numero>` no arquivo) quando identificado; um valor
@@ -30,6 +39,9 @@ from plugins.limites_db.LimitesService import (
     BASE_ROOT,
     DEFAULT_SUB_OS,
     DEFAULT_TOLERANCE_PCT,
+    MODE_LIMITES,
+    MODE_SETTINGS,
+    MODE_ZONAS,
     LimitesImportConfig,
     LimitesImportWorker,
     LimitesInspectWorker,
@@ -39,7 +51,9 @@ from resources.widgets.complex.GridComplexSelector import GridComplexSelector
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
 from resources.widgets.grid.GridLabel import GridLabel
 from resources.widgets.grid.GridLineEdit import GridLineEdit
+from resources.widgets.grid.GridRadio import GridRadio
 from resources.widgets.GroupPainel import GroupPainel
+from resources.widgets.SectionPanel import SectionPanel
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from utils.MessageBox import MessageBox
 
@@ -50,20 +64,32 @@ class LimitesPlugin(BasePlugin):
     _SELECTOR_KEY = "Vetor"
     _FILTER = "Vetores (*.shp *.gpkg *.kml *.kmz *.geojson *.json)"
 
-    _COMBO_SPECS = (
-        ("talhao", "Talhão *", "Campo obrigatório: nome do talhão."),
-        ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
-        ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
-        ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
-        ("cliente", "Cliente", "Campo do cliente (opcional)."),
-        ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
-    )
+    _COMBO_SPECS = {
+        MODE_LIMITES: (
+            ("talhao", "Talhão *", "Campo obrigatório: nome do talhão."),
+            ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
+            ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
+            ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
+            ("cliente", "Cliente", "Campo do cliente (opcional)."),
+            ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
+        ),
+        MODE_ZONAS: (
+            ("zona", "Zona *", "Campo obrigatório da zona de manejo (Zone/Zona)."),
+            ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
+            ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
+            ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
+            ("talhao", "Talhão", "Opcional nas zonas de manejo."),
+            ("cliente", "Cliente", "Campo do cliente (opcional)."),
+            ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
+        ),
+    }
 
     def __init__(self, parent=None) -> None:
         self._generation = 0
         self._fields: list = []
         self._meta: dict = {}
         self._pending_field_map: dict = {}
+        self._mode = MODE_LIMITES
         self._restoring = False
         self._running = False
         self._inspect_worker = None
@@ -81,13 +107,13 @@ class LimitesPlugin(BasePlugin):
                     "text": "VALIDAR",
                     "callback": self._on_validar,
                     "type": "secondary",
-                    "description": "Valida o vetor (duplicidades, área, campos) sem gravar nada",
+                    "description": "Valida o vetor (campos, áreas, duplicidades) sem gravar nada",
                 },
                 "importar": {
                     "text": "IMPORTAR",
                     "callback": self._on_importar,
                     "type": "primary",
-                    "description": "Valida, calcula a área e grava na base de limites",
+                    "description": "Valida, calcula a área e grava o resultado na base e no projeto",
                 },
             },
         )
@@ -108,8 +134,20 @@ class LimitesPlugin(BasePlugin):
     # ── Preferências ────────────────────────────────────────────────
 
     def load_prefs(self) -> None:
-        """Restaura o vetor, o mapeamento de campos e os valores manuais."""
-        self._pending_field_map = dict(self.preferences.get("field_map", {}) or {})
+        """Restaura o modo, o vetor, o mapeamento de campos e os valores manuais."""
+        saved_map = self.preferences.get("field_map", {}) or {}
+        if saved_map and all(isinstance(value, str) for value in saved_map.values()):
+            saved_map = {MODE_LIMITES: saved_map}
+        self._pending_field_map = {
+            mode: dict(values)
+            for mode, values in saved_map.items()
+            if isinstance(values, dict)
+        }
+
+        saved_mode = str(self.preferences.get("mode", MODE_LIMITES) or MODE_LIMITES)
+        if saved_mode not in MODE_SETTINGS:
+            saved_mode = MODE_LIMITES
+        self._modo.set_selected(saved_mode)
 
         manual = self.preferences.get("manual", {}) or {}
         if manual:
@@ -135,11 +173,15 @@ class LimitesPlugin(BasePlugin):
             self._auto_os = guess
 
     def save_prefs(self) -> None:
-        """Persiste vetor, mapeamento de campos e valores manuais."""
+        """Persiste modo, vetor, mapeamento de campos e valores manuais."""
+        self.preferences["mode"] = self._mode
         self.preferences["vector_path"] = self._selector[self._SELECTOR_KEY].path()
         self.preferences["field_map"] = {
-            key: (combo.current_value or "")
-            for key, combo in self._combos.items()
+            mode: {
+                key: (combo.current_value or "")
+                for key, combo in combos.items()
+            }
+            for mode, combos in self._combos.items()
         }
         self.preferences["manual"] = self._manual.values
 
@@ -162,13 +204,35 @@ class LimitesPlugin(BasePlugin):
         }, title="Origem")
         self._selector.set_on_input_changed(self._on_input_changed)
 
+        self._modo = GridRadio({
+            MODE_LIMITES: {
+                "label": "Limites",
+                "description": "Importa os limites dos talhões (duplicidade bloqueada)",
+                "default": True,
+            },
+            MODE_ZONAS: {
+                "label": "Zonas de Manejo",
+                "description": "Importa as zonas de manejo (sem regra de duplicidade)",
+            },
+        }, num_columns=2)
+        self._modo.changed.connect(self._on_mode_changed)
+        painel_modo = GroupPainel("O que importar")
+        painel_modo.group_layout.addWidget(self._modo)
+
         painel_mapa = GroupPainel("Mapeamento de Campos")
         self._combos: dict = {}
-        for key, label, tooltip in self._COMBO_SPECS:
-            combo = SimpleComboBox(items={"": "(não usar)"}, label=label)
-            combo.setToolTip(tooltip)
-            self._combos[key] = combo
-            painel_mapa.group_layout.addWidget(combo)
+        self._sections: dict = {}
+        for mode, specs in self._COMBO_SPECS.items():
+            section = SectionPanel(object_name=f"map_{mode}", spacing=6)
+            combos: dict = {}
+            for key, label, tooltip in specs:
+                combo = SimpleComboBox(items={"": "(não usar)"}, label=label)
+                combo.setToolTip(tooltip)
+                combos[key] = combo
+                section.section_layout.addWidget(combo)
+            painel_mapa.group_layout.addWidget(section)
+            self._combos[mode] = combos
+            self._sections[mode] = section
 
         painel_manual = GroupPainel("Valores Manuais")
         self._manual = GridLineEdit({
@@ -199,10 +263,32 @@ class LimitesPlugin(BasePlugin):
         painel_resumo.group_layout.addWidget(self._resumo)
 
         self.main_layout.addWidget(self._selector)
+        self.main_layout.addWidget(GridGroupPainel(painel_modo))
         self.main_layout.addWidget(GridGroupPainel(painel_mapa, painel_manual))
         self.main_layout.addWidget(GridGroupPainel(painel_resumo))
         self.main_layout.addStretch(1)
         self.page.set_badge(self.page.PRONTA)
+        self._apply_mode_visibility()
+
+    # ── Modo (limites / zonas) ──────────────────────────────────────
+
+    def _on_mode_changed(self, key: str) -> None:
+        """Troca o modo de importação (limites ou zonas de manejo)."""
+        if key not in MODE_SETTINGS:
+            return
+
+        self._mode = key
+        self._apply_mode_visibility()
+        self.logger.info(
+            f"Modo de importação: {MODE_SETTINGS[key]['label']}",
+            code="LIM_MODE",
+            mode=key,
+        )
+
+    def _apply_mode_visibility(self) -> None:
+        """Mostra apenas o mapeamento do modo ativo."""
+        for mode, section in self._sections.items():
+            section.setVisible(mode == self._mode)
 
     # ── Inspeção do vetor ───────────────────────────────────────────
 
@@ -298,19 +384,21 @@ class LimitesPlugin(BasePlugin):
         )
 
     def _apply_fields(self) -> None:
-        """Repopula os combos com os campos do vetor e pré-seleciona os sugeridos."""
+        """Repopula os combos (dos dois modos) e pré-seleciona os campos sugeridos."""
         choices = {"": "(não usar)"}
         choices.update({field: field for field in self._fields})
 
-        for key, combo in self._combos.items():
-            combo.set_items(choices)
-            saved = self._pending_field_map.get(key, "")
-            target = (
-                saved
-                if saved and saved in choices
-                else LimitesService.guess_field(self._fields, key)
-            )
-            combo.current_value = target
+        for mode, combos in self._combos.items():
+            saved_map = self._pending_field_map.get(mode, {})
+            for key, combo in combos.items():
+                combo.set_items(choices)
+                saved = saved_map.get(key, "")
+                target = (
+                    saved
+                    if saved and saved in choices
+                    else LimitesService.guess_field(self._fields, key)
+                )
+                combo.current_value = target
 
         self._pending_field_map = {}
 
@@ -333,8 +421,9 @@ class LimitesPlugin(BasePlugin):
         self._fields = []
 
         empty = {"": "(não usar)"}
-        for combo in self._combos.values():
-            combo.set_items(empty)
+        for combos in self._combos.values():
+            for combo in combos.values():
+                combo.set_items(empty)
 
         self._resumo.set_values({
             "arquivo": "—",
@@ -357,13 +446,17 @@ class LimitesPlugin(BasePlugin):
 
         field_map = {
             key: (combo.current_value or "")
-            for key, combo in self._combos.items()
+            for key, combo in self._combos[self._mode].items()
         }
         manual = {key: value.strip() for key, value in self._manual.values.items()}
 
-        if not field_map.get("talhao"):
+        if self._mode == MODE_LIMITES and not field_map.get("talhao"):
             raise ValueError(
                 "O campo do TALHÃO é obrigatório. Selecione-o em 'Mapeamento de Campos'."
+            )
+        if self._mode == MODE_ZONAS and not field_map.get("zona"):
+            raise ValueError(
+                "O campo da ZONA é obrigatório. Selecione-o em 'Mapeamento de Campos'."
             )
         if not field_map.get("fazenda") and not manual.get("fazenda"):
             raise ValueError(
@@ -388,6 +481,7 @@ class LimitesPlugin(BasePlugin):
                 for key in ("fazenda", "os", "subos", "cliente", "area")
             },
             tolerance_pct=tolerance,
+            mode=self._mode,
         )
 
     # ── Execução ────────────────────────────────────────────────────
@@ -397,7 +491,7 @@ class LimitesPlugin(BasePlugin):
         self._start_import(dry_run=True)
 
     def _on_importar(self) -> None:
-        """Valida, calcula a área e grava na base de limites."""
+        """Valida, calcula a área e grava o resultado (base + projeto + banco)."""
         self._start_import(dry_run=False)
 
     def _start_import(self, dry_run: bool) -> None:
@@ -425,13 +519,17 @@ class LimitesPlugin(BasePlugin):
         self.page.buttons.set_enabled("validar", False)
         self.page.buttons.set_enabled("importar", False)
 
+        mode_label = MODE_SETTINGS[self._mode]["label"]
         SignalManager.instance().hud_show.emit({
-            "message": "Validando limites..." if dry_run else "Importando limites..."
+            "message": (
+                f"Validando {mode_label}..." if dry_run
+                else f"Importando {mode_label}..."
+            )
         })
         SignalManager.instance().execution_started.emit(self.tool_key)
         SignalManager.instance().console_message.emit(
-            "Validando vetor..." if dry_run
-            else f"Importando {os.path.basename(config.vector_path)}..."
+            f"Validando {mode_label.lower()}..." if dry_run
+            else f"Importando {mode_label.lower()}: {os.path.basename(config.vector_path)}..."
         )
 
         self._generation += 1
@@ -465,8 +563,12 @@ class LimitesPlugin(BasePlugin):
         detail = "\n".join(warnings)
         os_numbers = payload.get("os_numbers", []) or []
         subs = payload.get("sub_os", {}) or {}
+        mode_label = MODE_SETTINGS.get(
+            payload.get("mode", MODE_LIMITES), MODE_SETTINGS[MODE_LIMITES]
+        )["label"]
 
         stats = (
+            f"Modo: {mode_label}\n"
             f"{self._format_int(payload.get('n_features', 0))} feição(ões)\n"
             f"OS: {', '.join(str(number) for number in os_numbers) or '—'}\n"
             f"SubOS: {self._format_sub_os(subs)}\n"
