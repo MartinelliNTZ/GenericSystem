@@ -1,3 +1,9 @@
+[1.10.1][2026.10.21][17:54] - Correção de layout na Base de Limites (painéis ocupando meia largura)
+  - resources/widgets/grid/GridGroupPainel.py: o stretch de coluna agora é aplicado APENAS às colunas que têm painel — com 1 painel ele ocupa a largura inteira (antes ficava com metade e deixava um buraco à direita); com 2+ painéis o rateio igual continua
+  - plugins/limites_db/LimitesPlugin.py: o seletor de modo foi movido para dentro do painel "Mapeamento de Campos" (acima de um SeparatorWidget), eliminando a linha "O que importar" que ficava sozinha e desalinhava a tela; o painel "Resumo da Origem" voltou a ocupar a largura total
+  - docs/skills/SKILL_WIDGETS.md: nota de que 1 único painel ocupa a largura inteira no GridGroupPainel
+
+
 [1.10.0][2026.10.21][17:45] - Base de Limites ganha o modo "Zonas de Manejo" (13_ZONAS_DE_MANEJO)
   - plugins/limites_db/LimitesService.py: novos modos `limites`/`zonas` (`MODE_SETTINGS`) — o service passou a ser genérico por modo (campos, arquivo completão, sufixo por OS, pasta do projeto, chave do banco e regra de unicidade)
   - Zonas de manejo: completão `<BASE_DADOS>/limites/zonas_manejo.shp`, arquivo por OS `<BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp` e cópia em `<projeto da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`

@@ -977,6 +977,8 @@ main_layout.addWidget(grid)
 **Propriedades:**
 - `painels` → lista de GroupPainel
 
+> **Largura:** o stretch é aplicado somente às colunas que têm painel — com **1 painel** ele ocupa a **largura inteira**; com 2+ o rateio é igual entre eles.
+
 ---
 
 ### `FileTreeWidget` — `FileTreeWidget.py`

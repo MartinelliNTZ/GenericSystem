@@ -54,6 +54,7 @@ from resources.widgets.grid.GridLineEdit import GridLineEdit
 from resources.widgets.grid.GridRadio import GridRadio
 from resources.widgets.GroupPainel import GroupPainel
 from resources.widgets.SectionPanel import SectionPanel
+from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from utils.MessageBox import MessageBox
 
@@ -216,10 +217,12 @@ class LimitesPlugin(BasePlugin):
             },
         }, num_columns=2)
         self._modo.changed.connect(self._on_mode_changed)
-        painel_modo = GroupPainel("O que importar")
-        painel_modo.group_layout.addWidget(self._modo)
 
         painel_mapa = GroupPainel("Mapeamento de Campos")
+        painel_mapa.group_layout.addWidget(self._modo)
+        painel_mapa.group_layout.addWidget(
+            SeparatorWidget(orientation="horizontal")
+        )
         self._combos: dict = {}
         self._sections: dict = {}
         for mode, specs in self._COMBO_SPECS.items():
@@ -263,7 +266,6 @@ class LimitesPlugin(BasePlugin):
         painel_resumo.group_layout.addWidget(self._resumo)
 
         self.main_layout.addWidget(self._selector)
-        self.main_layout.addWidget(GridGroupPainel(painel_modo))
         self.main_layout.addWidget(GridGroupPainel(painel_mapa, painel_manual))
         self.main_layout.addWidget(GridGroupPainel(painel_resumo))
         self.main_layout.addStretch(1)

@@ -44,8 +44,6 @@ class GridGroupPainel(QWidget):
         self._grid = QGridLayout(self)
         self._grid.setContentsMargins(0, 0, 0, 0)
         self._grid.setSpacing(10)
-        self._grid.setColumnStretch(0, 1)
-        self._grid.setColumnStretch(1, 1)
 
         self._painels: List[GroupPainel] = list(painels)
 
