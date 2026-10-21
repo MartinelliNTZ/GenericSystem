@@ -44,9 +44,14 @@ Fornecer um guia completo de utilização das classes de camada, permitindo:
 
 ## Status da Implementação
 
-> **⚠️ ATENÇÃO:** Todas as classes estão implementadas como **stubs (placeholders)**.
+> **⚠️ ATENÇÃO:** A maior parte das classes está implementada como **stubs (placeholders)**.
 > Os métodos possuem assinaturas completas com type hints e docstrings, mas retornam
 > valores padrão (None, False, 0, etc.) e logam `"... chamado — stub"`.
+>
+> **Exceções já implementadas (GeoDataFrame, sem QGIS):**
+> - `VectorLayerSource.read_geodataframe()`, `list_fields()`,
+>   `write_geodataframe_atomic()`, `concat_geodataframes()`
+> - `VectorLayerMetrics.calculate_area_hectares()`
 >
 > **Implementar sob demanda** — quando um fluxo exigir funcionalidade real,
 > implemente o método específico seguindo o padrão das classes existentes.
@@ -224,6 +229,7 @@ Responsável pela leitura e cálculos espaciais. NÃO altera dados, apenas mede.
 |--------|-----------|---------|
 | `calculate_line_length(layer, field_name, use_ellipsoidal, precision)` | Calcula comprimento de linhas (elipsoidal ou cartesiano) | `None` (atualiza campo) |
 | `calculate_polygon_area(layer, field_name, use_ellipsoidal, precision)` | Calcula área de polígonos em hectares | `None` (atualiza campo) |
+| `calculate_area_hectares(gdf, field_name, precision, tool_key)` | **IMPLEMENTADO** — área de polígonos em hectares a partir de GeoDataFrame (reprojeta para o UTM estimado; fallback EPSG:6933) | `GeoDataFrame` novo com o campo preenchido |
 | `calculate_polygon_perimeter(layer, field_name, use_ellipsoidal, precision)` | Calcula perímetro de polígonos | `None` (atualiza campo) |
 
 ## Exemplo de Uso
@@ -245,6 +251,17 @@ VectorLayerMetrics.calculate_polygon_area(
     field_name="area_ha",
     use_ellipsoidal=False,
     precision=2,
+)
+
+# Área em hectares a partir de GeoDataFrame (implementado — sem QGIS)
+from utils.vector.VectorLayerSource import VectorLayerSource
+
+gdf = VectorLayerSource.read_geodataframe("talhoes.shp", tool_key=ToolKey.MEU_ALGORITHM.value)
+gdf = VectorLayerMetrics.calculate_area_hectares(
+    gdf,
+    field_name="AREA_HA",
+    precision=4,
+    tool_key=ToolKey.MEU_ALGORITHM.value,
 )
 ```
 
@@ -307,13 +324,18 @@ layer_garantido = VectorLayerProjection.ensure_crs(
 **Arquivo:** `utils/vector/VectorLayerSource.py`
 
 Responsável por I/O de camadas vetoriais: carregar, salvar, validar, clonar.
-**Única classe com implementação real de leitura** (`read()` para .shp/.gpkg/.csv).
+**Única classe com implementação real de I/O** (`read()`, `read_geodataframe()`,
+`write_geodataframe_atomic()`, `concat_geodataframes()`).
 
 ## Métodos Estáticos Principais
 
 | Método | Descrição | Retorno |
 |--------|-----------|---------|
-| `read(path, tool_key)` | Lê arquivo vetorial e retorna lista de dicts | `list[dict]` |
+| `read(path, tool_key)` | Lê arquivo vetorial e retorna lista de dicts (sem geometria) | `list[dict]` |
+| `read_geodataframe(path, tool_key)` | **IMPLEMENTADO** — lê SHP/GPKG/KML/**KMZ**/GeoJSON preservando geometria e CRS (KMZ é descompactado em pasta temporária; não há driver KMZ no GDAL) | `GeoDataFrame` |
+| `list_fields(gdf)` | **IMPLEMENTADO** — nomes dos campos de atributos (sem a geometria) | `list[str]` |
+| `write_geodataframe_atomic(gdf, output_path, tool_key)` | **IMPLEMENTADO** — grava SHP (todos os sidecars)/GPKG/GeoJSON de forma atômica (`.tmp` + `os.replace`) | `str` (caminho gravado) |
+| `concat_geodataframes(first, second, tool_key)` | **IMPLEMENTADO** — concatena dois GeoDataFrames preservando geometria e CRS do primeiro (reprojeta o segundo se preciso) | `GeoDataFrame` |
 | `get_driver_name(path, tool_key)` | Nome do driver baseado na extensão | `str` |
 | `save_vector_layer(layer, save_to_folder, output_path, output_name, decision, external_tool_key)` | Salva camada (memória ou disco). `decision`: `"rename"` ou `"overwrite"` | `QgsVectorLayer` ou `None` |
 | `save_layer_to_path(layer, output_path, tool_key, decision)` | Salva e retorna caminho efetivo | `str` ou `None` |
@@ -334,6 +356,20 @@ from core.enum.ToolKey import ToolKey
 
 # Ler dados
 data = VectorLayerSource.read("dados.shp", tool_key=ToolKey.MEU_ALGORITHM.value)
+
+# Ler preservando a geometria (SHP/GPKG/KML/KMZ/GeoJSON)
+gdf = VectorLayerSource.read_geodataframe("limites.kmz", tool_key=ToolKey.MEU_ALGORITHM.value)
+campos = VectorLayerSource.list_fields(gdf)
+
+# Gravar de forma atômica (SHP + sidecars, GPKG ou GeoJSON)
+VectorLayerSource.write_geodataframe_atomic(
+    gdf, "C:/base/limites.shp", tool_key=ToolKey.MEU_ALGORITHM.value
+)
+
+# Empilhar lotes mantendo o CRS da base
+completo = VectorLayerSource.concat_geodataframes(
+    existente, gdf, tool_key=ToolKey.MEU_ALGORITHM.value
+)
 
 # Validar antes de processar
 from qgis.core import QgsWkbTypes
@@ -359,11 +395,14 @@ saved = VectorLayerSource.save_vector_layer(
 ## Extensões Suportadas para Leitura
 - `.shp` — ESRI Shapefile (via geopandas)
 - `.gpkg` — GeoPackage (via geopandas)
+- `.kml` / `.kmz` — KML e KMZ (o KMZ é descompactado; o `doc.kml` interno é lido)
+- `.geojson` / `.json` — GeoJSON
 - `.csv` — CSV (via csv.DictReader)
 
 ## Limitações
-- Métodos de salvamento/validação são **stubs** — implementar sob demanda
-- Extensões de leitura suportadas: `.shp`, `.gpkg`, `.csv`
+- Métodos de salvamento/validação Qgs são **stubs** — implementar sob demanda
+- As extensões de leitura acima valem para `read()` e `read_geodataframe()`
+- A escrita atômica suporta apenas `.shp`, `.gpkg` e `.geojson`/`.json`
 
 ---
 
@@ -819,6 +858,10 @@ point_layer = VectorLayerGeometry.create_point_layer_from_dicts(
 | Explodir linhas em segmentos | VectorLayerGeometry | `explode_lines_to_path_safe()` |
 | Calcular comprimento de linhas | VectorLayerMetrics | `calculate_line_length()` |
 | Calcular área de polígonos em hectares | VectorLayerMetrics | `calculate_polygon_area()` |
+| Calcular área (ha) de GeoDataFrame sem QGIS | VectorLayerMetrics | `calculate_area_hectares()` |
+| Ler vetor com geometria (SHP/GPKG/KML/KMZ/GeoJSON) | VectorLayerSource | `read_geodataframe()` |
+| Gravar SHP/GPKG/GeoJSON de forma atômica | VectorLayerSource | `write_geodataframe_atomic()` |
+| Empilhar lotes mantendo o CRS da base | VectorLayerSource | `concat_geodataframes()` |
 | Calcular perímetro de polígonos | VectorLayerMetrics | `calculate_polygon_perimeter()` |
 | Reprojetar camada vetorial | VectorLayerProjection | `reproject_layer()` |
 | Converter distância para unidade da camada | VectorLayerProjection | `convert_distance_to_layer_units()` |
@@ -899,5 +942,6 @@ Quando precisar implementar um método stub:
 
 | Data | Versão | Descrição |
 |------|--------|-----------|
+| 2026-10-21 | 2.1.0 | `VectorLayerSource`: `read_geodataframe` (KMZ descompactado), `list_fields`, `write_geodataframe_atomic` e `concat_geodataframes`; `VectorLayerMetrics.calculate_area_hectares` (GeoDataFrame, UTM/área equivalente); extensões `.kmz`/`.json` |
 | 2026-06-23 | 2.0.0 | Adaptação para Aetheris ToolBox: stubs de todas as 11 classes, logging via BaseUtil._get_logger, ToolKey de core/enum, imports ajustados, pacotes __init__.py atualizados |
 | 2026-06-23 | 1.0.0 | Criação — documentação original do Cadmus |

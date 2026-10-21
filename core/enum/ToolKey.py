@@ -38,6 +38,7 @@ class ToolKey(str, Enum):
     PROJECT_DATABASE = "ProjectDatabase"
     OS_TRACKER = "OsTracker"
     FIREBASE = "Firebase"
+    LIMITES_DB = "LimitesDb"
 
     PYTHON_LIBRARY_MANAGER = "PythonLibraryManager"  # Ainda não implementado
 

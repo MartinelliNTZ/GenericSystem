@@ -21,7 +21,12 @@ Uso:
 from __future__ import annotations
 
 import csv
+import glob
 import os
+import shutil
+import tempfile
+import uuid
+import zipfile
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
@@ -37,7 +42,9 @@ class VectorLayerSource(BaseUtil):
     Nao transforma geometrias — use VectorLayerGeometry para isso.
     """
 
-    _SUPPORTED_EXTENSIONS = frozenset({".shp", ".gpkg", ".csv", ".kml", ".geojson"})
+    _SUPPORTED_EXTENSIONS = frozenset({
+        ".shp", ".gpkg", ".csv", ".kml", ".kmz", ".geojson", ".json",
+    })
 
     # ── API Publica — Leitura ────────────────────────────────────────
 
@@ -83,7 +90,7 @@ class VectorLayerSource(BaseUtil):
             if ext == ".csv":
                 data = VectorLayerSource._read_csv(path)
             else:
-                data = VectorLayerSource._read_geo(path)
+                data = VectorLayerSource._read_geo(path, tool_key)
 
             logger.info(
                 "Arquivo lido com sucesso",
@@ -119,7 +126,9 @@ class VectorLayerSource(BaseUtil):
             ".gpkg": "GeoPackage",
             ".csv": "CSV",
             ".kml": "KML",
+            ".kmz": "KMZ",
             ".geojson": "GeoJSON",
+            ".json": "GeoJSON",
         }
         result = drivers.get(ext, "Desconhecido")
         logger.debug("Driver obtido", code="VECTOR_DRIVER", path=path, driver=result)
@@ -323,6 +332,203 @@ class VectorLayerSource(BaseUtil):
         logger.info("generate_incremental_path chamado — stub", code="VECTOR_UTIL_STUB")
         return path
 
+    # ── API Publica — GeoDataFrame (com geometria) ───────────────────
+
+    _DRIVERS = {
+        ".shp": "ESRI Shapefile",
+        ".gpkg": "GPKG",
+        ".geojson": "GeoJSON",
+        ".json": "GeoJSON",
+    }
+
+    @staticmethod
+    def read_geodataframe(
+        path: str,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> Any:
+        """
+        Le um arquivo vetorial preservando a geometria (GeoDataFrame).
+
+        Suporta .shp, .gpkg, .kml, .kmz, .geojson e .json. O KMZ e descompactado
+        em pasta temporaria (nao ha driver KMZ no GDAL) e o KML interno e lido.
+
+        Args:
+            path: Caminho do arquivo vetorial.
+            tool_key: Chave da ferramenta para logging.
+
+        Returns:
+            GeoDataFrame com geometria e CRS (quando o arquivo tiver).
+
+        Raises:
+            FileNotFoundError: Se o arquivo nao existe.
+            ValueError: Extensao nao suportada, arquivo vazio ou sem KML no KMZ.
+        """
+        logger = BaseUtil._get_logger(tool_key, "VectorLayerSource")
+
+        if not os.path.exists(path):
+            logger.error("Arquivo nao encontrado", code="VECTOR_NOT_FOUND", path=path)
+            raise FileNotFoundError(f"Arquivo nao encontrado: {path}")
+
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in VectorLayerSource._SUPPORTED_EXTENSIONS:
+            logger.error(
+                "Extensao nao suportada",
+                code="VECTOR_UNSUPPORTED_EXT",
+                path=path,
+                extension=ext,
+            )
+            raise ValueError(
+                f"Extensao '{ext}' nao suportada. "
+                f"Use: {', '.join(sorted(VectorLayerSource._SUPPORTED_EXTENSIONS))}"
+            )
+
+        import geopandas as gpd
+
+        tmp_dir = ""
+        source = path
+        try:
+            if ext == ".kmz":
+                source, tmp_dir = VectorLayerSource._extract_kmz(path, tool_key)
+            gdf = gpd.read_file(source)
+        finally:
+            if tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+
+        if gdf is None or gdf.empty:
+            logger.error("Arquivo vetorial vazio", code="VECTOR_EMPTY", path=path)
+            raise ValueError(f"Arquivo vetorial vazio: {path}")
+
+        logger.info(
+            "GeoDataFrame lido",
+            code="VECTOR_GDF_READ",
+            path=path,
+            n_features=len(gdf),
+            crs=str(gdf.crs) if gdf.crs is not None else "N/A",
+        )
+        return gdf
+
+    @staticmethod
+    def list_fields(gdf: Any) -> List[str]:
+        """Retorna os nomes dos campos de atributos (sem a coluna de geometria)."""
+        geom_name = getattr(getattr(gdf, "geometry", None), "name", "geometry")
+        return [column for column in gdf.columns if column != geom_name]
+
+    @staticmethod
+    def write_geodataframe_atomic(
+        gdf: Any,
+        output_path: str,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """
+        Grava o GeoDataFrame de forma ATOMICA no caminho informado.
+
+        Suporta .shp (com todos os sidecars), .gpkg e .geojson. A escrita ocorre
+        em arquivo temporario na MESMA pasta e so substitui o destino no final.
+
+        Args:
+            gdf: GeoDataFrame a ser gravado.
+            output_path: Caminho final (extensao define o driver).
+            tool_key: Chave da ferramenta para logging.
+
+        Returns:
+            Caminho efetivamente gravado.
+
+        Raises:
+            ValueError: Extensao sem driver suportado ou GeoDataFrame vazio.
+        """
+        logger = BaseUtil._get_logger(tool_key, "VectorLayerSource")
+
+        if gdf is None or len(gdf) == 0:
+            raise ValueError(f"Nada para gravar em '{output_path}': GeoDataFrame vazio.")
+
+        ext = os.path.splitext(output_path)[1].lower()
+        driver = VectorLayerSource._DRIVERS.get(ext)
+        if driver is None:
+            raise ValueError(
+                f"Extensao '{ext}' nao suportada para escrita. "
+                f"Use: {', '.join(sorted(VectorLayerSource._DRIVERS))}"
+            )
+
+        folder = os.path.dirname(output_path) or "."
+        os.makedirs(folder, exist_ok=True)
+
+        stem = os.path.splitext(os.path.basename(output_path))[0]
+        tmp_path = os.path.join(folder, f".__{stem}_{uuid.uuid4().hex[:8]}{ext}")
+        tmp_stem = os.path.splitext(tmp_path)[0]
+
+        try:
+            write_kwargs = {"driver": driver}
+            if ext == ".shp":
+                write_kwargs["encoding"] = "UTF-8"
+            gdf.to_file(tmp_path, **write_kwargs)
+
+            written = glob.glob(glob.escape(tmp_stem) + ".*")
+            if not written:
+                raise ValueError(f"Escrita nao gerou arquivos para '{output_path}'.")
+
+            for tmp_file in written:
+                sidecar = os.path.splitext(tmp_file)[1].lower()
+                os.replace(tmp_file, os.path.join(folder, stem + sidecar))
+        finally:
+            for leftover in glob.glob(glob.escape(tmp_stem) + ".*"):
+                try:
+                    os.remove(leftover)
+                except OSError as e:
+                    logger.warning(
+                        "Falha ao remover temporario de escrita",
+                        code="VECTOR_TMP_CLEAN_ERR",
+                        path=leftover,
+                        error=str(e),
+                    )
+
+        logger.info(
+            "Camada gravada",
+            code="VECTOR_GDF_WRITE",
+            path=output_path,
+            driver=driver,
+            n_features=len(gdf),
+        )
+        return output_path
+
+    @staticmethod
+    def concat_geodataframes(
+        first: Any,
+        second: Any,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> Any:
+        """
+        Concatena dois GeoDataFrames preservando a geometria e o CRS do PRIMEIRO.
+
+        O segundo GeoDataFrame e reprojetado quando o CRS diverge.
+        """
+        import geopandas as gpd
+        import pandas as pd
+
+        logger = BaseUtil._get_logger(tool_key, "VectorLayerSource")
+        geom_name = first.geometry.name
+
+        if (
+            second.crs is not None
+            and first.crs is not None
+            and second.crs != first.crs
+        ):
+            logger.info(
+                "Reprojetando lote para o CRS da base",
+                code="VECTOR_CONCAT_REPROJECT",
+                from_crs=str(second.crs),
+                to_crs=str(first.crs),
+            )
+            second = second.to_crs(first.crs)
+
+        merged = pd.concat([first, second], ignore_index=True)
+        result = gpd.GeoDataFrame(merged, geometry=geom_name, crs=first.crs)
+        logger.info(
+            "GeoDataFrames concatenados",
+            code="VECTOR_CONCAT_DONE",
+            n_total=len(result),
+        )
+        return result
+
     # ── API Publica — Validacao ──────────────────────────────────────
 
     @staticmethod
@@ -348,6 +554,47 @@ class VectorLayerSource(BaseUtil):
         logger.info("validate_layer chamado — stub", code="VECTOR_VALIDATE_STUB")
         return (False, "Nao implementado")
 
+    @staticmethod
+    def _extract_kmz(path: str, tool_key: str) -> Tuple[str, str]:
+        """
+        Extrai o KML de um KMZ em pasta temporaria (nao ha driver KMZ no GDAL).
+
+        Returns:
+            (caminho_do_kml, pasta_temporaria)
+
+        Raises:
+            ValueError: KMZ sem arquivo KML interno.
+        """
+        logger = BaseUtil._get_logger(tool_key, "VectorLayerSource")
+        tmp_dir = tempfile.mkdtemp(prefix="aetheris_kmz_")
+
+        try:
+            with zipfile.ZipFile(path) as archive:
+                kml_names = [
+                    name for name in archive.namelist()
+                    if name.lower().endswith(".kml")
+                ]
+                if not kml_names:
+                    raise ValueError(f"KMZ sem arquivo KML interno: {path}")
+
+                target = next(
+                    (n for n in kml_names if os.path.basename(n).lower() == "doc.kml"),
+                    kml_names[0],
+                )
+                archive.extract(target, tmp_dir)
+        except Exception as e:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            logger.error(
+                "Falha ao extrair KMZ",
+                code="VECTOR_KMZ_ERR",
+                path=path,
+                error=str(e),
+            )
+            raise
+
+        logger.info("KMZ extraido", code="VECTOR_KMZ_OK", path=path, kml=target)
+        return os.path.join(tmp_dir, target), tmp_dir
+
     # ── Leitura Interna ──────────────────────────────────────────────
 
     @staticmethod
@@ -362,12 +609,11 @@ class VectorLayerSource(BaseUtil):
         return data
 
     @staticmethod
-    def _read_geo(path: str) -> List[dict]:
-        """Le Shapefile ou GeoPackage usando geopandas."""
-        import geopandas as gpd
+    def _read_geo(path: str, tool_key: str = ToolKey.UNTRACEABLE.value) -> List[dict]:
+        """Le arquivo geografico (SHP/GPKG/KML/KMZ/GeoJSON) e retorna atributos como texto."""
         import numpy as np
 
-        gdf = gpd.read_file(path)
+        gdf = VectorLayerSource.read_geodataframe(path, tool_key=tool_key)
 
         # Remove coluna geometry
         if "geometry" in gdf.columns:

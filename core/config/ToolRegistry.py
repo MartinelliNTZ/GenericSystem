@@ -212,6 +212,18 @@ class ToolRegistry:
             category=CategoryTool.CENTRAL,
             show_in_toolbar=True,
         ),
+        ToolKey.LIMITES_DB.value: Tool(
+            name=ToolKey.LIMITES_DB.value,
+            title="Base de Limites",
+            widget_factory=_make_factory(
+                "plugins.limites_db.LimitesPlugin",
+                "LimitesPlugin",
+            ),
+            tooltip="Importa vetores (SHP, KML, KMZ, GeoJSON) e grava os limites por OS",
+            tool_type=ToolType.VECTOR,
+            category=CategoryTool.CENTRAL,
+            show_in_toolbar=True,
+        ),
         ToolKey.ICO_CONVERTER.value: Tool(
             name=ToolKey.ICO_CONVERTER.value,
             title="Conversor ICO",

@@ -104,6 +104,12 @@
 | `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS, exibe os dados gerais e o painel **Últimas alterações da OS** (changelog da estrutura filtrado pelo número da OS); cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase`/`CloudStructureDatabase` |
 | `OsTrackerService` (módulo) | Lê a base (Firebase) e as alterações de UMA OS (`load_changes(os_number)`, com `change_summary`/`change_when`); monta os modelos `SubOS`; cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
 
+### plugins/limites_db/
+| Classe | Descrição |
+|---|---|
+| `LimitesPlugin` | Ferramenta CENTRAL da Base de Limites: seleciona um vetor (SHP/GPKG/KML/KMZ/GeoJSON), mapeia o campo do **talhão** (obrigatório) e, opcionalmente, fazenda/OS/SubOS/cliente/área informada; VALIDAR (não grava) e IMPORTAR (calcula a área e grava) |
+| `LimitesService` (módulo) | Regras de negócio: normalização (`TALHÃO`/`FAZENDA` em maiúsculas), área calculada em hectares (`AREA_HA`) + área informada (`AREA_INF`), divergência por tolerância (%), bloqueio de duplicidade `OS-FAZENDA-TALHÃO`, gravação atômica do completão `limites.shp` e de `<OS>/<OS>_limites.shp`; `LimitesInspectWorker` e `LimitesImportWorker` (QRunnable) |
+
 ---
 
 ## resources/ — Recursos Visuais

@@ -1,3 +1,13 @@
+[1.8.8][2026.10.21][16:07] - Nova ferramenta: Base de Limites (importação de vetores por OS)
+  - core/enum/ToolKey.py: nova chave `LIMITES_DB = "LimitesDb"`
+  - core/config/ToolRegistry.py: registro da ferramenta "Base de Limites" (ToolType.VECTOR, CategoryTool.CENTRAL)
+  - plugins/limites_db/LimitesPlugin.py: NOVO — seletor do vetor (SHP/GPKG/KML/KMZ/GeoJSON), mapeamento de campos (TALHÃO obrigatório; FAZENDA/OS/SUB_OS/CLIENTE/ÁREA INFORMADA opcionais), valores manuais para FAZENDA/OS quando não mapeados, resumo da origem e botões VALIDAR/IMPORTAR com processamento em background (QThreadPool + HUD/progresso)
+  - plugins/limites_db/LimitesService.py: NOVO — normalização de TALHÃO/FAZENDA (maiúsculas, sem acento, espaços → `_`), OS como inteiro, SUB_OS padrão "A", AREA_HA calculada em hectares e AREA_INF (informada), alerta de divergência por tolerância (%), bloqueio de duplicidade na chave `OS-FAZENDA-TALHÃO` (no arquivo e na base) e gravação atômica em `<BASE_DADOS>/limites/limites.shp` + `<OS>/<OS>_limites.shp`; workers `LimitesInspectWorker`/`LimitesImportWorker`
+  - utils/vector/VectorLayerSource.py: NOVOS `read_geodataframe` (SHP/GPKG/KML/KMZ/GeoJSON — KMZ descompactado), `list_fields`, `write_geodataframe_atomic` (SHP com sidecars, GPKG e GeoJSON) e `concat_geodataframes` (reprojeta o segundo lote para o CRS da base); extensões `.kmz` e `.json`
+  - utils/vector/VectorLayerMetrics.py: NOVO `calculate_area_hectares` (GeoDataFrame, reprojeção para UTM estimado / EPSG:6933)
+  - docs/skills/SKILL_VECTOR_RASTER_LAYER_UTILS.md e CatalogoClasses.md: métodos e ferramenta documentados
+
+
 [1.8.7][2026.10.21][14:32] - Correções: debounce do filtro, snapshot que não persistia e painel de alterações por OS
   - plugins/project_structure_manager/ProjectStructurePlugin.py: filtro por nome com DEBOUNCE de 350 ms (`_FILTER_DELAY_MS`/`_filter_timer` + `_apply_filter`) — não expande/ler mais os projetos a cada tecla; limpar a busca aplica na hora; timer encerrado no closeEvent
   - core/firebase/FirestoreService.py: `list_documents` agora PAGINA por `nextPageToken` (a 1ª página podia trazer só ~11 docs e as demais OS pareciam novas a cada abertura); `query_documents` aceita `order_by`/`limit` opcionais e `equals` (filtro de igualdade) via `_build_query`
