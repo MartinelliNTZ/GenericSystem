@@ -16,8 +16,9 @@ disco.
 
 O changelog gerado pela ferramenta (``11_AGROROBOTICA/
 OS_<numero>_CHANGELOG.DOCX``) e os temporários do Office (``~$*``) são
-ignorados — assim a própria gravação do documento não vira "alteração" na
-próxima execução.
+ignorados — qualquer ``*_CHANGELOG.DOCX`` dentro de ``11_AGROROBOTICA`` — assim
+a própria gravação do documento não vira "alteração" (criado, removido ou
+modificado) na próxima execução.
 
 Uso:
     from utils.ProjectStructureSnapshot import ProjectStructureSnapshot
@@ -143,6 +144,16 @@ class ProjectStructureSnapshot(BaseUtil):
 
     @staticmethod
     def _is_ignored(name: str, relative: str, ignored: set[str]) -> bool:
-        """Indica se o arquivo é temporário do Office ou o próprio changelog."""
-        return name.startswith("~$") or relative.lower() in ignored
+        """Indica se o arquivo é temporário do Office ou changelog da ferramenta.
+
+        Qualquer ``11_AGROROBOTICA/*_CHANGELOG.DOCX`` é ignorado (não só o nome
+        calculado para a OS) — assim o documento nunca entra como criado,
+        removido ou modificado, inclusive após renomear a pasta da OS.
+        """
+        lower = relative.lower()
+        if name.startswith("~$") or lower in ignored:
+            return True
+        folder = f"{ProjectStructureChangelog.FOLDER_NAME.lower()}/"
+        suffix = ProjectStructureChangelog.DOCUMENT_SUFFIX.lower()
+        return lower.startswith(folder) and lower.endswith(suffix)
 

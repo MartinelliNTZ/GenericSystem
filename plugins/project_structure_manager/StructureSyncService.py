@@ -11,11 +11,14 @@ Lógica pura (sem widgets Qt) executada quando o Gerenciador de Estrutura abre:
    ``ProjectStructureChangeDetector`` (criados/removidos, renomeados, movidos
    e modificados — inclusive renomeação/movimentação de pastas por árvore);
 4. grava o changelog em Word dentro de cada OS
-   (``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``);
-5. grava as alterações e o novo snapshot no banco.
+   (``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``), carimbando QUEM executou
+   a conferência (usuário logado no Firebase + máquina);
+5. grava as alterações (com o mesmo carimbo) e o novo snapshot no banco.
 
 Na primeira execução (banco vazio) apenas a linha de base é salva — nenhuma
-alteração é reportada e nenhum documento Word é criado.
+alteração é reportada e nenhum documento Word é criado. Cada OS vista pela
+PRIMEIRA vez (sem snapshot anterior) é registrada como ``first_run``: um único
+bloco "Primeira inicialização", sem listar as milhares de pastas/arquivos.
 
 O ``StructureSyncWorker`` (QRunnable) executa tudo em background para não
 bloquear a interface (rede + varredura de disco).
@@ -23,14 +26,17 @@ bloquear a interface (rede + varredura de disco).
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
 from core.enum.ToolKey import ToolKey
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
+from core.firebase.FirebaseAuthService import FirebaseAuthService
+from core.firebase.FirebaseCredentialManager import FirebaseCredentialManager
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureChangeDetector import ProjectStructureChangeDetector
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
@@ -55,6 +61,9 @@ class StructureSyncService(BaseUtil):
     )
     _MAX_SUMMARY_OS = 10
     _MAX_DETAIL_LINES = 120
+    _FIRST_RUN_TEXT = (
+        "Primeira inicialização: estrutura registrada como linha de base."
+    )
 
     @classmethod
     def sync(
@@ -70,12 +79,17 @@ class StructureSyncService(BaseUtil):
         baseline = not previous
         changes = (
             [] if baseline
-            else ProjectStructureChangeDetector.detect(previous, current)
+            else cls._compact_first_runs(
+                ProjectStructureChangeDetector.detect(previous, current), previous
+            )
         )
+        operator = cls._operator() if changes else {}
 
-        written = cls._write_changelogs(mother, changes, current, tool_key)
+        written = cls._write_changelogs(mother, changes, current, tool_key, operator)
         changes_saved = (
-            CloudStructureDatabase.save_changes(changes, tool_key=tool_key)
+            CloudStructureDatabase.save_changes(
+                changes, tool_key=tool_key, operator=operator
+            )
             if changes else 0
         )
         snapshots_saved = CloudStructureDatabase.save_snapshots(
@@ -108,13 +122,10 @@ class StructureSyncService(BaseUtil):
     @classmethod
     def summary(cls, changes: List[Dict[str, Any]]) -> str:
         """Resumo curto exibido no corpo do modal."""
-        total = sum(
-            len(change.get(key, []) or [])
-            for change in changes
-            for _, key in cls._DETAIL_LABELS
-        )
+        total = sum(cls._change_total(change) for change in changes)
         listed = [
             f"• OS {change.get('os', '')} — {change.get('scope', '')}"
+            + (" (primeira inicialização)" if change.get("first_run") else "")
             for change in changes[: cls._MAX_SUMMARY_OS]
         ]
         if len(changes) > cls._MAX_SUMMARY_OS:
@@ -132,6 +143,10 @@ class StructureSyncService(BaseUtil):
         lines: List[str] = []
         for change in changes:
             lines.append(f"OS {change.get('os', '')} — {change.get('scope', '')}")
+            if change.get("first_run"):
+                lines.append(f"  {cls._FIRST_RUN_TEXT}")
+                lines.append("")
+                continue
             for label, key in cls._DETAIL_LABELS:
                 for item in change.get(key, []) or []:
                     lines.append(f"  {label}: {cls._item_text(item)}")
@@ -165,6 +180,24 @@ class StructureSyncService(BaseUtil):
         return f"{path} ({date})"
 
     @staticmethod
+    def _operator() -> Dict[str, str]:
+        """Identifica quem executou a conferência (usuário logado + máquina).
+
+        O filesystem não guarda quem alterou cada arquivo — o carimbo é do
+        operador que executou a verificação que detectou as mudanças. Usa o
+        nome da sessão Firebase e, sem login, o nome salvo nas credenciais.
+        """
+        user = FirebaseAuthService.get_current_user()
+        name = (user.get("name") or "").strip()
+        if not name:
+            name = (FirebaseCredentialManager.get_user_name() or "").strip()
+        return {
+            "name": name,
+            "email": (user.get("email") or "").strip(),
+            "machine": (os.getenv("COMPUTERNAME") or "").strip(),
+        }
+
+    @staticmethod
     def _previous_by_scope(
         documents: Dict[str, Dict[str, Any]],
     ) -> Dict[str, Dict[str, Any]]:
@@ -176,6 +209,52 @@ class StructureSyncService(BaseUtil):
             previous[str(data.get("scope") or doc_id)] = data
         return previous
 
+    # ── Primeira inicialização ──────────────────────────────────────
+
+    @classmethod
+    def _compact_first_runs(
+        cls,
+        changes: List[Dict[str, Any]],
+        previous: Dict[str, Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Reduz a PRIMEIRA detecção de cada OS a um único evento.
+
+        Sem snapshot anterior (ou com snapshot vazio) a comparação listaria
+        TODAS as pastas e arquivos como criados — o documento Word ficaria
+        enorme. Nesses casos o registro vira ``first_run`` e o changelog mostra
+        apenas "Primeira inicialização".
+        """
+        compacted: List[Dict[str, Any]] = []
+        for change in changes:
+            scope = str(change.get("scope", ""))
+            if not cls._is_first_run(previous.get(scope)):
+                compacted.append(change)
+                continue
+            compacted.append(
+                {
+                    "scope": scope,
+                    "os": str(change.get("os", "")),
+                    "first_run": True,
+                }
+            )
+        return compacted
+
+    @staticmethod
+    def _is_first_run(before: Optional[Dict[str, Any]]) -> bool:
+        """Indica OS sem snapshot anterior utilizável (nada para comparar)."""
+        if not before:
+            return True
+        return not before.get("folders") and not before.get("files")
+
+    @classmethod
+    def _change_total(cls, change: Dict[str, Any]) -> int:
+        """Quantidade de mudanças do evento (primeira inicialização conta 1)."""
+        if change.get("first_run"):
+            return 1
+        return sum(
+            len(change.get(key, []) or []) for _, key in cls._DETAIL_LABELS
+        )
+
     @classmethod
     def _write_changelogs(
         cls,
@@ -183,6 +262,7 @@ class StructureSyncService(BaseUtil):
         changes: List[Dict[str, Any]],
         current: Dict[str, Dict[str, Any]],
         tool_key: str,
+        operator: Dict[str, str],
     ) -> int:
         """Grava o Word de cada OS alterada e registra a pasta do changelog."""
         written = 0
@@ -192,7 +272,7 @@ class StructureSyncService(BaseUtil):
             if not scope or not folder.is_dir():
                 continue
             result = ProjectStructureChangelog.append_changes(
-                folder, change, tool_key=tool_key
+                folder, change, tool_key=tool_key, operator=operator
             )
             if not result["written"]:
                 continue

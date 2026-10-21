@@ -6,6 +6,8 @@ Lógica pura (sem widgets Qt):
 
 - ``load_orders`` lê os registros de OS da FONTE OFICIAL (Firebase) via a
   classe de banco ``CloudProjectDatabase`` (o plugin NUNCA toca no JSON).
+- ``load_dashboard`` lê a base + as últimas alterações registradas no banco
+  (coluna ``estrutura_changelog``, via ``CloudStructureDatabase.load_changes``).
 - ``build_sub_os`` converte as entradas ``sub_os`` em modelos ``SubOS``.
 - ``create_order`` / ``add_sub_os`` criam OS/SubOS na base (grava no Firebase).
 - ``add_folders`` cria as pastas padrão selecionadas dentro da pasta da OS.
@@ -13,17 +15,20 @@ Lógica pura (sem widgets Qt):
 Uso:
     from plugins.os_tracker.OsTrackerService import OsTrackerService
 
-    orders = OsTrackerService.load_orders()
+    data = OsTrackerService.load_dashboard()
+    orders, changes = data["orders"], data["changes"]
     sub_os = OsTrackerService.build_sub_os(record)
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.enum.ToolKey import ToolKey
 from core.firebase.CloudProjectDatabase import CloudProjectDatabase
+from core.firebase.CloudStructureDatabase import CloudStructureDatabase
 from core.model.SubOSModel import SubOS
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureCreator import ProjectStructureCreator
@@ -33,6 +38,19 @@ from utils.ProjectStructureUtil import ProjectStructureUtil
 class OsTrackerService(BaseUtil):
     """Lê e mantém os registros de OS/SubOS e as pastas associadas."""
 
+    RECENT_CHANGES_LIMIT = 6
+    _CHANGE_SUMMARY_LABELS = (
+        ("pasta(s) criada(s)", "added_folders"),
+        ("pasta(s) removida(s)", "removed_folders"),
+        ("pasta(s) renomeada(s)", "folder_renames"),
+        ("pasta(s) movida(s)", "folder_moves"),
+        ("arquivo(s) criado(s)", "added_files"),
+        ("arquivo(s) removido(s)", "removed_files"),
+        ("arquivo(s) renomeado(s)", "renamed_files"),
+        ("arquivo(s) movido(s)", "moved_files"),
+        ("arquivo(s) modificado(s)", "modified_files"),
+    )
+
     # ── Leitura ─────────────────────────────────────────────────────
 
     @classmethod
@@ -41,6 +59,63 @@ class OsTrackerService(BaseUtil):
     ) -> List[Dict[str, Any]]:
         """Lê os registros de OS da fonte oficial (Firebase — nunca do JSON)."""
         return CloudProjectDatabase.load_orders(tool_key=tool_key)
+
+    @classmethod
+    def load_dashboard(
+        cls,
+        tool_key: str = ToolKey.OS_TRACKER.value,
+        limit: int = RECENT_CHANGES_LIMIT,
+    ) -> Dict[str, Any]:
+        """Lê, numa única passada de background, a base e as últimas alterações."""
+        return {
+            "orders": cls.load_orders(tool_key=tool_key),
+            "changes": cls.load_recent_changes(limit=limit, tool_key=tool_key),
+        }
+
+    @classmethod
+    def load_recent_changes(
+        cls,
+        limit: int = RECENT_CHANGES_LIMIT,
+        tool_key: str = ToolKey.OS_TRACKER.value,
+    ) -> List[Dict[str, Any]]:
+        """Últimas alterações registradas no banco (mais recentes primeiro)."""
+        return CloudStructureDatabase.load_changes(limit=limit, tool_key=tool_key)
+
+    # ── Apresentação das alterações ─────────────────────────────────
+
+    @classmethod
+    def change_summary(cls, change: Dict[str, Any]) -> str:
+        """Resumo curto de uma alteração (ex.: ``2 pasta(s) criada(s)``)."""
+        if change.get("first_run"):
+            return "Primeira inicialização"
+        parts = [
+            f"{len(change.get(key) or [])} {label}"
+            for label, key in cls._CHANGE_SUMMARY_LABELS
+            if change.get(key)
+        ]
+        if not parts:
+            return "Sem itens registrados"
+        return " · ".join(parts[:3] + (["…"] if len(parts) > 3 else []))
+
+    @staticmethod
+    def change_when(
+        change: Dict[str, Any],
+        tool_key: str = ToolKey.OS_TRACKER.value,
+    ) -> str:
+        """Data/hora da alteração (``dd/mm/aaaa hh:mm``) ou o texto original."""
+        value = str(change.get("detected_at", "") or "")
+        if not value:
+            return ""
+        try:
+            return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M")
+        except ValueError as e:
+            BaseUtil._get_logger(tool_key, "OsTrackerService").warning(
+                "Data de alteração inválida",
+                code="OST_CHANGE_DATE_ERR",
+                error=str(e),
+                value=value,
+            )
+            return value
 
     @classmethod
     def build_sub_os(cls, record: Dict[str, Any]) -> List[SubOS]:

@@ -3,7 +3,8 @@
 OsTrackerPlugin — Acompanhamento de OS
 ======================================
 Ferramenta CENTRAL de OS. Lê a FONTE OFICIAL (Firebase) e, para a OS/SubOS
-selecionada, exibe os dados gerais e os cards de SubOS. Permite também:
+selecionada, exibe os dados gerais e as ÚLTIMAS ALTERAÇÕES registradas no banco
+de dados (changelog da estrutura). Permite também:
 
 - **CRIAR OS** — pede os dados básicos (só o NÚMERO é obrigatório) e cria a
   SubOS ``A`` automaticamente. A OS é lançada DIRETO no Firebase.
@@ -25,7 +26,6 @@ from PySide6.QtCore import QTimer
 
 from core.enum.ToolKey import ToolKey
 from core.firebase.FirebaseWorker import FirebaseWorker
-from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from plugins.BasePlugin import BasePlugin
 from plugins.os_tracker.OsTrackerService import OsTrackerService
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
@@ -50,6 +50,7 @@ class OsTrackerPlugin(BasePlugin):
     def __init__(self, parent=None) -> None:
         self._mother_folder: Optional[Path] = None
         self._orders: List[Dict[str, Any]] = []
+        self._changes: List[Dict[str, Any]] = []
         self._load_worker: Optional[FirebaseWorker] = None
         super().__init__(
             tool_key=ToolKey.OS_TRACKER.value,
@@ -151,7 +152,7 @@ class OsTrackerPlugin(BasePlugin):
         self.main_layout.addWidget(self._cards)
 
     def _build_panels(self) -> None:
-        """Cria os painéis de dados gerais e de SubOS."""
+        """Cria os painéis de dados gerais e de últimas alterações do banco."""
         grupo_geral = GroupPainel("Dados Gerais")
         self._general = GridLabel({
             "os": {"label": "OS", "value": "—"},
@@ -162,11 +163,13 @@ class OsTrackerPlugin(BasePlugin):
         }, columns=2)
         grupo_geral.group_layout.addWidget(self._general)
 
-        grupo_sub = GroupPainel("SubOS")
-        self._sub_cards = GridCardView({"items_per_row": 2, "cards": []})
-        grupo_sub.group_layout.addWidget(self._sub_cards)
+        grupo_alteracoes = GroupPainel("Últimas alterações no banco")
+        self._change_cards = GridCardView({"items_per_row": 2, "cards": []})
+        grupo_alteracoes.group_layout.addWidget(self._change_cards)
 
-        self.main_layout.addWidget(GridGroupPainel(grupo_geral, grupo_sub), 1)
+        self.main_layout.addWidget(
+            GridGroupPainel(grupo_geral, grupo_alteracoes), 1
+        )
 
     def _build_legend(self) -> None:
         """Cria a legenda/estado vazio abaixo dos painéis."""
@@ -179,30 +182,36 @@ class OsTrackerPlugin(BasePlugin):
     # ── Carga ────────────────────────────────────────────────────────
 
     def _load_from_disk(self) -> None:
-        """Lê a base da FONTE OFICIAL (Firebase) via classe de banco, em background."""
+        """Lê a base e as últimas alterações do banco, em background."""
         self._orders = []
+        self._changes = []
         self._load_worker = FirebaseWorker(
-            CloudProjectDatabase.load_orders,
+            OsTrackerService.load_dashboard,
             tool_key=self.tool_key,
             parent=self,
         )
-        self._load_worker.finished_with_result.connect(self._on_orders_loaded)
+        self._load_worker.finished_with_result.connect(self._on_data_loaded)
         self._load_worker.failed.connect(self._on_load_failed)
         self._load_worker.start()
 
-    def _on_orders_loaded(self, result: Optional[list]) -> None:
-        """Aplica a base lida na UI."""
-        self._orders = list(result or [])
+    def _on_data_loaded(self, result: Optional[dict]) -> None:
+        """Aplica a base de OS e as últimas alterações lidas do banco."""
+        payload = result if isinstance(result, dict) else {}
+        self._orders = list(payload.get("orders") or [])
+        self._changes = list(payload.get("changes") or [])
         self._populate_selector()
         self._render()
         self.page.set_badge(self.page.PRONTA if self._orders else self.page.INFO)
 
     def _on_load_failed(self, message: str) -> None:
-        """Trata falha ao ler a base (mantém o estado atual)."""
+        """Trata falha ao ler o banco (mantém o estado atual)."""
         self.logger.warning(
             "Falha ao ler a base do Firebase", code="OST_LOAD_ERR", error=message
         )
-        self._on_orders_loaded(list(self._orders))
+        self._on_data_loaded({
+            "orders": list(self._orders),
+            "changes": list(self._changes),
+        })
 
     def _populate_selector(self) -> None:
         """Preenche o combo de OS e restaura a última seleção."""
@@ -274,12 +283,12 @@ class OsTrackerPlugin(BasePlugin):
     # ── Render ───────────────────────────────────────────────────────
 
     def _render(self) -> None:
-        """Atualiza cards, dados gerais e SubOS para a OS/SubOS selecionadas."""
+        """Atualiza cards, dados gerais e alterações do banco para a seleção."""
         record = self._current_record()
         entry = self._current_sub_entry(record)
         self._render_cards(record, entry)
         self._render_general(record, entry)
-        self._render_sub_cards(record, entry)
+        self._render_changes()
         self._render_legend(record)
 
     def _render_cards(
@@ -319,31 +328,51 @@ class OsTrackerPlugin(BasePlugin):
             return rel_path or ""
         return str(ProjectStructureUtil.resolve_path(self._mother_folder, rel_path))
 
-    def _render_sub_cards(
-        self,
-        record: Optional[Dict[str, Any]],
-        entry: Optional[Dict[str, Any]],
-    ) -> None:
-        """Reconstrói os cards de SubOS (destacando a selecionada)."""
-        sub_os_list = OsTrackerService.build_sub_os(record) if record else []
-        selected = self._sub_combo.current_value or ""
-        cards = []
-        for sub in sub_os_list:
-            marker = "◀" if sub.code == selected else ""
-            cards.append({"labels": [
-                {"type": "great_accent", "text": f"SubOS {sub.code or '—'} {marker}".strip()},
-                {"type": "simple_accent", "text": sub.name or "—"},
-                {"type": "simple", "text": sub.commercial_name or "—"},
-                {"type": "simple", "text": sub.document or "—"},
-            ]})
-        self._sub_cards.build({"items_per_row": 2, "cards": cards})
+    def _render_changes(self) -> None:
+        """Reconstrói os cards das últimas alterações registradas no banco."""
+        cards = [self._change_card(change) for change in self._changes]
+        self._change_cards.build({"items_per_row": 2, "cards": cards})
+
+    @classmethod
+    def _change_card(cls, change: Dict[str, Any]) -> Dict[str, Any]:
+        """Monta o card de uma alteração (OS/data, resumo e operador)."""
+        os_number = str(change.get("os", "") or "—")
+        when = OsTrackerService.change_when(change)
+        scope = str(change.get("scope", "") or "")
+        email = str(change.get("detected_by_email", "") or "")
+        return {"labels": [
+            {
+                "type": "great_accent",
+                "text": f"OS {os_number} · {when}" if when else f"OS {os_number}",
+                "tooltip": scope,
+            },
+            {
+                "type": "simple_accent",
+                "text": OsTrackerService.change_summary(change),
+                "tooltip": scope,
+            },
+            {
+                "type": "simple",
+                "text": cls._change_author(change),
+                "tooltip": email or scope,
+            },
+        ]}
+
+    @staticmethod
+    def _change_author(change: Dict[str, Any]) -> str:
+        """Operador/máquina que executou a conferência registrada."""
+        name = str(change.get("detected_by", "") or "").strip()
+        email = str(change.get("detected_by_email", "") or "").strip()
+        machine = str(change.get("machine", "") or "").strip()
+        who = name or email or "operador não registrado"
+        return f"por {who} · {machine}" if machine else f"por {who}"
 
     def _render_legend(self, record: Optional[Dict[str, Any]]) -> None:
         """Atualiza a legenda/estado vazio."""
-        if record and record.get("sub_os"):
-            text = "● SubOS da OS selecionada — cliente, nome comercial e CNPJ"
-        elif record:
-            text = "OS selecionada sem SubOS cadastradas no banco."
+        if self._changes:
+            text = "● Últimas alterações do banco — OS, data, resumo e operador"
+        elif record and record.get("sub_os"):
+            text = "Nenhuma alteração registrada no banco de dados."
         elif self._mother_folder is None:
             text = "Defina a pasta-mãe no Gerenciador de Estrutura."
         else:

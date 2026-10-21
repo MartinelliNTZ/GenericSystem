@@ -186,6 +186,84 @@ class FirestoreService(BaseUtil):
             return {}
 
     @classmethod
+    def query_documents(
+        cls,
+        collection: str,
+        order_by: str,
+        limit: int = 20,
+        descending: bool = True,
+        tool_key: str = ToolKey.FIREBASE.value,
+    ) -> List[Dict[str, Any]]:
+        """Consulta documentos ordenados por um campo (``documents:runQuery``).
+
+        Diferente de ``list_documents`` (ordem por ``doc_id``), aqui a ordem vem
+        do Firestore — necessário para obter os registros mais recentes de
+        coleções grandes.
+
+        Returns:
+            Lista de ``{"doc_id": ..., **campos}`` na ordem solicitada.
+        """
+        logger = cls._get_logger(tool_key, "FirestoreService", channel=LogUtils.DATABASE_CHANNEL)
+        url = f"{cls._base_url()}:runQuery"
+        payload = {
+            "structuredQuery": {
+                "from": [{"collectionId": collection}],
+                "orderBy": [
+                    {
+                        "field": {"fieldPath": order_by},
+                        "direction": "DESCENDING" if descending else "ASCENDING",
+                    }
+                ],
+                "limit": max(1, int(limit)),
+            }
+        }
+
+        try:
+            resp = requests.post(url, headers=cls._auth_headers(), json=payload, timeout=20)
+            if resp.status_code == 401:
+                if FirebaseTokenProvider.refresh():
+                    resp = requests.post(
+                        url, headers=cls._auth_headers(), json=payload, timeout=20
+                    )
+
+            if resp.status_code != 200:
+                logger.warning(
+                    f"Falha na consulta da coleção {collection}",
+                    code="FS_QUERY_FAIL",
+                    status=resp.status_code,
+                )
+                return []
+
+            rows = cls._documents_from_query(resp.json())
+            logger.info(
+                f"Consulta da coleção {collection} retornou {len(rows)} documento(s)",
+                code="FS_QUERY_OK",
+            )
+            return rows
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                f"Erro ao consultar a coleção {collection}",
+                code="FS_QUERY_NET_ERR",
+                error=str(e),
+            )
+            return []
+
+    @classmethod
+    def _documents_from_query(
+        cls, payload: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Extrai ``{"doc_id", **campos}`` da resposta do ``runQuery``."""
+        rows: List[Dict[str, Any]] = []
+        for item in payload:
+            document = item.get("document") if isinstance(item, dict) else None
+            if not document:
+                continue
+            data = cls.firestore_to_dict(document)
+            data["doc_id"] = str(document.get("name", "")).rsplit("/", 1)[-1]
+            rows.append(data)
+        return rows
+
+    @classmethod
     def delete_document(
         cls,
         collection: str,

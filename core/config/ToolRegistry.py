@@ -207,7 +207,7 @@ class ToolRegistry:
                 "plugins.os_tracker.OsTrackerPlugin",
                 "OsTrackerPlugin",
             ),
-            tooltip="Escolha uma OS e visualize seus dados (SubOS, cliente, CNPJ)",
+            tooltip="Escolha uma OS e veja os dados + as últimas alterações do banco",
             tool_type=ToolType.VERRA,
             category=CategoryTool.CENTRAL,
             show_in_toolbar=True,

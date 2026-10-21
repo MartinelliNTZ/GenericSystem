@@ -6,16 +6,33 @@ Grava/atualiza o changelog da estrutura de uma OS em
 ``<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``.
 
 O documento é criado sob demanda (na primeira alteração detectada) e, nas
-próximas execuções, recebe um novo bloco com data/hora e a lista de pastas e
-arquivos criados/removidos. Os blocos ficam em ordem DECRESCENTE (o mais
-recente no topo, logo abaixo do cabeçalho). O arquivo é EXCLUÍDO do snapshot
-da estrutura — sem isso, a própria atualização do documento apareceria como
-alteração.
+próximas execuções, recebe um novo bloco com data/hora, o operador que
+executou a conferência e a lista de pastas e arquivos criados/removidos. Os
+blocos ficam em ordem DECRESCENTE (o mais recente no topo, logo abaixo do
+cabeçalho). O arquivo é EXCLUÍDO do snapshot da estrutura — sem isso, a própria
+atualização do documento apareceria como alteração.
+
+Na PRIMEIRA detecção de uma OS (sem snapshot anterior) o bloco é reduzido a
+uma única linha — "Primeira inicialização" — em vez de listar todas as pastas
+e arquivos criados.
+
+Na PRIMEIRA detecção de uma OS (sem snapshot anterior) o bloco é reduzido a
+uma única linha — "Primeira inicialização" — em vez de listar todas as pastas
+e arquivos criados.
+
+O próprio `.DOCX` do changelog **nunca** entra na conta: qualquer arquivo
+`11_AGROROBOTICA/*_CHANGELOG.DOCX` (e os temporários `~$*`) é ignorado pelo
+snapshot, então ele não aparece como criado, removido nem modificado.
+
+O carimbo de autoria é do operador que EXECUTOU a verificação: o filesystem não
+guarda quem criou/renomeou/removeu cada arquivo, apenas a data da última
+modificação.
 
 Uso:
     from utils.ProjectStructureChangelog import ProjectStructureChangelog
 
-    result = ProjectStructureChangelog.append_changes(os_folder, change)
+    operator = {"name": "Fulano", "email": "fulano@x.com", "machine": "PC-01"}
+    result = ProjectStructureChangelog.append_changes(os_folder, change, operator=operator)
     # result -> {"written": bool, "created_folder": bool, "path": str}
 """
 
@@ -23,7 +40,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
@@ -38,6 +55,11 @@ class ProjectStructureChangelog(BaseUtil):
 
     FOLDER_NAME = "11_AGROROBOTICA"
     DOCUMENT_SUFFIX = "_CHANGELOG.DOCX"
+    # Bloco reduzido da primeira detecção de uma OS (evita listar milhares de
+    # pastas/arquivos criados).
+    FIRST_RUN_TEXT = (
+        "Primeira inicialização: estrutura completa registrada como linha de base."
+    )
     # Quantidade de parágrafos do cabeçalho criado por _new_document.
     HEADER_PARAGRAPHS = 3
 
@@ -87,8 +109,16 @@ class ProjectStructureChangelog(BaseUtil):
         os_folder: str | Path,
         change: Dict[str, Any],
         tool_key: str = ToolKey.PROJECT_STRUCTURE.value,
+        operator: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Acrescenta um bloco de alterações ao changelog da OS.
+
+        Args:
+            os_folder: pasta da OS (onde o documento é gravado).
+            change: alteração detectada (listas de criados/removidos/etc.).
+            tool_key: ferramenta dona do log.
+            operator: quem executou a conferência
+                (``{"name", "email", "machine"}``); opcional.
 
         Returns:
             ``{"written", "created_folder", "path"}`` — ``written`` é ``False``
@@ -100,7 +130,7 @@ class ProjectStructureChangelog(BaseUtil):
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             document = cls._load_document(path, os_folder, logger)
-            cls._append_event(document, change, tool_key)
+            cls._append_event(document, change, tool_key, operator)
             document.save(str(path))
         except (OSError, ValueError) as e:
             logger.error(
@@ -147,6 +177,7 @@ class ProjectStructureChangelog(BaseUtil):
         document: Document,
         change: Dict[str, Any],
         tool_key: str,
+        operator: Optional[Dict[str, str]] = None,
     ) -> None:
         """Insere o bloco de alterações logo após o cabeçalho.
 
@@ -159,6 +190,29 @@ class ProjectStructureChangelog(BaseUtil):
                 datetime.now().strftime("%d/%m/%Y %H:%M:%S"), level=2
             )
         ]
+        operator_text = cls._operator_text(operator)
+        if operator_text:
+            created.append(
+                document.add_paragraph(f"Conferido por: {operator_text}")
+            )
+        if change.get("first_run"):
+            created.append(document.add_paragraph(cls.FIRST_RUN_TEXT))
+        else:
+            cls._append_items(document, change, tool_key, created)
+        if existing > cls.HEADER_PARAGRAPHS:
+            anchor = document.paragraphs[cls.HEADER_PARAGRAPHS]._p
+            for paragraph in created:
+                anchor.addprevious(paragraph._p)
+
+    @classmethod
+    def _append_items(
+        cls,
+        document: Document,
+        change: Dict[str, Any],
+        tool_key: str,
+        created: List[Any],
+    ) -> None:
+        """Acrescenta os bullets de alteração (ou o aviso de nenhuma)."""
         registered = False
         for label, key in cls._CHANGE_LABELS:
             for item in change.get(key, []) or []:
@@ -169,10 +223,17 @@ class ProjectStructureChangelog(BaseUtil):
                 registered = True
         if not registered:
             created.append(document.add_paragraph("Sem alterações registradas."))
-        if existing > cls.HEADER_PARAGRAPHS:
-            anchor = document.paragraphs[cls.HEADER_PARAGRAPHS]._p
-            for paragraph in created:
-                anchor.addprevious(paragraph._p)
+
+    @staticmethod
+    def _operator_text(operator: Optional[Dict[str, str]]) -> str:
+        """Formata o operador: ``Nome (email) — MAQUINA`` (partes ausentes são omitidas)."""
+        if not operator:
+            return ""
+        name = str(operator.get("name") or "").strip()
+        email = str(operator.get("email") or "").strip()
+        machine = str(operator.get("machine") or "").strip()
+        identity = f"{name} ({email})" if name and email else (name or email)
+        return " — ".join(part for part in (identity, machine) if part)
 
     @classmethod
     def _item_text(cls, item: Any, tool_key: str) -> str:

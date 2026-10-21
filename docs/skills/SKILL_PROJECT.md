@@ -373,15 +373,20 @@ ferramenta agenda em background a conferência da estrutura:
    **movidos** e **renomeação/movimentação de pastas** (validação por árvore).
 4. `ProjectStructureChangelog.append_changes` grava/atualiza
    `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX` (blocos em ordem
-   decrescente — o mais recente fica no topo).
+   decrescente — o mais recente fica no topo), carimbando **quem executou a
+   conferência** na linha `Conferido por: Nome (email) — MAQUINA`.
 5. `CloudStructureDatabase.save_changes` grava o histórico em
    `estrutura_changelog` e `save_snapshots` atualiza `estrutura_projetos`
    (podando OS que não existem mais em disco).
 
 Na primeira execução (banco vazio) só a **linha de base** é salva — nenhuma
-alteração é reportada e nenhum Word é criado. Nas execuções seguintes, se
-houver mudanças, um **modal** (`MessageBox.show_info`, com detalhes
-colapsáveis) lista as OS alteradas.
+alteração é reportada e nenhum Word é criado. Cada OS vista pela **primeira
+vez** (sem snapshot anterior, ou com snapshot vazio) é compactada em um único
+evento `first_run`: o Word ganha só o bloco **"Primeira inicialização"** em vez
+de listar milhares de pastas/arquivos criados (`StructureSyncService.
+_compact_first_runs`). Nas execuções seguintes, se houver mudanças, um
+**modal** (`MessageBox.show_info`, com detalhes colapsáveis) lista as OS
+alteradas.
 
 ### Arquivos
 
@@ -398,6 +403,10 @@ colapsáveis) lista as OS alteradas.
 
 - O próprio `.DOCX` do changelog e os temporários do Office (`~$*`) são
   ignorados no snapshot — evita "alteração" causada pela escrita do documento.
+  A regra é por **padrão**: qualquer `11_AGROROBOTICA/*_CHANGELOG.DOCX`
+  (case-insensitive) fica fora do snapshot, então o documento nunca aparece
+  como criado, removido nem **modificado**, mesmo se a pasta da OS for
+  renomeada.
 - Os mapas `sizes` e `modified` guardam, por arquivo, o tamanho (bytes) e a
   data da última modificação (ISO). Eles alimentam a classificação de
   renomeação/movimentação (mesmo tamanho) e de arquivos modificados (data
@@ -409,5 +418,15 @@ colapsáveis) lista as OS alteradas.
   no snapshot atual para não aparecer como pasta adicionada na próxima execução.
 - A conferência roda no máximo 1 vez a cada **5 minutos** por ferramenta
   (`_SYNC_INTERVAL`), além do gatilho do botão ATUALIZAR.
+- **Autoria**: cada bloco do `.DOCX` e cada documento de `estrutura_changelog`
+  registram o **operador que executou a conferência**
+  (`StructureSyncService._operator`: nome/e-mail da sessão Firebase, fallback
+  para o nome salvo nas credenciais + `COMPUTERNAME`). O filesystem **não**
+  guarda quem criou/renomeou/removeu cada arquivo — apenas a data da última
+  modificação (`modified`); não existe autoria por arquivo.
+- O **Acompanhamento de OS** (`OsTrackerPlugin`) exibe as últimas entradas do
+  `estrutura_changelog` no painel **"Últimas alterações no banco"**
+  (`CloudStructureDatabase.load_changes(limit)` → `FirestoreService.query_documents`
+  com `orderBy: detected_at DESC`).
 - `python-docx` é dependência declarada em `requirements.txt`.
 

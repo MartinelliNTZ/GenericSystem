@@ -432,8 +432,9 @@ snapshot = ProjectStructureSnapshot.scan(mother)
 # {scope: {"folders": [...], "files": [...], "sizes": {...}, "modified": {...}}}
 ```
 
-Ignora os temporários do Office (`~$*`) e o próprio arquivo de changelog da OS
-(`11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`).
+Ignora os temporários do Office (`~$*`) e **qualquer** changelog em
+`11_AGROROBOTICA/*_CHANGELOG.DOCX` (case-insensitive) — o documento não entra
+como criado, removido nem modificado.
 
 ### `utils.ProjectStructureChangeDetector`
 
@@ -463,11 +464,25 @@ demanda e inserindo cada novo bloco no topo (o mais recente primeiro):
 ```python
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
 
-result = ProjectStructureChangelog.append_changes(os_folder, change)
+operator = {"name": "Fulano", "email": "fulano@x.com", "machine": "PC-01"}
+result = ProjectStructureChangelog.append_changes(
+    os_folder, change, operator=operator
+)
 # result -> {"written": bool, "created_folder": bool, "path": str}
 ```
 
 Caminho: `<pasta da OS>/11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`.
+
+`operator` é opcional: quando informado, cada bloco recebe a linha
+`Conferido por: Nome (email) — MAQUINA` logo abaixo da data/hora. O utilitário
+**não** resolve a identidade sozinho (não importa Firebase) — quem chama passa
+o operador. Autoria é de **quem executou a conferência**; o filesystem não
+guarda quem alterou cada arquivo.
+
+Quando o dicionário da alteração traz `first_run: True` (primeira detecção da
+OS — ver `StructureSyncService._compact_first_runs`), o bloco recebe apenas
+`Primeira inicialização: estrutura completa registrada como linha de base.` em
+vez dos bullets de pastas/arquivos.
 
 
 

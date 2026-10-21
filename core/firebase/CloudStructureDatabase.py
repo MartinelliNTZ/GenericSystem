@@ -11,7 +11,8 @@ Coleções:
 - ``estrutura_projetos`` — um documento por pasta de OS com o último snapshot
   (``scope``, ``os``, ``folders``, ``files`` e ``updated_at``);
 - ``estrutura_changelog`` — um documento por evento de alteração detectada
-  (``scope``, ``os``, listas de mudanças e ``detected_at``).
+  (``scope``, ``os``, listas de mudanças, ``detected_at`` e o operador em
+  ``detected_by``/``detected_by_email``/``machine``).
 
 Uso:
     from core.firebase.CloudStructureDatabase import CloudStructureDatabase
@@ -49,6 +50,24 @@ class CloudStructureDatabase(BaseUtil):
         """Retorna ``{doc_id: snapshot}`` da coleção de snapshots."""
         return FirestoreService.list_documents(
             cls.SNAPSHOT_COLLECTION, tool_key=tool_key
+        )
+
+    @classmethod
+    def load_changes(
+        cls,
+        limit: int = 20,
+        tool_key: str = ToolKey.PROJECT_DATABASE.value,
+    ) -> List[Dict[str, Any]]:
+        """Retorna as últimas alterações registradas (mais recentes primeiro).
+
+        Usa consulta ordenada por ``detected_at`` no Firestore — não depende da
+        ordem do ``doc_id`` (que começa pelo escopo da OS).
+        """
+        return FirestoreService.query_documents(
+            cls.CHANGELOG_COLLECTION,
+            order_by="detected_at",
+            limit=limit,
+            tool_key=tool_key,
         )
 
     # ── Escrita ─────────────────────────────────────────────────────
@@ -111,20 +130,37 @@ class CloudStructureDatabase(BaseUtil):
         cls,
         changes: List[Dict[str, Any]],
         tool_key: str = ToolKey.PROJECT_DATABASE.value,
+        operator: Optional[Dict[str, str]] = None,
     ) -> int:
-        """Grava um documento por OS alterada na coleção de changelog."""
+        """Grava um documento por OS alterada na coleção de changelog.
+
+        ``operator`` (``{"name", "email", "machine"}``) identifica quem
+        executou a conferência — o filesystem não informa quem alterou cada
+        arquivo, apenas a data da última modificação.
+        """
         saved = 0
         detected_at = datetime.now()
         stamp = detected_at.strftime("%Y%m%d%H%M%S")
         for index, change in enumerate(changes):
             payload = dict(change)
             payload["detected_at"] = detected_at.isoformat(timespec="seconds")
+            cls._stamp_operator(payload, operator)
             doc_id = f"{cls._doc_id(change.get('scope', ''))}_{stamp}{index:03d}"
             if FirestoreService.save_document(
                 cls.CHANGELOG_COLLECTION, doc_id, payload, tool_key=tool_key
             ):
                 saved += 1
         return saved
+
+    @staticmethod
+    def _stamp_operator(
+        payload: Dict[str, Any], operator: Optional[Dict[str, str]]
+    ) -> None:
+        """Inclui ``detected_by``/``detected_by_email``/``machine`` no payload."""
+        operator = operator or {}
+        payload["detected_by"] = str(operator.get("name", "") or "")
+        payload["detected_by_email"] = str(operator.get("email", "") or "")
+        payload["machine"] = str(operator.get("machine", "") or "")
 
     # ── Internos ────────────────────────────────────────────────────
 

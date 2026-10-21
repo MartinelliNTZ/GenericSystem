@@ -1,3 +1,23 @@
+[1.8.6][2026.10.21][13:54] - Acompanhamento de OS: painel de SubOS substituído por "Últimas alterações no banco"
+  - core/firebase/FirestoreService.py: novo `query_documents(collection, order_by, limit, descending)` via `documents:runQuery` (ordenação e limite no servidor) + `_documents_from_query` (inclui o `doc_id` no resultado)
+  - core/firebase/CloudStructureDatabase.py: novo `load_changes(limit)` — últimas alterações de `estrutura_changelog` ordenadas por `detected_at` (mais recentes primeiro)
+  - plugins/os_tracker/OsTrackerService.py: novos `load_dashboard` (base + alterações em uma única leitura de background), `load_recent_changes`, `change_summary` e `change_when`
+  - plugins/os_tracker/OsTrackerPlugin.py: painel "SubOS" REMOVIDO e substituído por "Últimas alterações no banco" (GridCardView — OS/data, resumo das mudanças e operador/máquina, com tooltip do escopo/e-mail); legenda ajustada; carga única via `OsTrackerService.load_dashboard`
+  - core/config/ToolRegistry.py: tooltip do Acompanhamento de OS atualizado
+  - docs/skills/SKILL_PROJECT.md, SKILL_DATABASE.md e CatalogoClasses.md: documentação do painel e da consulta ordenada
+
+[1.8.5][2026.10.20][17:26] - Primeira inicialização compacta + DOCX do changelog sempre ignorado
+  - plugins/project_structure_manager/StructureSyncService.py: novos `_compact_first_runs`/`_is_first_run` — OS sem snapshot anterior (ou com snapshot vazio) deixa de listar todas as pastas/arquivos: vira um único evento `first_run`; `summary`/`detail` contam 1 mudança e exibem "Primeira inicialização"
+  - utils/ProjectStructureChangelog.py: bloco com `first_run` grava apenas "Primeira inicialização: estrutura completa registrada como linha de base." (sem bullets); itens extraídos para `_append_items`
+  - utils/ProjectStructureSnapshot.py: exclusão por PADRÃO — qualquer `11_AGROROBOTICA/*_CHANGELOG.DOCX` (case-insensitive), além dos temporários `~$*`, fica fora do snapshot (não conta como criado, removido nem modificado)
+  - docs/skills/SKILL_PROJECT.md, SKILL_UTILS.md, SKILL_DATABASE.md e CatalogoClasses.md: documentação do `first_run` e da exclusão reforçada do changelog
+
+[1.8.4][2026.10.20][14:16] - Changelog da estrutura: registro de quem executou a conferência
+  - plugins/project_structure_manager/StructureSyncService.py: novo `_operator()` — resolve o operador (nome/e-mail da sessão Firebase, fallback para o nome das credenciais salvas, + `COMPUTERNAME`) e repassa às gravações; o carimbo é de QUEM EXECUTOU a conferência (o filesystem não guarda quem alterou cada arquivo, só a data da última modificação)
+  - utils/ProjectStructureChangelog.py: `append_changes`/`_append_event` aceitam `operator` e gravam a linha "Conferido por: Nome (email) — MAQUINA" logo abaixo da data/hora de cada bloco (sem alterar `HEADER_PARAGRAPHS`)
+  - core/firebase/CloudStructureDatabase.py: `save_changes` aceita `operator` e grava `detected_by`, `detected_by_email` e `machine` em cada documento de `estrutura_changelog`
+  - docs/skills/SKILL_PROJECT.md, SKILL_UTILS.md, SKILL_DATABASE.md e CatalogoClasses.md: documentação do carimbo de autoria e da limitação (sem autoria por arquivo)
+
 [1.8.3][2026.10.19][17:30] - Detecção isolada + identificação inteligente de renomeações/movimentações
   - utils/ProjectStructureChangeDetector.py: NOVO — componente ISOLADO (sem Qt, banco e UI) que compara snapshots e classifica: pastas/arquivos criados e removidos, arquivos modificados, `renamed_files` (mesma pasta + mesmo tamanho), `moved_files` (mesmo nome + mesmo tamanho, pasta diferente) e `folder_renames`/`folder_moves` (validação por ÁRVORE: subpastas + arquivos + tamanhos; só pares únicos — se houver ambiguidade, os arquivos são comparados individualmente)
   - utils/ProjectStructureSnapshot.py: agora é SÓ scanner (`scan`) — grava `sizes` (tamanho em bytes) e `modified` (data da última modificação) por arquivo; `diff` e a detecção foram removidos daqui
