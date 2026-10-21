@@ -4,16 +4,21 @@ LimitesService — Regras de negócio da Base de Limites
 =====================================================
 Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) para a base de limites:
 
-    <BASE_DADOS>/limites/limites.shp              → completão (todas as OS)
-    <BASE_DADOS>/limites/<OS>/<OS>_limites.shp    → um arquivo por OS
+    <BASE_DADOS>/limites/limites.shp                       → completão (todas as OS)
+    <BASE_DADOS>/limites/<OS>/<OS>_limites.shp             → um arquivo por OS
+    <pasta da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp   → cópia no projeto
 
 Regras de negócio:
 - TALHÃO é obrigatório (sempre vem de um campo do vetor).
 - FAZENDA e OS são obrigatórios (campo mapeado OU valor manual).
 - SUB_OS é ``A`` por padrão; aceita campo mapeado ou valor manual (letra única).
 - AREA_HA é CALCULADA em hectares; AREA_INF guarda a área informada (opcional).
-- A chave ``OS-FAZENDA-TALHÃO`` é única: duplicidade BLOQUEIA a importação.
+- A chave ``OS-FAZENDA-TALHÃO`` é única; quando a SubOS NÃO é ``A`` ela recebe o
+  sufixo ``-<SubOS>`` (ex.: ``39-FAZ_X-P3-B``), permitindo o mesmo talhão em
+  SubOS diferentes. Duplicidade BLOQUEIA a importação.
 - Divergência entre área informada e calculada apenas ALERTA (tolerância em %).
+- Depois de gravar, cada OS/SubOS ganha a cópia no projeto e o registro
+  ``limites`` na SubOS do banco (via ``CloudProjectDatabase`` — Contrato 28).
 
 A leitura/escrita vetorial é delegada para ``utils.vector`` (Contrato 25).
 """
@@ -24,13 +29,18 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 from PySide6.QtCore import QObject, QRunnable, Signal
 
 from core.enum.ToolKey import ToolKey
+from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from utils.BaseUtil import BaseUtil
+from utils.Preferences import Preferences
+from utils.ProjectStructureUtil import ProjectStructureUtil
 from utils.vector.VectorLayerMetrics import VectorLayerMetrics
 from utils.vector.VectorLayerSource import VectorLayerSource
 
@@ -44,6 +54,10 @@ CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
 DEFAULT_SUB_OS = "A"
 DEFAULT_TOLERANCE_PCT = 1.0
+
+# Estrutura Verra: <projeto da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp
+LIMITES_FOLDER = "08_LIMITES"
+TALHOES_FOLDER = "TALHOES"
 
 FIELD_TALHAO = "TALHAO"
 FIELD_FAZENDA = "FAZENDA"
@@ -263,10 +277,13 @@ class LimitesService(BaseUtil):
             },
             "consolidated": consolidated,
             "os_files": [],
+            "copies": [],
+            "db_updated": 0,
             "warnings": warnings,
         }
 
         if dry_run:
+            warnings.extend(cls._structure_warnings(prepared))
             cls._notify(progress_cb, 100, "Validação concluída.")
             logger.info(
                 "Validação da importação concluída",
@@ -287,6 +304,10 @@ class LimitesService(BaseUtil):
             os_files.append(target)
 
         payload["os_files"] = os_files
+
+        cls._notify(progress_cb, 92, "Copiando para os projetos...")
+        cls._publish_to_projects(prepared, config, payload, logger)
+
         cls._notify(progress_cb, 100, "Importação concluída.")
 
         logger.info(
@@ -294,6 +315,8 @@ class LimitesService(BaseUtil):
             code="LIM_IMPORT_DONE",
             n_features=payload["n_features"],
             n_os=len(os_files),
+            n_copies=len(payload["copies"]),
+            n_db_updated=payload["db_updated"],
             total_ha=payload["total_ha"],
             n_warnings=len(warnings),
             root=config.output_root,
@@ -351,7 +374,10 @@ class LimitesService(BaseUtil):
                 continue
 
             os_numbers.append(int(os_number))
-            keys.append(f"{int(os_number)}-{fazenda}-{talhao}")
+            key = f"{int(os_number)}-{fazenda}-{talhao}"
+            if sub_os != DEFAULT_SUB_OS:
+                key = f"{key}-{sub_os}"
+            keys.append(key)
 
         if problems:
             raise LimitesValidationError(cls._limit_problems(problems))
@@ -476,6 +502,239 @@ class LimitesService(BaseUtil):
             merged = new_gdf
 
         VectorLayerSource.write_geodataframe_atomic(merged, target, tool_key=_TOOL_KEY)
+
+    # ── Estrutura do projeto (Verra) + banco ────────────────────────
+
+    @classmethod
+    def _publish_to_projects(
+        cls,
+        prepared: Any,
+        config: LimitesImportConfig,
+        payload: Dict[str, Any],
+        logger: Any,
+    ) -> None:
+        """Copia os limites para ``<projeto da SubOS>/08_LIMITES/TALHOES`` e registra no banco."""
+        warnings: List[str] = payload["warnings"]
+
+        mother = cls._load_mother_folder()
+        if mother is None:
+            warnings.append(
+                "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
+                f"{LIMITES_FOLDER}/{TALHOES_FOLDER} não foi gerada."
+            )
+            return
+
+        projects_by_os = ProjectStructureUtil.group_projects_by_os(
+            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
+        )
+        records: Dict[str, Optional[Dict[str, Any]]] = {}
+
+        for (os_number, sub_os), group in prepared.groupby(
+            [FIELD_OS, FIELD_SUB_OS], sort=True
+        ):
+            number = str(int(os_number))
+            letter = str(sub_os)
+
+            if number not in records:
+                records[number] = cls._load_order(number, logger)
+            record = records[number]
+
+            folder, reason = cls._find_sub_os_folder(
+                mother, record, number, letter, projects_by_os
+            )
+            if folder is None:
+                warnings.append(
+                    f"OS {number} · SubOS {letter}: {reason} — cópia no projeto não gerada."
+                )
+                continue
+
+            try:
+                copy_path = cls._write_project_copy(folder, number, group)
+            except Exception as e:
+                logger.error(
+                    "Falha ao gravar a copia no projeto",
+                    code="LIM_COPY_ERR",
+                    path=str(folder),
+                    error=str(e),
+                )
+                warnings.append(
+                    f"OS {number} · SubOS {letter}: falha ao gravar a cópia no projeto ({e})."
+                )
+                continue
+
+            payload["copies"].append(str(copy_path))
+
+            if record is None:
+                warnings.append(
+                    f"OS {number} · SubOS {letter}: OS não encontrada no banco — "
+                    "o limite não foi registrado."
+                )
+                continue
+
+            if cls._register_limits(mother, record, letter, copy_path, group, config):
+                payload["db_updated"] += 1
+            else:
+                warnings.append(
+                    f"OS {number} · SubOS {letter}: falha ao registrar o limite no banco."
+                )
+
+    @classmethod
+    def _structure_warnings(cls, prepared: Any) -> List[str]:
+        """Antes de gravar, avisa sobre projetos/SubOS que não receberão a cópia."""
+        mother = cls._load_mother_folder()
+        if mother is None:
+            return [
+                "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
+                f"{LIMITES_FOLDER}/{TALHOES_FOLDER} não será gerada."
+            ]
+
+        projects_by_os = ProjectStructureUtil.group_projects_by_os(
+            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
+        )
+        warnings: List[str] = []
+        pairs = prepared[[FIELD_OS, FIELD_SUB_OS]].drop_duplicates()
+
+        for os_number, sub_os in pairs.itertuples(index=False, name=None):
+            number = str(int(os_number))
+            letter = str(sub_os)
+            folder, reason = cls._find_sub_os_folder(
+                mother, None, number, letter, projects_by_os
+            )
+            if folder is None:
+                warnings.append(f"OS {number} · SubOS {letter}: {reason}.")
+
+        return warnings
+
+    @classmethod
+    def _find_sub_os_folder(
+        cls,
+        mother: Path,
+        record: Optional[Dict[str, Any]],
+        os_number: str,
+        sub_os: str,
+        projects_by_os: Dict[str, List[Path]],
+    ) -> Tuple[Optional[Path], str]:
+        """Localiza a pasta do projeto da SubOS (banco primeiro, disco como fallback)."""
+        if record:
+            for entry in record.get("sub_os", []) or []:
+                if not isinstance(entry, dict):
+                    continue
+                if str(entry.get("sub_os", "")) != sub_os:
+                    continue
+                rel = str(entry.get("path", "") or "")
+                if rel:
+                    folder = ProjectStructureUtil.resolve_path(mother, rel)
+                    if folder.is_dir():
+                        return folder, ""
+                break
+
+        candidates = projects_by_os.get(
+            ProjectStructureUtil.normalize_os(os_number), []
+        )
+
+        for folder in candidates:
+            if ProjectStructureUtil.extract_sub_os(folder.name) == sub_os:
+                return folder, ""
+
+        if sub_os == DEFAULT_SUB_OS:
+            without_letter = [
+                folder for folder in candidates
+                if not ProjectStructureUtil.extract_sub_os(folder.name)
+            ]
+            if len(without_letter) == 1:
+                return without_letter[0], ""
+
+        letters = ProjectStructureUtil.assign_sub_os_letters(candidates)
+        for folder, letter in letters.items():
+            if letter == sub_os:
+                return folder, ""
+
+        return None, f"pasta da SubOS {sub_os} não encontrada em {mother}"
+
+    @classmethod
+    def _write_project_copy(cls, project_folder: Path, os_number: str, group: Any) -> Path:
+        """Grava a cópia do limite em ``<projeto>/08_LIMITES/TALHOES/<OS>_limites.shp``."""
+        target = (
+            project_folder / LIMITES_FOLDER / TALHOES_FOLDER
+            / f"{os_number}{OS_FILE_SUFFIX}.shp"
+        )
+        cls._append_and_write(str(target), group)
+        return target
+
+    @classmethod
+    def _register_limits(
+        cls,
+        mother: Path,
+        record: Dict[str, Any],
+        sub_os: str,
+        file_path: Path,
+        group: Any,
+        config: LimitesImportConfig,
+    ) -> bool:
+        """Marca na SubOS do banco que o limite foi inserido (Firestore + backup JSON)."""
+        entries = [
+            entry for entry in record.get("sub_os", []) or []
+            if isinstance(entry, dict)
+        ]
+        entry = next(
+            (item for item in entries if str(item.get("sub_os", "")) == sub_os),
+            None,
+        )
+        if entry is None:
+            entry = {"sub_os": sub_os}
+            entries.append(entry)
+            entries.sort(key=lambda item: str(item.get("sub_os", "")))
+            record["sub_os"] = entries
+
+        entry["limites"] = {
+            "inserted_at": datetime.now().isoformat(timespec="seconds"),
+            "file": ProjectStructureUtil.to_relative_path(mother, file_path),
+            "source": os.path.basename(config.vector_path),
+            "features": int(len(group)),
+            "area_ha": round(float(group[FIELD_AREA_CALC].sum()), 4),
+        }
+
+        try:
+            return CloudProjectDatabase.save_order(
+                record, mother=str(mother), tool_key=_TOOL_KEY
+            )
+        except Exception as e:
+            cls._get_logger(_TOOL_KEY, "LimitesService").error(
+                "Falha ao registrar o limite no banco",
+                code="LIM_DB_SAVE_ERR",
+                os_number=str(record.get("os", "")),
+                sub_os=sub_os,
+                error=str(e),
+            )
+            return False
+
+    @staticmethod
+    def _load_order(number: str, logger: Any) -> Optional[Dict[str, Any]]:
+        """Lê o registro da OS no banco oficial (``None`` quando não existe/offline)."""
+        try:
+            return CloudProjectDatabase.get_order(number, tool_key=_TOOL_KEY)
+        except Exception as e:
+            logger.warning(
+                "Falha ao consultar a OS no banco",
+                code="LIM_DB_READ_ERR",
+                os_number=number,
+                error=str(e),
+            )
+            return None
+
+    @staticmethod
+    def _load_mother_folder() -> Optional[Path]:
+        """Pasta-mãe dos projetos (configurada no Gerenciador de Estrutura)."""
+        prefs = Preferences.load_tool_prefs(
+            ToolKey.PROJECT_STRUCTURE,
+            caller_tool_key=_TOOL_KEY,
+        )
+        raw = str(prefs.get("mother_folder", "") or "").strip()
+        if not raw:
+            return None
+
+        path = Path(raw)
+        return path if path.is_dir() else None
 
     # ── Utilidades ──────────────────────────────────────────────────
 

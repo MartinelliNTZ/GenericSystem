@@ -1,3 +1,12 @@
+[1.8.9][2026.10.21][16:57] - Base de Limites: SubOS na KEY, cópia em 08_LIMITES/TALHOES e registro no banco
+  - plugins/limites_db/LimitesService.py: `KEY` passa a incluir a SubOS quando ela NÃO é "A" (ex.: `39-FAZENDA_SAO_JOAO-P3` para SubOS A e `39-FAZENDA_SAO_JOAO-P3-B` para SubOS B) — permite o mesmo talhão em SubOS diferentes
+  - plugins/limites_db/LimitesService.py: `_publish_to_projects` copia os limites de cada OS/SubOS para `<pasta da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp` (append + gravação atômica), localizando a pasta pela `path` relativa da SubOS no banco e, como fallback, pela pasta-mãe em disco (`ProjectStructureUtil.assign_sub_os_letters`)
+  - plugins/limites_db/LimitesService.py: `_register_limits` grava no banco oficial (`CloudProjectDatabase.save_order` — Contrato 28) a chave `limites` na SubOS: `inserted_at`, `file` (relativo à pasta-mãe), `source`, `features` e `area_ha`
+  - plugins/limites_db/LimitesService.py: usa a pasta-mãe do Gerenciador de Estrutura (prefs `ProjectStructure`/`mother_folder`) e AVISA quando ela não está configurada ou a pasta da SubOS não existe — a base continua sendo gravada; falhas de cópia/registro não derrubam a importação
+  - plugins/limites_db/LimitesPlugin.py: modal e Console mostram "Cópias no projeto" e "Registros no banco"; avisos de estrutura/banco aparecem no detalhe do modal
+  - docs/skills/CatalogoClasses.md e SKILL_DATABASE.md: schema `limites` da SubOS e novo comportamento documentados
+
+
 [1.8.8][2026.10.21][16:07] - Nova ferramenta: Base de Limites (importação de vetores por OS)
   - core/enum/ToolKey.py: nova chave `LIMITES_DB = "LimitesDb"`
   - core/config/ToolRegistry.py: registro da ferramenta "Base de Limites" (ToolType.VECTOR, CategoryTool.CENTRAL)

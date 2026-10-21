@@ -416,17 +416,29 @@ class LimitesPlugin(BasePlugin):
             f"Área calculada: {self._format_number(payload.get('total_ha', 0.0))} ha"
         )
 
+        if not payload.get("dry_run"):
+            stats += (
+                f"\nCópias no projeto: {self._format_int(len(payload.get('copies', []) or []))}"
+                f"\nRegistros no banco: {self._format_int(payload.get('db_updated', 0))}"
+            )
+
         if payload.get("dry_run"):
+            text = f"Validação concluída.\n\n{stats}\n\nNada foi gravado."
+            if warnings:
+                text += f"\n\n⚠ {len(warnings)} aviso(s) — veja os detalhes."
             MessageBox.show_info(
-                f"Validação concluída.\n\n{stats}\n\nNada foi gravado.",
+                text,
                 title="Validação concluída",
                 detail=detail,
                 parent=self,
             )
             console = "Validação concluída"
         else:
+            text = f"Importação concluída.\n\n{stats}"
+            if warnings:
+                text += f"\n\n⚠ {len(warnings)} aviso(s) — veja os detalhes."
             MessageBox.show_info(
-                f"Importação concluída.\n\n{stats}",
+                text,
                 title="Importação concluída",
                 detail=detail,
                 parent=self,
@@ -434,8 +446,14 @@ class LimitesPlugin(BasePlugin):
             self.output_message(BASE_ROOT, label="Base de Limites")
             console = "Importação concluída"
 
+        if not payload.get("dry_run"):
+            console += (
+                f" | {len(payload.get('copies', []) or [])} cópia(s) no projeto"
+                f" | {payload.get('db_updated', 0)} registro(s) no banco"
+            )
+
         if warnings:
-            console += f" | {len(warnings)} divergência(s) de área"
+            console += f" | {len(warnings)} aviso(s)"
 
         SignalManager.instance().console_message.emit(console)
         self.logger.info(

@@ -94,6 +94,23 @@ guarda apenas o número + a lista de SubOS:
 - O `path` de cada SubOS é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`),
   resolvido em runtime por `ProjectStructureUtil.resolve_path` — portável entre
   computadores.
+- Quando a ferramenta **Base de Limites** importa um vetor, ela grava em cada
+  SubOS a chave **`limites`** (via `CloudProjectDatabase.save_order`):
+
+  ```json
+  "limites": {
+    "inserted_at": "2026-10-21T16:57:00",
+    "file": "OS_039_Bunge/08_LIMITES/TALHOES/39_limites.shp",
+    "source": "P230_001_01_OURO_VERDE_TALHOES.shp",
+    "features": 12,
+    "area_ha": 1234.5678
+  }
+  ```
+
+  - `file` é **RELATIVO à pasta-mãe** (portável) e aponta para a cópia do limite
+    dentro do projeto (`08_LIMITES/TALHOES`).
+  - O **ATUALIZAR DADOS** do Banco de Dados preserva `limites` — ele só reescreve
+    `folders`/`years` de cada SubOS.
 - O seed **cria a base de OS** (OS + SubOS + pasta, garantindo a SubOS A) direto
   no Firestore via `CloudProjectDatabase`. Novas OS são criadas pelo
   **Acompanhamento de OS** (botão CRIAR OS; só o número é obrigatório).
