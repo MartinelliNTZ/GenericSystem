@@ -32,6 +32,13 @@ Regras de negócio (zonas de manejo):
 - AREA_HA continua sendo CALCULADA em hectares.
 - O registro vai para a chave ``zonas_manejo`` da SubOS.
 
+Atualização (``ATUALIZAR``):
+- Antes de gravar, a ferramenta procura os shapes que já existem (completão,
+  arquivo da OS na base e cópia no projeto) e pergunta se devem ser substituídos.
+- Na atualização, as feições das OS/SubOS do vetor são REMOVIDAS dos arquivos de
+  destino e trocadas pelo lote novo — as demais OS/SubOS do arquivo ficam
+  intactas — e a checagem de duplicidade é ignorada.
+
 A leitura/escrita vetorial é delegada para ``utils.vector`` (Contrato 25).
 """
 
@@ -155,6 +162,7 @@ class LimitesImportConfig:
     tolerance_pct: float = DEFAULT_TOLERANCE_PCT
     output_root: str = BASE_ROOT
     mode: str = MODE_LIMITES
+    update: bool = False
 
 
 class LimitesValidationError(Exception):
@@ -356,8 +364,8 @@ class LimitesService(BaseUtil):
         prepared = prepared[fields + [prepared.geometry.name]]
         warnings: List[str] = cls._area_warnings(prepared, config)
 
-        consolidated = os.path.join(config.output_root, settings["consolidated"])
-        if settings["unique"]:
+        consolidated = cls._consolidated_path(config)
+        if settings["unique"] and not config.update:
             cls._notify(progress_cb, 70, "Verificando duplicidades...")
             cls._check_duplicates(prepared, consolidated)
 
@@ -376,6 +384,8 @@ class LimitesService(BaseUtil):
             "os_files": [],
             "copies": [],
             "db_updated": 0,
+            "update": bool(config.update),
+            "replaced": 0,
             "warnings": warnings,
         }
 
@@ -390,33 +400,41 @@ class LimitesService(BaseUtil):
             )
             return payload
 
-        cls._notify(progress_cb, 85, "Gravando base...")
-        cls._append_and_write(consolidated, prepared, fields)
+        cls._notify(
+            progress_cb,
+            85,
+            "Atualizando base..." if config.update else "Gravando base...",
+        )
+        replaced = cls._write_target(consolidated, prepared, fields, config.update)
 
         os_files: List[str] = []
         for os_number, group in prepared.groupby(FIELD_OS, sort=True):
-            os_dir = os.path.join(config.output_root, str(int(os_number)))
-            target = os.path.join(
-                os_dir, f"{int(os_number)}{settings['os_suffix']}.shp"
-            )
-            cls._append_and_write(target, group, fields)
+            target = cls._os_file_path(config, str(int(os_number)))
+            replaced += cls._write_target(target, group, fields, config.update)
             os_files.append(target)
 
         payload["os_files"] = os_files
+        payload["replaced"] = replaced
 
         cls._notify(progress_cb, 92, "Copiando para os projetos...")
         cls._publish_to_projects(prepared, config, payload, logger)
 
-        cls._notify(progress_cb, 100, "Importação concluída.")
+        cls._notify(
+            progress_cb,
+            100,
+            "Atualização concluída." if config.update else "Importação concluída.",
+        )
 
         logger.info(
             f"Importação concluída ({settings['label']})",
             code="LIM_IMPORT_DONE",
             mode=config.mode,
+            update=config.update,
             n_features=payload["n_features"],
             n_os=len(os_files),
             n_copies=len(payload["copies"]),
             n_db_updated=payload["db_updated"],
+            n_replaced=payload["replaced"],
             total_ha=payload["total_ha"],
             n_warnings=len(warnings),
             root=config.output_root,
@@ -427,6 +445,127 @@ class LimitesService(BaseUtil):
     def settings(cls, mode: str) -> Dict[str, Any]:
         """Configuração do modo (``limites`` ou ``zonas``)."""
         return MODE_SETTINGS.get(mode, MODE_SETTINGS[MODE_LIMITES])
+
+    # ── Destinos ────────────────────────────────────────────────────
+
+    @classmethod
+    def _consolidated_path(cls, config: LimitesImportConfig) -> str:
+        """Caminho do completão do modo (arquivo com todas as OS)."""
+        return os.path.join(
+            config.output_root, cls.settings(config.mode)["consolidated"]
+        )
+
+    @classmethod
+    def _os_file_path(cls, config: LimitesImportConfig, os_number: str) -> str:
+        """Caminho do arquivo do modo dentro da pasta da OS na base."""
+        settings = cls.settings(config.mode)
+        return os.path.join(
+            config.output_root, os_number, f"{os_number}{settings['os_suffix']}.shp"
+        )
+
+    @classmethod
+    def _project_copy_path(
+        cls,
+        project_folder: Path,
+        os_number: str,
+        mode: str,
+    ) -> Path:
+        """Caminho da cópia do modo dentro da pasta do projeto da SubOS."""
+        settings = cls.settings(mode)
+        target_dir = project_folder / settings["project_folder"]
+        if settings["project_subfolder"]:
+            target_dir = target_dir / settings["project_subfolder"]
+
+        return target_dir / f"{os_number}{settings['os_suffix']}.shp"
+
+    # ── Verificação de shapes existentes ────────────────────────────
+
+    @classmethod
+    def find_existing(cls, config: LimitesImportConfig) -> Dict[str, Any]:
+        """
+        Localiza os shapes do vetor que JÁ existem na base e nos projetos.
+
+        Lê e valida o vetor (mesmas regras da importação) para descobrir as OS/SubOS
+        e devolve os arquivos que uma atualização substituiria.
+
+        Raises:
+            LimitesValidationError: Problemas que impedem a leitura/validação.
+        """
+        logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+
+        gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
+        if gdf.crs is None:
+            raise LimitesValidationError(
+                [
+                    "O vetor não possui CRS definido. Defina a projeção do arquivo "
+                    "antes de atualizar."
+                ]
+            )
+
+        prepared = cls._prepare(gdf, config)
+        os_numbers = sorted({int(value) for value in prepared[FIELD_OS]})
+
+        targets: List[str] = []
+        consolidated = cls._consolidated_path(config)
+        if os.path.exists(consolidated):
+            targets.append(consolidated)
+
+        for number in os_numbers:
+            path = cls._os_file_path(config, str(number))
+            if os.path.exists(path):
+                targets.append(path)
+
+        targets.extend(cls._existing_project_copies(prepared, config))
+
+        logger.info(
+            "Shapes existentes verificados",
+            code="LIM_EXISTING",
+            mode=config.mode,
+            n_os=len(os_numbers),
+            n_targets=len(targets),
+        )
+        return {
+            "mode": config.mode,
+            "n_features": int(len(prepared)),
+            "os_numbers": os_numbers,
+            "targets": targets,
+        }
+
+    @classmethod
+    def _existing_project_copies(
+        cls,
+        prepared: Any,
+        config: LimitesImportConfig,
+    ) -> List[str]:
+        """Caminhos das cópias no projeto que já existem para as OS/SubOS do lote."""
+        mother = cls._load_mother_folder()
+        if mother is None:
+            return []
+
+        logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        projects_by_os = ProjectStructureUtil.group_projects_by_os(
+            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
+        )
+        records: Dict[str, Optional[Dict[str, Any]]] = {}
+        found: List[str] = []
+
+        pairs = prepared[[FIELD_OS, FIELD_SUB_OS]].drop_duplicates()
+        for os_number, sub_os in pairs.itertuples(index=False, name=None):
+            number = str(int(os_number))
+            if number not in records:
+                records[number] = cls._load_order(number, logger)
+
+            folder, _ = cls._find_sub_os_folder(
+                mother, records[number], number, str(sub_os), projects_by_os
+            )
+            if folder is None:
+                continue
+
+            target = cls._project_copy_path(folder, number, config.mode)
+            if target.is_file():
+                found.append(str(target))
+
+        return found
 
     @classmethod
     def _prepare(
@@ -619,25 +758,98 @@ class LimitesService(BaseUtil):
     # ── Escrita ─────────────────────────────────────────────────────
 
     @classmethod
+    def _write_target(
+        cls,
+        target: str,
+        new_gdf: Any,
+        fields: List[str],
+        replace: bool,
+    ) -> int:
+        """
+        Anexa ou SUBSTITUI o lote no arquivo de destino.
+
+        Returns:
+            Número de feições removidas do destino (0 quando apenas anexa).
+        """
+        if not replace:
+            cls._append_and_write(target, new_gdf, fields)
+            return 0
+
+        return cls._replace_and_write(target, new_gdf, fields)
+
+    @classmethod
     def _append_and_write(cls, target: str, new_gdf: Any, fields: List[str]) -> None:
         """Anexa o lote ao arquivo de destino (quando existe) e grava de forma atômica."""
-        if os.path.exists(target):
-            existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
-            defaults = {
-                FIELD_OS: 0,
-                FIELD_AREA_CALC: 0.0,
-                FIELD_AREA_INF: float("nan"),
-            }
-            for column in fields:
-                if column not in existing.columns:
-                    existing[column] = defaults.get(column, "")
-            existing = existing[fields + [existing.geometry.name]]
-            merged = VectorLayerSource.concat_geodataframes(existing, new_gdf, tool_key=_TOOL_KEY)
-            merged = merged[fields + [merged.geometry.name]]
-        else:
-            merged = new_gdf
+        if not os.path.exists(target):
+            VectorLayerSource.write_geodataframe_atomic(
+                new_gdf, target, tool_key=_TOOL_KEY
+            )
+            return
 
-        VectorLayerSource.write_geodataframe_atomic(merged, target, tool_key=_TOOL_KEY)
+        existing = cls._read_existing(target, fields)
+        merged = VectorLayerSource.concat_geodataframes(
+            existing, new_gdf, tool_key=_TOOL_KEY
+        )
+        cls._write_canonical(merged, target, fields)
+
+    @classmethod
+    def _replace_and_write(cls, target: str, new_gdf: Any, fields: List[str]) -> int:
+        """Substitui as feições das OS/SubOS do lote no destino e grava de forma atômica."""
+        if not os.path.exists(target):
+            VectorLayerSource.write_geodataframe_atomic(
+                new_gdf, target, tool_key=_TOOL_KEY
+            )
+            return 0
+
+        existing = cls._read_existing(target, fields)
+        kept = cls._drop_batch_pairs(existing, new_gdf)
+        removed = len(existing) - len(kept)
+
+        if len(kept) == 0:
+            merged = new_gdf
+        else:
+            merged = VectorLayerSource.concat_geodataframes(
+                kept, new_gdf, tool_key=_TOOL_KEY
+            )
+
+        cls._write_canonical(merged, target, fields)
+        return removed
+
+    @classmethod
+    def _read_existing(cls, target: str, fields: List[str]) -> Any:
+        """Lê o destino garantindo as colunas canônicas do modo antes de mesclar."""
+        existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
+        defaults = {
+            FIELD_OS: 0,
+            FIELD_AREA_CALC: 0.0,
+            FIELD_AREA_INF: float("nan"),
+        }
+        for column in fields:
+            if column not in existing.columns:
+                existing[column] = defaults.get(column, "")
+
+        return existing[fields + [existing.geometry.name]]
+
+    @staticmethod
+    def _drop_batch_pairs(existing: Any, batch: Any) -> Any:
+        """Remove do arquivo existente as feições das OS/SubOS presentes no lote."""
+        pairs = {
+            (LimitesService.normalize_os(number), LimitesService.normalize_sub_os(letter))
+            for number, letter in zip(batch[FIELD_OS], batch[FIELD_SUB_OS])
+        }
+        keep = [
+            (LimitesService.normalize_os(number), LimitesService.normalize_sub_os(letter))
+            not in pairs
+            for number, letter in zip(existing[FIELD_OS], existing[FIELD_SUB_OS])
+        ]
+        return existing[keep]
+
+    @staticmethod
+    def _write_canonical(gdf: Any, target: str, fields: List[str]) -> None:
+        """Grava o GeoDataFrame com as colunas do modo, de forma atômica."""
+        VectorLayerSource.write_geodataframe_atomic(
+            gdf[fields + [gdf.geometry.name]], target, tool_key=_TOOL_KEY
+        )
 
     # ── Estrutura do projeto (Verra) + banco ────────────────────────
 
@@ -686,7 +898,9 @@ class LimitesService(BaseUtil):
                 continue
 
             try:
-                copy_path = cls._write_project_copy(folder, number, group, config.mode)
+                copy_path, removed = cls._write_project_copy(
+                    folder, number, group, config.mode, config.update
+                )
             except Exception as e:
                 logger.error(
                     "Falha ao gravar a copia no projeto",
@@ -700,6 +914,7 @@ class LimitesService(BaseUtil):
                 continue
 
             payload["copies"].append(str(copy_path))
+            payload["replaced"] += removed
 
             if record is None:
                 warnings.append(
@@ -796,16 +1011,13 @@ class LimitesService(BaseUtil):
         os_number: str,
         group: Any,
         mode: str,
-    ) -> Path:
-        """Grava a cópia na pasta do projeto conforme o modo (limites ou zonas)."""
+        replace: bool = False,
+    ) -> Tuple[Path, int]:
+        """Grava (ou substitui) a cópia na pasta do projeto e devolve o caminho."""
         settings = cls.settings(mode)
-        target_dir = project_folder / settings["project_folder"]
-        if settings["project_subfolder"]:
-            target_dir = target_dir / settings["project_subfolder"]
-
-        target = target_dir / f"{os_number}{settings['os_suffix']}.shp"
-        cls._append_and_write(str(target), group, settings["fields"])
-        return target
+        target = cls._project_copy_path(project_folder, os_number, mode)
+        removed = cls._write_target(str(target), group, settings["fields"], replace)
+        return target, removed
 
     @classmethod
     def _register_limits(
@@ -974,6 +1186,33 @@ class LimitesImportWorker(QRunnable):
             LimitesService._get_logger(_TOOL_KEY, "LimitesImportWorker").error(
                 "Falha na importação de limites",
                 code="LIM_IMPORT_ERR",
+                path=self.config.vector_path,
+                error=str(e),
+            )
+            self.signals.failed.emit(self.generation, str(e))
+
+
+class LimitesExistingWorker(QRunnable):
+    """Procura, em background, os shapes do vetor que já existem nas pastas."""
+
+    def __init__(self, generation: int, config: LimitesImportConfig) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.generation = generation
+        self.config = config
+        self.signals = _LimitesSignals()
+
+    def run(self) -> None:
+        """Executa a verificação e emite o resultado."""
+        try:
+            payload = LimitesService.find_existing(self.config)
+            self.signals.finished.emit(self.generation, payload)
+        except LimitesValidationError as e:
+            self.signals.invalid.emit(self.generation, e.problems)
+        except Exception as e:
+            LimitesService._get_logger(_TOOL_KEY, "LimitesExistingWorker").error(
+                "Falha ao verificar shapes existentes",
+                code="LIM_EXISTING_ERR",
                 path=self.config.vector_path,
                 error=str(e),
             )

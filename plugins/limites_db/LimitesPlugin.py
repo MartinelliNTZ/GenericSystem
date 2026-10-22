@@ -21,9 +21,17 @@ Fluxo: escolhe o modo → seleciona o vetor → mapeia os campos → informa
 manualmente o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a
 área, grava na base, copia para o projeto e registra no banco).
 
+O ATUALIZAR procura os shapes que já existem nas pastas (completão, arquivo da OS
+na base e cópia no projeto), pergunta se devem ser substituídos e troca as feições
+das OS/SubOS do vetor nesses arquivos — as demais OS/SubOS ficam intactas.
+
 A OS manual é preenchida automaticamente pelo padrão do caminho de origem
-(`OS_<numero>` na pasta ou `P<numero>` no arquivo) quando identificado; um valor
-digitado pelo usuário é preservado.
+(`OS_<numero>` na pasta ou `P<numero>` no arquivo) APENAS quando o campo está
+vazio — valores digitados ou restaurados das preferências nunca são sobrescritos.
+
+Preferências: modo, vetor e valores manuais (fazenda, OS, SubOS, cliente, área e
+tolerância) são salvos e restaurados. O **mapeamento de campos NÃO vai para as
+preferências** — é sempre recalculado a partir dos campos do vetor carregado.
 """
 
 from __future__ import annotations
@@ -42,6 +50,7 @@ from plugins.limites_db.LimitesService import (
     MODE_LIMITES,
     MODE_SETTINGS,
     MODE_ZONAS,
+    LimitesExistingWorker,
     LimitesImportConfig,
     LimitesImportWorker,
     LimitesInspectWorker,
@@ -57,6 +66,7 @@ from resources.widgets.SectionPanel import SectionPanel
 from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from utils.MessageBox import MessageBox
+from utils.Preferences import Preferences
 
 
 class LimitesPlugin(BasePlugin):
@@ -89,15 +99,12 @@ class LimitesPlugin(BasePlugin):
         self._generation = 0
         self._fields: list = []
         self._meta: dict = {}
-        self._pending_field_map: dict = {}
         self._mode = MODE_LIMITES
         self._restoring = False
         self._running = False
         self._inspect_worker = None
         self._import_worker = None
-        self._auto_os = ""
-        self._os_locked = False
-        self._setting_auto_os = False
+        self._existing_worker = None
 
         super().__init__(
             tool_key=ToolKey.LIMITES_DB.value,
@@ -115,6 +122,15 @@ class LimitesPlugin(BasePlugin):
                     "callback": self._on_importar,
                     "type": "primary",
                     "description": "Valida, calcula a área e grava o resultado na base e no projeto",
+                },
+                "atualizar": {
+                    "text": "ATUALIZAR",
+                    "callback": self._on_atualizar,
+                    "type": "danger",
+                    "description": (
+                        "Procura os shapes que já existem nas pastas e, com sua confirmação, "
+                        "substitui as feições das OS/SubOS do vetor"
+                    ),
                 },
             },
         )
@@ -135,15 +151,14 @@ class LimitesPlugin(BasePlugin):
     # ── Preferências ────────────────────────────────────────────────
 
     def load_prefs(self) -> None:
-        """Restaura o modo, o vetor, o mapeamento de campos e os valores manuais."""
-        saved_map = self.preferences.get("field_map", {}) or {}
-        if saved_map and all(isinstance(value, str) for value in saved_map.values()):
-            saved_map = {MODE_LIMITES: saved_map}
-        self._pending_field_map = {
-            mode: dict(values)
-            for mode, values in saved_map.items()
-            if isinstance(values, dict)
-        }
+        """Restaura modo, vetor e valores manuais.
+
+        O **mapeamento de campos NÃO é persistido** — ele é sempre recalculado a
+        partir dos campos do vetor carregado, então um campo auto-preenchido nunca
+        substitui (nem é substituído por) uma preferência do usuário.
+        """
+        self.preferences.pop("field_map", None)
+        Preferences.remove_tool_prefs(self.tool_key, ["field_map"])
 
         saved_mode = str(self.preferences.get("mode", MODE_LIMITES) or MODE_LIMITES)
         if saved_mode not in MODE_SETTINGS:
@@ -157,8 +172,6 @@ class LimitesPlugin(BasePlugin):
                 block_signals=True,
             )
 
-        self._os_locked = False
-
         path = self.preferences.get("vector_path", "") or ""
         if not path:
             return
@@ -169,22 +182,16 @@ class LimitesPlugin(BasePlugin):
         finally:
             self._restoring = False
 
-        guess = LimitesService.guess_os_from_path(path)
-        if guess and self._manual.get("os").strip() == guess:
-            self._auto_os = guess
-
     def save_prefs(self) -> None:
-        """Persiste modo, vetor, mapeamento de campos e valores manuais."""
+        """Persiste modo, vetor e valores manuais (mapeamento de campos fica fora)."""
         self.preferences["mode"] = self._mode
         self.preferences["vector_path"] = self._selector[self._SELECTOR_KEY].path()
-        self.preferences["field_map"] = {
-            mode: {
-                key: (combo.current_value or "")
-                for key, combo in combos.items()
-            }
-            for mode, combos in self._combos.items()
-        }
         self.preferences["manual"] = self._manual.values
+
+    def _persist_prefs(self) -> None:
+        """Atualiza o cache e grava as preferências no disco (escrita com debounce)."""
+        self.save_prefs()
+        self.force_save_prefs()
 
     # ── UI ──────────────────────────────────────────────────────────
 
@@ -286,6 +293,7 @@ class LimitesPlugin(BasePlugin):
             code="LIM_MODE",
             mode=key,
         )
+        self._persist_prefs()
 
     def _apply_mode_visibility(self) -> None:
         """Mostra apenas o mapeamento do modo ativo."""
@@ -295,56 +303,48 @@ class LimitesPlugin(BasePlugin):
     # ── Inspeção do vetor ───────────────────────────────────────────
 
     def _inspect_saved_path(self) -> None:
-        """Inspeciona o vetor restaurado das preferências (sem sobrescrever a OS salva)."""
+        """Inspeciona o vetor restaurado das preferências (sem sobrescrever valores salvos)."""
         path = self._selector[self._SELECTOR_KEY].path()
         if not (path and os.path.isfile(path)):
             return
 
-        if not self._manual.get("os").strip():
-            self._autofill_os(path)
+        self._autofill_os(path)
         self._start_inspect(path)
 
     def _on_input_changed(self, label: str, paths: list) -> None:
-        """Reage à troca do vetor de entrada."""
+        """Reage à troca do vetor de entrada e persiste a escolha."""
         if self._restoring:
             return
 
         path = paths[0] if paths else ""
         if not path:
             self._reset_meta()
+            self._persist_prefs()
             return
 
         self._autofill_os(path)
         self._start_inspect(path)
+        self._persist_prefs()
 
     def _on_manual_changed(self, key: str, value: str) -> None:
-        """Marca a OS manual como digitada pelo usuário (impede o auto-preenchimento)."""
-        if key == "os" and not self._setting_auto_os:
-            self._os_locked = bool(value.strip())
+        """Salva os valores manuais quando um campo muda (``key``/``value`` vêm do sinal)."""
+        self.save_prefs()
 
     def _autofill_os(self, path: str) -> None:
-        """Preenche a OS manual pelo padrão do caminho (apenas quando identificado)."""
+        """Preenche a OS manual pelo caminho APENAS quando o campo está vazio.
+
+        Valores restaurados das preferências ou digitados pelo usuário nunca são
+        sobrescritos pelo palpite do caminho — limpe o campo para voltar a preencher.
+        """
+        current = self._manual.get("os").strip()
+        if current:
+            return
+
         guess = LimitesService.guess_os_from_path(path)
         if not guess:
             return
 
-        current = self._manual.get("os").strip()
-        if self._os_locked and current and current != self._auto_os:
-            self.logger.info(
-                f"OS manual mantida ({current}) — o caminho sugere {guess}",
-                code="LIM_OS_KEPT",
-            )
-            return
-
-        self._setting_auto_os = True
-        try:
-            self._manual.set("os", guess)
-        finally:
-            self._setting_auto_os = False
-
-        self._auto_os = guess
-        self._os_locked = False
-
+        self._manual.set("os", guess)
         self.logger.info(
             f"OS preenchida pelo caminho de origem: {guess}",
             code="LIM_OS_GUESS",
@@ -386,23 +386,18 @@ class LimitesPlugin(BasePlugin):
         )
 
     def _apply_fields(self) -> None:
-        """Repopula os combos (dos dois modos) e pré-seleciona os campos sugeridos."""
+        """Repopula os combos (dos dois modos) e pré-seleciona os campos sugeridos.
+
+        A sugestão é SEMPRE recalculada a partir do vetor atual — o mapeamento não
+        vem das preferências.
+        """
         choices = {"": "(não usar)"}
         choices.update({field: field for field in self._fields})
 
-        for mode, combos in self._combos.items():
-            saved_map = self._pending_field_map.get(mode, {})
+        for combos in self._combos.values():
             for key, combo in combos.items():
                 combo.set_items(choices)
-                saved = saved_map.get(key, "")
-                target = (
-                    saved
-                    if saved and saved in choices
-                    else LimitesService.guess_field(self._fields, key)
-                )
-                combo.current_value = target
-
-        self._pending_field_map = {}
+                combo.current_value = LimitesService.guess_field(self._fields, key)
 
     def _update_summary(self) -> None:
         """Atualiza o painel de resumo com os metadados do vetor."""
@@ -438,7 +433,7 @@ class LimitesPlugin(BasePlugin):
 
     # ── Configuração da importação ──────────────────────────────────
 
-    def _collect_config(self) -> LimitesImportConfig:
+    def _collect_config(self, update: bool = False) -> LimitesImportConfig:
         """Monta e valida a configuração informada na UI."""
         path = self._selector[self._SELECTOR_KEY].path().strip()
         if not path:
@@ -484,6 +479,7 @@ class LimitesPlugin(BasePlugin):
             },
             tolerance_pct=tolerance,
             mode=self._mode,
+            update=update,
         )
 
     # ── Execução ────────────────────────────────────────────────────
@@ -496,43 +492,132 @@ class LimitesPlugin(BasePlugin):
         """Valida, calcula a área e grava o resultado (base + projeto + banco)."""
         self._start_import(dry_run=False)
 
-    def _start_import(self, dry_run: bool) -> None:
-        """Dispara a validação/importação em background."""
+    def _on_atualizar(self) -> None:
+        """Procura os shapes já existentes e pede confirmação antes de substituí-los."""
         if self._running:
             return
 
         try:
-            config = self._collect_config()
+            config = self._collect_config(update=True)
         except ValueError as e:
-            self.logger.warning(
-                "Configuração incompleta",
-                code="LIM_CONFIG_INVALID",
-                error=str(e),
-            )
-            MessageBox.show_warning(
-                str(e),
-                title="Configuração incompleta",
+            self._warn_config(e)
+            return
+
+        self._persist_prefs()
+        mode_label = MODE_SETTINGS[self._mode]["label"]
+        self._begin_execution(f"Verificando shapes existentes ({mode_label})...")
+        SignalManager.instance().console_message.emit(
+            f"Verificando shapes existentes ({mode_label.lower()}): "
+            f"{os.path.basename(config.vector_path)}..."
+        )
+
+        self._generation += 1
+        worker = LimitesExistingWorker(self._generation, config)
+        worker.signals.finished.connect(self._on_check_done)
+        worker.signals.invalid.connect(self._on_import_invalid)
+        worker.signals.failed.connect(self._on_import_failed)
+        self._existing_worker = worker
+        self._pool.start(worker)
+
+    def _on_check_done(self, generation: int, payload: dict) -> None:
+        """Confirma a substituição dos shapes encontrados nas pastas."""
+        if generation != self._generation:
+            return
+
+        self._finish_execution()
+        targets = [str(path) for path in (payload.get("targets") or [])]
+
+        if not targets:
+            MessageBox.show_info(
+                "Nenhum shape existente encontrado nas pastas.\n\n"
+                "Use IMPORTAR para gravar a primeira versão.",
+                title="Nada para atualizar",
                 parent=self,
+            )
+            SignalManager.instance().console_message.emit(
+                "Atualização: nenhum shape existente encontrado."
+            )
+            self.logger.info(
+                "Atualização sem shapes existentes",
+                code="LIM_UPDATE_EMPTY",
+                mode=payload.get("mode", self._mode),
             )
             return
 
+        if not self._confirm_update(targets, payload):
+            SignalManager.instance().console_message.emit(
+                "Atualização cancelada pelo usuário."
+            )
+            self.logger.info("Atualização cancelada", code="LIM_UPDATE_CANCEL")
+            return
+
+        self._start_import(dry_run=False, update=True)
+
+    def _confirm_update(self, targets: list, payload: dict) -> bool:
+        """Pergunta se os shapes encontrados devem ser substituídos pelo vetor atual."""
+        answer = MessageBox.show_question(
+            f"{len(targets)} shape(s) já existem nas pastas.\n\n"
+            "Deseja substituir o conteúdo desses arquivos pelas feições do vetor atual?",
+            title="Atualizar shapes existentes",
+            detail=(
+                f"{self._format_int(payload.get('n_features', 0))} feição(ões) do vetor "
+                "substituem as feições das mesmas OS/SubOS nos arquivos abaixo "
+                "(as demais OS/SubOS são preservadas):\n\n"
+                + "\n".join(targets)
+            ),
+            parent=self,
+        )
+        return answer == MessageBox.YES
+
+    def _warn_config(self, error: ValueError) -> None:
+        """Informa configuração incompleta sem iniciar a execução."""
+        self.logger.warning(
+            "Configuração incompleta",
+            code="LIM_CONFIG_INVALID",
+            error=str(error),
+        )
+        MessageBox.show_warning(
+            str(error),
+            title="Configuração incompleta",
+            parent=self,
+        )
+
+    def _begin_execution(self, message: str) -> None:
+        """Bloqueia os botões, liga o HUD e sinaliza o início da execução."""
         self._running = True
         self.page.set_badge(self.page.RUNNING)
-        self.page.buttons.set_enabled("validar", False)
-        self.page.buttons.set_enabled("importar", False)
+        for key in ("validar", "importar", "atualizar"):
+            self.page.buttons.set_enabled(key, False)
 
-        mode_label = MODE_SETTINGS[self._mode]["label"]
-        SignalManager.instance().hud_show.emit({
-            "message": (
-                f"Validando {mode_label}..." if dry_run
-                else f"Importando {mode_label}..."
-            )
-        })
+        SignalManager.instance().hud_show.emit({"message": message})
         SignalManager.instance().execution_started.emit(self.tool_key)
-        SignalManager.instance().console_message.emit(
-            f"Validando {mode_label.lower()}..." if dry_run
-            else f"Importando {mode_label.lower()}: {os.path.basename(config.vector_path)}..."
-        )
+
+    def _start_import(self, dry_run: bool, update: bool = False) -> None:
+        """Dispara a validação/importação/atualização em background."""
+        if self._running:
+            return
+
+        try:
+            config = self._collect_config(update=update)
+        except ValueError as e:
+            self._warn_config(e)
+            return
+
+        self._persist_prefs()
+        mode_label = MODE_SETTINGS[self._mode]["label"]
+        source = os.path.basename(config.vector_path)
+        if dry_run:
+            message = f"Validando {mode_label}..."
+            console = f"Validando {mode_label.lower()}..."
+        elif update:
+            message = f"Atualizando {mode_label}..."
+            console = f"Atualizando {mode_label.lower()}: {source}..."
+        else:
+            message = f"Importando {mode_label}..."
+            console = f"Importando {mode_label.lower()}: {source}..."
+
+        self._begin_execution(message)
+        SignalManager.instance().console_message.emit(console)
 
         self._generation += 1
         worker = LimitesImportWorker(self._generation, config, dry_run)
@@ -577,6 +662,11 @@ class LimitesPlugin(BasePlugin):
             f"Área calculada: {self._format_number(payload.get('total_ha', 0.0))} ha"
         )
 
+        if payload.get("update"):
+            stats += (
+                f"\nFeições substituídas: {self._format_int(payload.get('replaced', 0))}"
+            )
+
         if not payload.get("dry_run"):
             stats += (
                 f"\nCópias no projeto: {self._format_int(len(payload.get('copies', []) or []))}"
@@ -595,17 +685,18 @@ class LimitesPlugin(BasePlugin):
             )
             console = "Validação concluída"
         else:
-            text = f"Importação concluída.\n\n{stats}"
+            operation = "Atualização" if payload.get("update") else "Importação"
+            text = f"{operation} concluída.\n\n{stats}"
             if warnings:
                 text += f"\n\n⚠ {len(warnings)} aviso(s) — veja os detalhes."
             MessageBox.show_info(
                 text,
-                title="Importação concluída",
+                title=f"{operation} concluída",
                 detail=detail,
                 parent=self,
             )
             self.output_message(BASE_ROOT, label="Base de Limites")
-            console = "Importação concluída"
+            console = f"{operation} concluída"
 
         if not payload.get("dry_run"):
             console += (
@@ -621,40 +712,42 @@ class LimitesPlugin(BasePlugin):
             "Operação de limites finalizada",
             code="LIM_DONE",
             dry_run=bool(payload.get("dry_run")),
+            update=bool(payload.get("update")),
             n_features=payload.get("n_features", 0),
+            n_replaced=payload.get("replaced", 0),
             n_warnings=len(warnings),
         )
 
     def _on_import_invalid(self, generation: int, problems: list) -> None:
-        """Bloqueia a importação e exibe os problemas encontrados."""
+        """Bloqueia a operação e exibe os problemas encontrados."""
         if generation != self._generation:
             return
 
         self._finish_execution(info_only=True)
         MessageBox.show_warning(
-            "Importação bloqueada — nada foi gravado.",
-            title="Validação bloqueou a importação",
+            "Operação bloqueada — nada foi gravado.",
+            title="Validação bloqueou a operação",
             detail="\n".join(problems),
             parent=self,
         )
         SignalManager.instance().console_message.emit(
-            f"Importação bloqueada: {len(problems)} problema(s)."
+            f"Operação bloqueada: {len(problems)} problema(s)."
         )
         self.logger.warning(
-            "Importação bloqueada",
+            "Operação bloqueada",
             code="LIM_BLOCKED",
             problems=len(problems),
         )
 
     def _on_import_failed(self, generation: int, message: str) -> None:
-        """Reporta falha inesperada na importação."""
+        """Reporta falha inesperada na operação."""
         if generation != self._generation:
             return
 
         self._finish_execution(error=True)
         MessageBox.show_error(
-            "Falha ao importar o vetor.",
-            title="Importação",
+            "Falha ao processar o vetor.",
+            title="Base de Limites",
             detail=message,
             parent=self,
         )
@@ -663,8 +756,8 @@ class LimitesPlugin(BasePlugin):
     def _finish_execution(self, error: bool = False, info_only: bool = False) -> None:
         """Restaura botões/badge e encerra HUD e progresso."""
         self._running = False
-        self.page.buttons.set_enabled("validar", True)
-        self.page.buttons.set_enabled("importar", True)
+        for key in ("validar", "importar", "atualizar"):
+            self.page.buttons.set_enabled(key, True)
 
         if error:
             self.page.set_badge(self.page.ERROR)

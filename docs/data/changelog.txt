@@ -1,3 +1,21 @@
+[1.11.1][2026.10.22][09:23] - Base de Limites: preferências completas e mapeamento de campos fora das prefs
+  - plugins/limites_db/LimitesPlugin.py: o **mapeamento de campos deixou de ser persistido** — `save_prefs` grava apenas `mode`, `vector_path` e `manual`; `load_prefs`/`_apply_fields` recalculam a sugestão de campos a partir do vetor carregado (antes o mapeamento salvo voltava a ser aplicado, ou era substituído pela sugestão, conforme o vetor)
+  - plugins/limites_db/LimitesPlugin.py: limpeza automática do `field_map` antigo (via `Preferences.remove_tool_prefs`), tanto no cache local quanto no JSON
+  - plugins/limites_db/LimitesPlugin.py: a **OS auto-preenchida pelo caminho** só preenche quando o campo está VAZIO — valores digitados ou restaurados das preferências nunca são sobrescritos (`_os_locked`/`_auto_os` removidos); log `LIM_OS_KEPT` substituído pela regra de campo vazio
+  - plugins/limites_db/LimitesPlugin.py: preferências passam a ser persistidas nos pontos de mudança — modo (`_on_mode_changed`), troca/limpeza do vetor (`_on_input_changed`), valores manuais (`_on_manual_changed`) e antes de cada execução (`_start_import`/`_on_atualizar`) via novo `_persist_prefs` (save + `force_save_prefs`, escrita com debounce)
+  - utils/Preferences.py: novo `remove_tool_prefs(tool_key, keys)` — `save_tool_prefs` só MESCLA e nunca apagava chaves antigas (retorna True quando removeu; cache + escrita com debounce)
+  - docs/skills/SKILL_PREFERENCES.md: seção de remoção de preferências e regra do que NÃO persistir (valores derivados/auto-preenchidos); CatalogoClasses.md atualizado (`Preferences.remove_tool_prefs` e comportamento de prefs do LimitesPlugin)
+
+
+[1.11.0][2026.10.22][09:10] - Base de Limites: ATUALIZAR substitui os shapes que já existem nas pastas
+  - plugins/limites_db/LimitesService.py: novo `LimitesImportConfig.update` — em modo atualização a checagem de duplicidade é ignorada e a gravação SUBSTITUI as feições das OS/SubOS do lote em cada destino (completão, arquivo da OS na base e cópia no projeto), preservando as demais OS/SubOS; novos `_write_target`/`_replace_and_write`/`_drop_batch_pairs`/`_read_existing`/`_write_canonical` (o IMPORTAR continua apenas anexando)
+  - plugins/limites_db/LimitesService.py: novos helpers de destino `_consolidated_path`, `_os_file_path` e `_project_copy_path` (reaproveitados por importação, atualização e verificação) e novo `find_existing` — lê e valida o vetor e devolve os shapes que já existem: completão, `<OS>/<OS>_limites.shp` e `<projeto>/08_LIMITES/TALHOES/<OS>_limites.shp` (ou `13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`)
+  - plugins/limites_db/LimitesService.py: novo worker `LimitesExistingWorker` (QRunnable) para a verificação em background; `import_file` devolve `update`/`replaced` no payload e registra `n_replaced` no log; `_write_project_copy` devolve o caminho + as feições removidas
+  - plugins/limites_db/LimitesPlugin.py: novo botão **ATUALIZAR** (danger) — valida a configuração, procura os shapes existentes nas pastas, pergunta via `MessageBox.show_question` (com a lista dos arquivos no detalhe) e, confirmado, executa a importação em modo atualização; quando nada existe avisa "Nada para atualizar"
+  - plugins/limites_db/LimitesPlugin.py: `_collect_config`/`_start_import` aceitam `update`, novos `_on_atualizar`, `_on_check_done`, `_confirm_update`, `_warn_config` e `_begin_execution` (bloqueia validar/importar/atualizar durante a execução); resumo, console e modal mostram "Atualização concluída" com as feições substituídas
+  - docs/skills/CatalogoClasses.md e docs/skills/SKILL_DATABASE.md: fluxo ATUALIZAR, `find_existing`, `LimitesExistingWorker` e reescrita do registro da SubOS documentados
+
+
 [1.10.2][2026.10.21][18:02] - Layout 50/50 garantido entre "Mapeamento de Campos" e "Valores Manuais"
   - resources/widgets/grid/GridGroupPainel.py: cada painel recebe QSizePolicy horizontal `Ignored` — a divisão fica SEMPRE igual (50/50), independentemente do texto dos combos/campos; antes, conteúdo com nomes longos esticava a coluna e empurrava o painel vizinho para fora da tela
   - resources/widgets/simple/SimpleComboBox.py: `setSizeAdjustPolicy(AdjustToMinimumContentsLengthWithIcon)` + `setMinimumContentsLength(8)` e largura mínima 160 — o texto dos itens não dita mais a largura do layout (o popup continua mostrando os nomes completos)

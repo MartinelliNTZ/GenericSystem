@@ -109,6 +109,10 @@ guarda apenas o número + a lista de SubOS:
 
   - `file` é **RELATIVO à pasta-mãe** (portável) e aponta para a cópia do limite
     dentro do projeto (`08_LIMITES/TALHOES`).
+  - Ao **ATUALIZAR** pela Base de Limites, o mesmo objeto é reescrito na SubOS
+    (`inserted_at`, `file`, `source`, `features` e `area_ha` do novo vetor) — as
+    feições antigas das OS/SubOS do vetor são substituídas no completão, no
+    arquivo da OS e na cópia do projeto.
   - O **ATUALIZAR DADOS** do Banco de Dados preserva `limites` — ele só reescreve
     `folders`/`years` de cada SubOS.
 - No modo **Zonas de Manejo** a mesma ferramenta grava a chave **`zonas_manejo`**

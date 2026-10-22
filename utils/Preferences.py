@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from core.enum.ToolKey import ToolKey
 from utils.BaseUtil import BaseUtil
@@ -187,6 +187,50 @@ class Preferences(BaseUtil):
             tool=tool_name,
         )
         return dict(section)
+
+    @staticmethod
+    def remove_tool_prefs(
+        tool_key: ToolKey,
+        keys: List[str],
+        caller_tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> bool:
+        """
+        Remove chaves das preferências de uma ferramenta (cache + escrita async).
+
+        Necessário quando uma preferência deixa de existir: ``save_tool_prefs``
+        apenas MESCLA valores e nunca apaga chaves antigas.
+
+        Args:
+            tool_key: Chave da ferramenta (ToolKey enum)
+            keys: Nomes das chaves a remover
+            caller_tool_key: Chave da ferramenta chamadora para logging.
+
+        Returns:
+            True quando alguma chave foi realmente removida.
+        """
+        logger = BaseUtil._get_logger(caller_tool_key, "Preferences")
+        tool_name = tool_key.value if isinstance(tool_key, ToolKey) else str(tool_key)
+        all_data = Preferences._ensure_cache()
+
+        section = all_data.get(tool_name)
+        if not isinstance(section, dict):
+            return False
+
+        removed = [key for key in keys if key in section]
+        if not removed:
+            return False
+
+        for key in removed:
+            section.pop(key, None)
+
+        Preferences._schedule_write()
+        logger.info(
+            "Preferências removidas",
+            code="PREFS_REMOVE",
+            tool=tool_name,
+            keys=removed,
+        )
+        return True
 
     # ── Utilitários ──────────────────────────────────────────────────
 

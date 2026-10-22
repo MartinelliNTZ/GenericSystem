@@ -65,4 +65,25 @@ Para melhorar a experiência do usuário (UX), sempre salve:
 - Estados de CheckBoxes e RadioButtons.
 - Filtros de visualização ativos.
 
+## 🗑️ Removendo preferências
+
+`save_tool_prefs()` apenas **mescla** valores — nunca apaga chaves antigas. Quando
+uma preferência deixa de existir, remova-a explicitamente:
+
+```python
+from utils.Preferences import Preferences
+
+Preferences.remove_tool_prefs(self.tool_key, ["field_map"])
+```
+
+A remoção é aplicada no cache em memória e a gravação no disco acontece com o
+mesmo debounce do save. Retorna `True` quando alguma chave foi realmente removida.
+
+## ⚠️ O que NÃO persistir
+
+Valores **derivados ou auto-preenchidos** (mapeamento de campos, campos sugeridos
+a partir do arquivo selecionado, resultados calculados) **não** devem ser salvos:
+na próxima abertura eles podem não fazer sentido para o novo arquivo e acabam
+substituindo a preferência do usuário. Recalcule-os sempre a partir do estado atual.
+
 ---
