@@ -6,8 +6,8 @@ Ferramenta CENTRAL de ATUALIZAÇÃO do banco de OS.
 
 Nova regra de negócio:
 - A ferramenta **não cria mais OS**. Ela consulta a fonte oficial (Firebase,
-  coleção ``banco_dados``) as OS já existentes, **re-escaneia** as pastas
-  associadas a cada SubOS e **atualiza** ``folders``/``years`` no Firebase.
+  coleção ``banco_dados``) as OS já existentes, **re-escaneia** a pasta
+  associada a cada OS e **atualiza** ``folders``/``years`` no Firebase.
 - A ferramenta tem **zero contato** com o JSON de dados: quem grava/lê e gera
   os backups JSON é a classe de banco ``CloudProjectDatabase`` (Contrato 28).
 - Ao final, exibe um **modal** com o resumo do que foi atualizado.
@@ -572,16 +572,15 @@ class ProjectDatabasePlugin(BasePlugin):
         """Popula a árvore, os cards e a legenda com os dados atuais."""
         self._tree.clear_nodes()
         for index, record in enumerate(self._database.get("projects", [])):
-            summary = ProjectStructureUtil.aggregate_record(record)
-            resolved = self._resolve_display_path(summary["path"])
+            resolved = self._resolve_display_path(str(record.get("path", "") or ""))
             node_key = f"os::{record.get('os', index)}::{index}"
             self._tree.add_node(
                 key=node_key,
                 texts={
                     self._COL_OS: record.get("os", ""),
-                    self._COL_CLIENT: summary["client"] or "—",
-                    self._COL_FOLDERS: ", ".join(summary["folders"]) or "—",
-                    self._COL_YEARS: ", ".join(summary["years"]) or "—",
+                    self._COL_CLIENT: str(record.get("client", "") or "") or "—",
+                    self._COL_FOLDERS: ", ".join(record.get("folders") or []) or "—",
+                    self._COL_YEARS: ", ".join(record.get("years") or []) or "—",
                     self._COL_PATH: resolved or "—",
                 },
                 bold=True,
@@ -599,9 +598,8 @@ class ProjectDatabasePlugin(BasePlugin):
     def _update_cards(self) -> None:
         """Atualiza os cards de resumo."""
         projects = self._database.get("projects", [])
-        summaries = [ProjectStructureUtil.aggregate_record(r) for r in projects]
-        total_folders = sum(len(s["folders"]) for s in summaries)
-        total_years = sum(len(s["years"]) for s in summaries)
+        total_folders = sum(len(record.get("folders") or []) for record in projects)
+        total_years = sum(len(record.get("years") or []) for record in projects)
         self._cards.set_card_value(0, 0, str(len(projects)))
         self._cards.set_card_value(1, 0, str(total_folders))
         self._cards.set_card_value(2, 0, str(total_years))

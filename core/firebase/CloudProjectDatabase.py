@@ -3,7 +3,7 @@
 CloudProjectDatabase — Banco de OS oficial (Firebase-first) + backup JSON
 =========================================================================
 CLASSE DE BANCO central do sistema de OS. É a ÚNICA porta de entrada para os
-registros de OS/SubOS: as ferramentas (plugins) **nunca** leem/escrevem o JSON
+registros de OS: as ferramentas (plugins) **nunca** leem/escrevem o JSON
 de dados — elas chamam esta classe, que:
 
 - LÊ/grava os documentos no **Cloud Firestore** (coleção ``banco_dados``) — a
@@ -72,6 +72,17 @@ class CloudProjectDatabase(BaseUtil):
         """Busca o registro de UMA OS na fonte oficial (``None`` se não existir)."""
         return FirestoreService.get_document(
             cls.COLLECTION, cls._doc_id(os_number), tool_key=tool_key
+        )
+
+    @classmethod
+    def delete_order(cls, os_key: str, tool_key: str = _TOOL_KEY) -> bool:
+        """Remove o registro de UMA OS da fonte oficial (Firestore).
+
+        O backup JSON correspondente é removido pela poda do consolidado
+        (``rebuild_consolidated`` → ``ProjectDatabaseStore.prune_projects``).
+        """
+        return FirestoreService.delete_document(
+            cls.COLLECTION, cls._doc_id(os_key), tool_key=tool_key
         )
 
     # ── Escrita (Firestore + backup JSON) ───────────────────────────
@@ -154,9 +165,9 @@ class CloudProjectDatabase(BaseUtil):
     # ── Internos ────────────────────────────────────────────────────
 
     @classmethod
-    def _doc_id(cls, os_number: str | Any) -> str:
-        """``doc_id``/nome do backup de uma OS (número normalizado + sanitizado)."""
-        return cls._safe_name(ProjectStructureUtil.normalize_os(str(os_number)))
+    def _doc_id(cls, os_key: str | Any) -> str:
+        """``doc_id``/nome do backup de uma OS (chave normalizada + sanitizada)."""
+        return cls._safe_name(ProjectStructureUtil.normalize_os(str(os_key)))
 
     @staticmethod
     def _safe_name(name: str) -> str:

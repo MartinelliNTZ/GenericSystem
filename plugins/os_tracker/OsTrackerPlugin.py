@@ -2,27 +2,27 @@
 """
 OsTrackerPlugin — Acompanhamento de OS
 ======================================
-Ferramenta CENTRAL de OS. Lê a FONTE OFICIAL (Firebase) e, para a OS/SubOS
-selecionada, exibe os dados gerais e as ÚLTIMAS ALTERAÇÕES DA OS (changelog da
-estrutura, filtrado pelo número da OS). Permite também:
+Ferramenta CENTRAL de OS. Lê a FONTE OFICIAL (Firebase) e, para a OS selecionada,
+exibe os dados gerais e as ÚLTIMAS ALTERAÇÕES DA OS (changelog da estrutura,
+filtrado pela chave da OS). Permite também:
 
-- **CRIAR OS** — pede os dados básicos (só o NÚMERO é obrigatório) e cria a
-  SubOS ``A`` automaticamente. A OS é lançada DIRETO no Firebase.
-- **CRIAR SUBOS** — adiciona uma SubOS (letra) à OS selecionada.
+- **CRIAR OS** — pede os dados básicos (só a CHAVE é obrigatória) e lança a OS
+  DIRETO no Firebase. A chave é TEXTO e pode conter LETRA (ex.: ``169A``), que é
+  o que diferencia as OS de um mesmo projeto.
 - **ADICIONAR PASTA** — abre um checklist com as pastas da estrutura do projeto
   e cria as selecionadas (com as subpastas), EXCETO os anos do
-  ``03_ENVIO_DE_DOCUMENTOS``, na pasta da SubOS selecionada.
+  ``03_ENVIO_DE_DOCUMENTOS``, na pasta da OS.
 
 A ferramenta tem ZERO contato com o JSON de dados — a persistência (Firebase +
 backup JSON) é da classe ``CloudProjectDatabase`` (Contrato 28).
 
-O painel **Dados Gerais** reúne OS, SubOS, pastas/anos criados e as infos de cada
+O painel **Dados Gerais** reúne OS, cliente, pastas/anos criados e as infos de cada
 base do banco (``limites`` e ``zonas_manejo``: feições e área em hectares).
 
-O painel **Atalhos** abre, com um clique, a pasta da SubOS, a pasta do arquivo de
+O painel **Atalhos** abre, com um clique, a pasta da OS, a pasta do arquivo de
 cada base obtida (``LIMITES`` e ``ZONAS DE MANEJO`` — um botão por link registrado
-no banco, escondido quando a SubOS não tem o registro) e o changelog Word da OS
-(``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``).
+no banco, escondido quando a OS não tem o registro) e o changelog Word da OS
+(``11_AGROROBOTICA/OS_<chave>_CHANGELOG.DOCX``).
 """
 
 from __future__ import annotations
@@ -52,9 +52,9 @@ from utils.ProjectStructureUtil import DEFAULT_PROJECT_FOLDERS
 
 
 class OsTrackerPlugin(BasePlugin):
-    """Ferramenta CENTRAL: escolhe OS/SubOS, cria OS/SubOS e adiciona pastas."""
+    """Ferramenta CENTRAL: escolhe a OS, cria OS e adiciona pastas."""
 
-    # Bases gravadas na SubOS pelo banco: (chave, label, prefixo das chaves do GridLabel)
+    # Bases gravadas na OS pelo banco: (chave, label, prefixo das chaves do GridLabel)
     _ASSETS = (
         ("limites", "Limites", "lim"),
         ("zonas_manejo", "Zonas de manejo", "zon"),
@@ -62,12 +62,12 @@ class OsTrackerPlugin(BasePlugin):
 
     # Atalhos do painel "Atalhos": (chave, texto, descrição)
     _SHORTCUTS = (
-        ("path", "PASTA DA SUBOS", "Abre a pasta da SubOS no Explorer"),
-        ("limites", "LIMITES", "Abre a pasta do arquivo de limites da SubOS"),
+        ("path", "PASTA DA OS", "Abre a pasta da OS no Explorer"),
+        ("limites", "LIMITES", "Abre a pasta do arquivo de limites da OS"),
         (
             "zonas_manejo",
             "ZONAS DE MANEJO",
-            "Abre a pasta do arquivo de zonas de manejo da SubOS",
+            "Abre a pasta do arquivo de zonas de manejo da OS",
         ),
         ("changelog", "CHANGELOG (WORD)", "Abre o changelog Word da OS"),
     )
@@ -89,19 +89,13 @@ class OsTrackerPlugin(BasePlugin):
                     "text": "CRIAR OS",
                     "callback": self._on_create_os,
                     "type": "secondary",
-                    "description": "Cria uma OS (número obrigatório) com SubOS A",
-                },
-                "criar_subos": {
-                    "text": "CRIAR SUBOS",
-                    "callback": self._on_create_subos,
-                    "type": "secondary",
-                    "description": "Adiciona uma SubOS à OS selecionada",
+                    "description": "Cria uma OS (chave obrigatória — pode conter letra)",
                 },
                 "adicionar_pasta": {
                     "text": "ADICIONAR PASTA",
                     "callback": self._on_add_folder,
                     "type": "primary",
-                    "description": "Cria pastas da estrutura do projeto na SubOS selecionada",
+                    "description": "Cria pastas da estrutura do projeto na OS selecionada",
                 },
             },
         )
@@ -121,9 +115,8 @@ class OsTrackerPlugin(BasePlugin):
         self._mother_selector.set_path(saved_mother)
 
     def save_prefs(self) -> None:
-        """Persiste a última OS/SubOS selecionadas."""
+        """Persiste a última OS selecionada."""
         self.preferences["selected_os"] = self._os_combo.current_value or ""
-        self.preferences["selected_subos"] = self._sub_combo.current_value or ""
 
     # ── UI ───────────────────────────────────────────────────────────
 
@@ -146,14 +139,8 @@ class OsTrackerPlugin(BasePlugin):
             on_item_changed=self._on_os_changed,
             label="OS:",
         )
-        self._sub_combo = SimpleComboBox(
-            items={},
-            on_item_changed=self._on_sub_changed,
-            label="SubOS:",
-        )
         grupo_selecao = GroupPainel("Seleção")
         grupo_selecao.group_layout.addWidget(self._os_combo)
-        grupo_selecao.group_layout.addWidget(self._sub_combo)
 
         self.main_layout.addWidget(GridGroupPainel(grupo_origem, grupo_selecao))
         self._build_panels()
@@ -190,10 +177,10 @@ class OsTrackerPlugin(BasePlugin):
 
     @classmethod
     def _general_config(cls) -> Dict[str, Dict[str, Any]]:
-        """Config do GridLabel de Dados Gerais (OS/SubOS + bases de limites/zonas)."""
+        """Config do GridLabel de Dados Gerais (OS + cliente + bases de limites/zonas)."""
         config: Dict[str, Dict[str, Any]] = {
             "os": {"label": "OS", "value": "—"},
-            "subos": {"label": "SubOS", "value": "—"},
+            "client": {"label": "Cliente", "value": "—"},
             "folders": {"label": "Pastas criadas", "value": "—"},
             "years": {"label": "Anos criados", "value": "—"},
         }
@@ -201,12 +188,12 @@ class OsTrackerPlugin(BasePlugin):
             config[f"{prefix}_features"] = {
                 "label": f"Feições — {label}",
                 "value": "—",
-                "description": f"Feições da base '{key}' registrada na SubOS",
+                "description": f"Feições da base '{key}' registrada na OS",
             }
             config[f"{prefix}_area"] = {
                 "label": f"Área — {label} (ha)",
                 "value": "—",
-                "description": f"Área (hectares) da base '{key}' registrada na SubOS",
+                "description": f"Área (hectares) da base '{key}' registrada na OS",
             }
         return config
 
@@ -306,41 +293,13 @@ class OsTrackerPlugin(BasePlugin):
             self._os_combo.current_value = saved
         elif items:
             self._os_combo.select_first()
-        self._populate_sub_selector()
-
-    def _populate_sub_selector(self) -> None:
-        """Preenche o combo de SubOS da OS selecionada (default SubOS ``A``)."""
-        record = self._current_record()
-        codes = OsTrackerService.sub_os_codes(record) if record else []
-        items = {code: self._sub_os_label(record, code) for code in codes}
-        self._sub_combo.set_items(items)
-        saved = self.preferences.get("selected_subos", "") or ""
-        if "A" in items:
-            self._sub_combo.current_value = "A"
-        elif saved and saved in items:
-            self._sub_combo.current_value = saved
-        elif items:
-            self._sub_combo.select_first()
-
-    @staticmethod
-    def _sub_os_label(record: Dict[str, Any], code: str) -> str:
-        """Rótulo do seletor de SubOS (``SubOS <letra> — <cliente>``)."""
-        entry = OsTrackerService.sub_os_entry(record, code) or {}
-        client = str(entry.get("client", "")).strip()
-        return f"SubOS {code} — {client}" if client else f"SubOS {code}"
 
     def _on_os_changed(self, os_key: str) -> None:
-        """Reage à troca de OS: repopula as SubOS, re-renderiza e busca alterações."""
+        """Reage à troca de OS: re-renderiza os painéis e busca as alterações."""
         self.preferences["selected_os"] = os_key or ""
-        self._populate_sub_selector()
         self._changes = []
         self._render()
         self._load_changes()
-
-    def _on_sub_changed(self, sub_key: str) -> None:
-        """Reage à troca de SubOS."""
-        self.preferences["selected_subos"] = sub_key or ""
-        self._render()
 
     def _current_record(self) -> Optional[Dict[str, Any]]:
         """Retorna o registro da OS selecionada, ou None."""
@@ -352,53 +311,37 @@ class OsTrackerPlugin(BasePlugin):
                 return record
         return None
 
-    def _current_sub_entry(
-        self, record: Optional[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
-        """Retorna a entrada da SubOS selecionada (ou None)."""
-        if record is None:
-            return None
-        code = self._sub_combo.current_value
-        if not code:
-            return None
-        return OsTrackerService.sub_os_entry(record, code)
-
     # ── Render ───────────────────────────────────────────────────────
 
     def _render(self) -> None:
         """Atualiza dados gerais, atalhos e alterações."""
         record = self._current_record()
-        entry = self._current_sub_entry(record)
-        self._render_general(record, entry)
-        self._render_shortcuts(entry)
+        self._render_general(record)
+        self._render_shortcuts(record)
         self._render_changes()
         self._render_legend(record)
 
-    def _render_general(
-        self,
-        record: Optional[Dict[str, Any]],
-        entry: Optional[Dict[str, Any]],
-    ) -> None:
-        """Atualiza os labels de dados gerais (OS/SubOS + bases de limites/zonas)."""
-        os_number = str(record.get("os", "")) if record else "—"
-        code = self._sub_combo.current_value or "—"
-        folders = list((entry or {}).get("folders", []) or [])
-        years = list((entry or {}).get("years", []) or [])
-        self._general.set("os", os_number or "—")
-        self._general.set("subos", code)
+    def _render_general(self, record: Optional[Dict[str, Any]]) -> None:
+        """Atualiza os labels de dados gerais (OS + cliente + bases de limites/zonas)."""
+        os_key = str(record.get("os", "")) if record else ""
+        client = str((record or {}).get("client", "") or "")
+        folders = list((record or {}).get("folders") or [])
+        years = list((record or {}).get("years") or [])
+        self._general.set("os", os_key or "—")
+        self._general.set("client", client or "—")
         self._general.set("folders", str(len(folders)))
         self._general.set("years", str(len(years)))
         for key, _label, prefix in self._ASSETS:
-            self._render_asset(entry, key, prefix)
+            self._render_asset(record, key, prefix)
 
     def _render_asset(
         self,
-        entry: Optional[Dict[str, Any]],
+        record: Optional[Dict[str, Any]],
         key: str,
         prefix: str,
     ) -> None:
         """Escreve as infos (feições e área) de uma base nos labels de Dados Gerais."""
-        info = OsTrackerService.asset_info(entry, key)
+        info = OsTrackerService.asset_info(record, key)
         tooltip = self._asset_tooltip(info)
         values = {
             f"{prefix}_features": self._format_int(info.get("features", 0)),
@@ -408,15 +351,15 @@ class OsTrackerPlugin(BasePlugin):
             self._general.set(field, value)
             self._general.widget(field).setToolTip(tooltip)
 
-    def _render_shortcuts(self, entry: Optional[Dict[str, Any]]) -> None:
+    def _render_shortcuts(self, record: Optional[Dict[str, Any]]) -> None:
         """Resolve os atalhos e exibe um botão por link (limites/zonas) obtido."""
-        folder = OsTrackerService.sub_os_folder(self._mother_folder, entry)
+        folder = OsTrackerService.project_folder(self._mother_folder, record)
         self._shortcut_paths = {
             "path": str(folder) if folder is not None else "",
-            "changelog": OsTrackerService.changelog_path(self._mother_folder, entry),
+            "changelog": OsTrackerService.changelog_path(self._mother_folder, record),
         }
         for key, _label, _prefix in self._ASSETS:
-            path = OsTrackerService.asset_file_path(self._mother_folder, entry, key)
+            path = OsTrackerService.asset_file_path(self._mother_folder, record, key)
             self._shortcut_paths[key] = path
             self._shortcuts.set_visible(key, bool(path))
 
@@ -424,7 +367,7 @@ class OsTrackerPlugin(BasePlugin):
     def _asset_tooltip(info: Dict[str, Any]) -> str:
         """Detalhes do registro do banco (arquivo de origem e data de registro)."""
         if not info.get("has"):
-            return "Sem registro na SubOS."
+            return "Sem registro na OS."
 
         lines = []
         if info.get("source"):
@@ -432,7 +375,7 @@ class OsTrackerPlugin(BasePlugin):
         when = OsTrackerService.format_when(str(info.get("inserted_at", "")))
         if when:
             lines.append(f"Registrado em: {when}")
-        return "\n".join(lines) or "Registro presente na SubOS."
+        return "\n".join(lines) or "Registro presente na OS."
 
     def _render_changes(self) -> None:
         """Reconstrói os cards das últimas alterações registradas no banco."""
@@ -477,7 +420,7 @@ class OsTrackerPlugin(BasePlugin):
         """Atualiza a legenda/estado vazio."""
         if self._changes:
             text = "● Últimas alterações desta OS — data, resumo e operador"
-        elif record and record.get("sub_os"):
+        elif record:
             text = "Nenhuma alteração registrada para esta OS."
         elif self._mother_folder is None:
             text = "Defina a pasta-mãe no Gerenciador de Estrutura."
@@ -488,11 +431,11 @@ class OsTrackerPlugin(BasePlugin):
     # ── Abrir caminhos ──────────────────────────────────────────────
 
     def _on_shortcut(self, key: str) -> None:
-        """Abre o alvo do atalho clicado (pasta da SubOS, limites/zonas ou Word)."""
+        """Abre o alvo do atalho clicado (pasta da OS, limites/zonas ou Word)."""
         path = self._shortcut_paths.get(key, "")
         if not path:
             MessageBox.show_warning(
-                "Nada para abrir: selecione uma OS/SubOS com pasta em disco.",
+                "Nada para abrir: selecione uma OS com pasta em disco.",
                 title="Acompanhamento de OS",
                 parent=self,
             )
@@ -538,7 +481,7 @@ class OsTrackerPlugin(BasePlugin):
     # ── Ações ────────────────────────────────────────────────────────
 
     def _on_create_os(self) -> None:
-        """Cria uma OS (número obrigatório) com SubOS A e lança no Firebase."""
+        """Cria uma OS (chave obrigatória — pode conter letra) e lança no Firebase."""
         if self._mother_folder is None:
             MessageBox.show_warning(
                 "Defina a pasta-mãe no Gerenciador de Estrutura.",
@@ -547,7 +490,7 @@ class OsTrackerPlugin(BasePlugin):
             return
         dialog = FormLineEditDialog(
             config={
-                "os": {"label": "Número da OS *", "placeholder": "ex.: 39"},
+                "os": {"label": "OS *", "placeholder": "ex.: 169A"},
                 "name": {"label": "Nome", "placeholder": "opcional"},
                 "client": {"label": "Cliente", "placeholder": "opcional"},
                 "commercial_name": {"label": "Nome comercial", "placeholder": "opcional"},
@@ -576,64 +519,16 @@ class OsTrackerPlugin(BasePlugin):
             self.logger.error("Falha ao criar OS", code="OST_CREATE_ERR", error=str(e))
             MessageBox.show_error(f"Falha ao criar OS: {e}", parent=self)
             return
-        number = str(record.get("os", ""))
-        self._reload(number, "A")
-        MessageBox.show_toast(f"OS {number} criada (SubOS A).", parent=self)
-
-    def _on_create_subos(self) -> None:
-        """Adiciona uma SubOS à OS selecionada e grava no Firebase."""
-        record = self._current_record()
-        if record is None:
-            MessageBox.show_warning(
-                "Selecione uma OS primeiro.",
-                title="Acompanhamento de OS", parent=self,
-            )
-            return
-        suggested = OsTrackerService.next_sub_os_code(record)
-        dialog = FormLineEditDialog(
-            config={
-                "sub_os": {
-                    "label": "SubOS (letra)", "default": suggested,
-                    "placeholder": "ex.: B",
-                },
-                "client": {"label": "Cliente", "placeholder": "opcional"},
-                "commercial_name": {"label": "Nome comercial", "placeholder": "opcional"},
-                "cnpj": {"label": "CNPJ", "placeholder": "opcional"},
-            },
-            title="Criar SubOS",
-            required_keys=["sub_os"],
-            ok_text="Criar SubOS",
-            min_size=(420, 320),
-            parent=self,
-        )
-        if not dialog.exec():
-            return
-        values = dialog.values
-        try:
-            OsTrackerService.add_sub_os(
-                self._mother_folder,
-                record,
-                code=values.get("sub_os", ""),
-                client=values.get("client", ""),
-                commercial_name=values.get("commercial_name", ""),
-                cnpj=values.get("cnpj", ""),
-                tool_key=self.tool_key,
-            )
-        except Exception as e:
-            self.logger.error("Falha ao criar SubOS", code="OST_SUBOS_ERR", error=str(e))
-            MessageBox.show_error(f"Falha ao criar SubOS: {e}", parent=self)
-            return
-        code = values.get("sub_os", "").strip().upper()
-        self._reload(str(record.get("os", "")), code)
-        MessageBox.show_toast(f"SubOS {code} criada.", parent=self)
+        os_key = str(record.get("os", ""))
+        self._reload(os_key)
+        MessageBox.show_toast(f"OS {os_key} criada.", parent=self)
 
     def _on_add_folder(self) -> None:
         """Abre o checklist de pastas da estrutura e cria as selecionadas."""
         record = self._current_record()
-        entry = self._current_sub_entry(record)
-        if record is None or entry is None:
+        if record is None:
             MessageBox.show_warning(
-                "Selecione uma OS e uma SubOS primeiro.",
+                "Selecione uma OS primeiro.",
                 title="Acompanhamento de OS", parent=self,
             )
             return
@@ -655,10 +550,10 @@ class OsTrackerPlugin(BasePlugin):
         selected = list(dialog.selected_keys)
         if not selected:
             return
-        code = str(entry.get("sub_os", ""))
+        os_key = str(record.get("os", ""))
         try:
             result = OsTrackerService.add_folders(
-                self._mother_folder, record, code, selected, tool_key=self.tool_key
+                self._mother_folder, record, selected, tool_key=self.tool_key
             )
         except Exception as e:
             self.logger.error(
@@ -666,16 +561,15 @@ class OsTrackerPlugin(BasePlugin):
             )
             MessageBox.show_error(f"Falha ao adicionar pastas: {e}", parent=self)
             return
-        self._reload(str(record.get("os", "")), code)
+        self._reload(os_key)
         MessageBox.show_toast(
-            f"{result.get('created', 0)} pasta(s) criada(s) na SubOS {code}.",
+            f"{result.get('created', 0)} pasta(s) criada(s) na OS {os_key}.",
             parent=self,
         )
 
-    def _reload(self, os_key: str, sub_key: str) -> None:
+    def _reload(self, os_key: str) -> None:
         """Recarrega a base do Firebase e restaura a seleção informada."""
         self.preferences["selected_os"] = os_key
-        self.preferences["selected_subos"] = sub_key
         self._load_from_disk()
 
     # ── Formatação ──────────────────────────────────────────────────

@@ -83,12 +83,10 @@ class ProjectStructureSnapshot(BaseUtil):
     @classmethod
     def _new_entry(cls, project: Path) -> Dict[str, Any]:
         """Cria o registro vazio de uma pasta de OS."""
-        number = ProjectStructureUtil.normalize_os(
-            ProjectStructureUtil.extract_os_number(project.name)
-        )
+        key = ProjectStructureUtil.extract_os(project.name)
         return {
             "scope": project.name,
-            "os": number,
+            "os": key,
             "folders": [],
             "files": [],
             "modified": {},

@@ -296,7 +296,7 @@ consulta rápida.
 | `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: **NÃO cria OS** — re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
 | `core/firebase/CloudProjectDatabase.py` | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore) + geração dos backups JSON |
 | `core/database/ProjectDatabaseStore.py` | Leitura/escrita atômica dos backups JSON em `.BancoDados` (usada só pela `CloudProjectDatabase`) |
-| `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os_number`, `extract_sub_os`, `assign_sub_os_letters`, `normalize_os`, `group_projects_by_os`, `collect_created_data`, `aggregate_record`) e tipos de nó (`BaseFile`, `Years`) |
+| `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os`, `normalize_os`, `project_folder`, `collect_created_data`) e tipos de nó (`BaseFile`, `Years`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
 ### Estrutura em disco
@@ -309,32 +309,31 @@ consulta rápida.
 
 ### Chave da OS e estrutura
 
-O nome da pasta segue `OS_<numero>_<resto...>` (ex.: `OS_039_Bunge`,
-`OS_181_RENNER_A_Grupo JCN - Faz Clateia`). O **número** é o primeiro campo
-após `OS_` e é normalizado (`039` → `39`). Uma OS com o mesmo número em várias
-pastas vira **um único registro** (`<numero>.json`), com **uma SubOS por pasta**.
-A chave (`os`) — que também dá nome ao arquivo — é o número normalizado
-(ex.: `68` → `68.json`, `181` → `181.json`).
+O nome da pasta segue `OS_<chave>_<resto...>` (ex.: `OS_039_Bunge`,
+`OS_169A_AGUA_VIVA`, `OS_181C_RENNER_Grupo Salazar - Faz Rio Alegre`). A **chave**
+é o primeiro campo após `OS_`, é **TEXTO** e PODE CONTER **LETRA** — a letra é o
+que diferencia as OS de um mesmo projeto. Os **zeros à esquerda são preservados**
+(`OS_039_Bunge` → `039`), assim como a letra (`OS_169B_DARRO` → `169B`).
 
-**As pastas pertencem à SubOS, não à OS.** O registro da OS guarda apenas
-`os`, `name` e a lista `sub_os`; cada entrada de `sub_os` carrega o seu
-`path`/`folders`/`years` + cliente/nome comercial/CNPJ:
+**Uma pasta = UMA OS.** A chave (`os`) — que também dá nome ao arquivo — é a chave
+da pasta (`039` → `039.json`, `169A` → `169A.json`) e o registro guarda TUDO no
+próprio nível (cliente, nome comercial, CNPJ, caminho, pastas/anos e as bases):
 
 ```json
 {
-  "os": "181",
+  "os": "181C",
   "name": "",
-  "updated_at": "2026-10-05T17:15:36",
-  "sub_os": [
-    {"sub_os": "A", "path": "OS_181_RENNER_A_...",
-     "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
-     "years": ["2023", "2024"],
-     "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""}
-  ]
+  "path": "OS_181C_RENNER_Grupo Salazar - Faz Rio Alegre",
+  "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "03_ENVIO_DE_DOCUMENTOS"],
+  "years": ["2023", "2024"],
+  "client": "Grupo Salazar - Faz Rio Alegre",
+  "commercial_name": "GRUPO JCN",
+  "cnpj": "",
+  "updated_at": "2026-10-05T17:15:36"
 }
 ```
 
-- **Uma pasta = uma SubOS**: não existem SubOS sem pasta em disco.
+- Não existe mais o campo/list `sub_os` (o sistema de SubOS foi eliminado).
 - `folders`: **apenas** as pastas **padrão** presentes em disco (nunca as fora
   de padrão).
 - `years`: **apenas** as pastas de ano presentes em `03_ENVIO_DE_DOCUMENTOS`.
@@ -447,19 +446,19 @@ alteradas.
 - Os painéis do **Acompanhamento de OS** são: **Origem**, **Seleção**, **Dados
   Gerais**, **Atalhos** e **Últimas alterações da OS**.
 - O painel **"Dados Gerais"** exibe TODOS os dados em um único `GridLabel` de
-  **2 colunas**, na mesma formatação: OS, SubOS, pastas criadas, anos criados e as
-  infos de cada base do banco — **Feições/Área de Limites** e **Feições/Área de
+  **2 colunas**, na mesma formatação: OS, cliente, pastas criadas, anos criados e
+  as infos de cada base do banco — **Feições/Área de Limites** e **Feições/Área de
   Zonas de manejo** (`OsTrackerService.asset_info`; o tooltip traz a origem e a
   data de registro).
 - O painel **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da
-  SubOS** (`OsTrackerService.sub_os_folder`), a **pasta do arquivo de cada base
+  OS** (`OsTrackerService.project_folder`), a **pasta do arquivo de cada base
   obtida** (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido
-  quando a SubOS não tem o registro) e o **changelog Word** da OS
+  quando a OS não tem o registro) e o **changelog Word** da OS
   (`OsTrackerService.changelog_path` → `ProjectStructureChangelog.document_path`),
   aberto no aplicativo padrão. **Não** há link para o shapefile — a abertura da
   pasta é feita pelos botões de atalho. O caminho do arquivo de limites/zonas
   (`asset_file_path`) é resolvido em cascata — **absoluto → relativo à pasta-mãe →
-  relativo à pasta da SubOS** — cobrindo registros antigos ou gravados fora da
+  relativo à pasta da OS** — cobrindo registros antigos ou gravados fora da
   pasta-mãe. O painel **"Últimas alterações da OS"** continua vindo do **banco**
   (`estrutura_changelog`), nunca do Word.
 - `python-docx` é dependência declarada em `requirements.txt`.

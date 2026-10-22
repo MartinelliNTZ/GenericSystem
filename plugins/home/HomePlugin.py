@@ -7,7 +7,7 @@ Apresenta um resumo visual das ferramentas disponíveis
 e boas-vindas ao usuário. Exibe partidas de futebol do dia
 e dados climáticos lado a lado em painéis, após a conclusão
 das pipelines de fetch. Oferece também um botão para semear
-a base de SubOS (add_data/seed_sub_os.py — DEV).
+a base de OS (add_data/seed_os.py — DEV).
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ class HomePlugin(BasePlugin):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
 
-        # === Seed de SubOS (add_data/seed_sub_os.py — DEV) ===
+        # === Seed de OS (add_data/seed_os.py — DEV) ===
         self._seed_btn = SimpleThemeButton(
             "SEMEAR BASE (SEED OS)",
             min_width=200,
@@ -155,13 +155,13 @@ class HomePlugin(BasePlugin):
         QTimer.singleShot(500, self._start_football_pipeline)
         QTimer.singleShot(600, self._start_weather_pipeline)
 
-    # ── Seed de SubOS (add_data/seed_sub_os.py — DEV) ──────────────
+    # ── Seed da base de OS (add_data/seed_os.py — DEV) ──────────────
 
     def _on_seed_clicked(self) -> None:
-        """Dispara o seed de SubOS em background (não bloqueia a UI)."""
+        """Dispara o seed da base de OS em background (não bloqueia a UI)."""
         if self._seed_worker is not None and self._seed_worker.isRunning():
             self.logger.info(
-                "Seed de SubOS já está em execução", code="HOME_SEED_BUSY",
+                "Seed da base de OS já está em execução", code="HOME_SEED_BUSY",
             )
             return
 
@@ -170,12 +170,12 @@ class HomePlugin(BasePlugin):
         self._seed_worker.finished_with_result.connect(self._on_seed_done)
         self._seed_worker.failed.connect(self._on_seed_error)
 
-        self.logger.info("Executando seed de SubOS", code="HOME_SEED_START")
+        self.logger.info("Executando seed da base de OS", code="HOME_SEED_START")
         self._seed_worker.start()
 
     def _run_seed_script(self) -> str:
-        """Roda add_data/seed_sub_os.py em subprocesso e devolve a saída."""
-        script = Path(__file__).resolve().parents[2] / "add_data" / "seed_sub_os.py"
+        """Roda add_data/seed_os.py em subprocesso e devolve a saída."""
+        script = Path(__file__).resolve().parents[2] / "add_data" / "seed_os.py"
         creationflags = (
             subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         )
@@ -197,9 +197,9 @@ class HomePlugin(BasePlugin):
     def _on_seed_done(self, output: str) -> None:
         """Exibe o resumo do seed concluído."""
         self._seed_btn.setEnabled(True)
-        self.logger.info("Seed de SubOS concluído", code="HOME_SEED_DONE")
+        self.logger.info("Seed da base de OS concluído", code="HOME_SEED_DONE")
         MessageBox.show_info(
-            "Base de SubOS semeada com sucesso.",
+            "Base de OS semeada com sucesso.",
             title="Seed Sub OS",
             detail=output or "O script não retornou saída.",
             parent=self,
@@ -209,10 +209,10 @@ class HomePlugin(BasePlugin):
         """Exibe o erro do seed."""
         self._seed_btn.setEnabled(True)
         self.logger.error(
-            "Seed de SubOS falhou", code="HOME_SEED_ERR", error=error_msg,
+            "Seed da base de OS falhou", code="HOME_SEED_ERR", error=error_msg,
         )
         MessageBox.show_error(
-            "Falha ao executar o seed de SubOS.",
+            "Falha ao executar o seed da base de OS.",
             title="Seed Sub OS",
             detail=error_msg,
             parent=self,

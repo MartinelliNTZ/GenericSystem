@@ -211,69 +211,52 @@ class ProjectStructureUtil(BaseUtil):
         return name
 
     @classmethod
-    def extract_os_number(cls, name: str) -> str:
-        """Extrai o NÚMERO da OS — o primeiro campo após o prefixo ``OS_``.
+    def extract_os(cls, name: str) -> str:
+        """Extrai a CHAVE da OS — o primeiro campo após o prefixo ``OS_``.
 
-            "OS_234_Cliente"                      → "234"
-            "OS_181_RENNER_A_Grupo JCN - Faz X"   → "181"
-            "OS_234"                              → "234"
+        A OS é **TEXTO** (nunca inteiro) e a diferenciação é feita pela LETRA:
+        ``OS_169A_AGUA_VIVA`` → ``169A``. Os zeros à esquerda são PRESERVADOS
+        (``OS_039_Bunge`` → ``039``).
+
+            "OS_234_Cliente"    → "234"
+            "OS_039_Bunge"      → "039"
+            "OS_169A_AGUA_VIVA" → "169A"
+            "OS_181C_RENNER..." → "181C"
         """
         core = cls._strip_prefix(name)
         parts = core.split("_")
-        return parts[0] if parts else core
-
-    @classmethod
-    def extract_sub_os(cls, name: str) -> str:
-        """Extrai a SUBOS do nome da pasta — a letra única após o número.
-
-            "OS_181_RENNER_A_Grupo JCN - Faz X"   → "A"
-            "OS_189_Thiago_Fabris"                 → ""
-            "OS_169_SLC"                           → ""
-        """
-        core = cls._strip_prefix(name)
-        parts = core.split("_")
-        for token in parts[1:]:
-            if len(token) == 1 and token.isascii() and token.isalpha():
-                return token.upper()
-        return ""
-
-    @classmethod
-    def assign_sub_os_letters(cls, project_paths: List[Path]) -> Dict[Path, str]:
-        """Atribui uma letra de SubOS a cada pasta de uma OS.
-
-        - Se TODAS as pastas tiverem uma letra no nome (ex.: ``OS_181_RENNER_A_...``),
-          usa a letra do próprio nome.
-        - Caso contrário, subdivide por ORDEM: 1ª pasta → ``A``, 2ª → ``B``, ...
-          (uma pasta única fica sempre em ``A``).
-
-        Returns:
-            ``{Path: "A", ...}``.
-        """
-        ordered = sorted(project_paths, key=lambda path: path.name.lower())
-        letters = [cls.extract_sub_os(path.name) for path in ordered]
-        if all(letters) and len(set(letters)) == len(letters):
-            return {path: letter for path, letter in zip(ordered, letters)}
-        return {path: chr(ord("A") + index) for index, path in enumerate(ordered)}
-
-    @classmethod
-    def group_projects_by_os(cls, projects: List[Path]) -> Dict[str, List[Path]]:
-        """Agrupa as pastas de projeto pelo NÚMERO da OS (normalizado).
-
-        Uma OS dividida em várias pastas (uma por SubOS) vira UMA entrada:
-
-            {"181": [OS_181_RENNER_A..., OS_181_RENNER_B..., OS_181_RENNER_C...]}
-        """
-        groups: Dict[str, List[Path]] = {}
-        for path in projects:
-            number = cls.normalize_os(cls.extract_os_number(path.name))
-            groups.setdefault(number, []).append(path)
-        return groups
+        return cls.normalize_os(parts[0] if parts else core)
 
     @staticmethod
-    def normalize_os(number: str) -> str:
-        """Normaliza o número da OS — remove zeros à esquerda (``"039"`` → ``"39"``)."""
-        text = str(number).strip()
-        return str(int(text)) if text.isdigit() else text
+    def normalize_os(os_key: str) -> str:
+        """Normaliza a CHAVE da OS (texto em MAIÚSCULAS, zeros preservados).
+
+        ``"039"`` continua ``"039"`` (a OS é texto — nunca inteiro) e ``"169a"``
+        vira ``"169A"``.
+        """
+        return str(os_key).strip().upper()
+
+    @classmethod
+    def project_folder(
+        cls,
+        mother: Optional[Path],
+        os_key: str,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> Optional[Path]:
+        """Pasta do projeto (OS) na pasta-mãe — ``None`` quando não existe.
+
+        Localiza a pasta ``OS_<chave>...`` cuja chave bate com ``os_key``
+        (ex.: ``169A`` → ``OS_169A_AGUA_VIVA``).
+        """
+        if mother is None:
+            return None
+        key = cls.normalize_os(os_key)
+        if not key:
+            return None
+        for project in cls.discover_projects(Path(mother), tool_key=tool_key):
+            if cls.extract_os(project.name) == key:
+                return project
+        return None
 
     # ── Caminhos (relativo à pasta-mãe — portável entre computadores) ──
 
@@ -363,48 +346,7 @@ class ProjectStructureUtil(BaseUtil):
 
         return {"folders": folders, "years": years}
 
-    # ── Agregação (Regra: pastas e anos pertencem à SubOS) ──────────
-
-    @classmethod
-    def aggregate_record(cls, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Deriva cliente/pastas/anos/caminho a partir das SubOS do registro.
-
-        As pastas e os anos **pertencem à SubOS** — não à OS. Este helper apenas
-        agrega esses dados para telas que resumem a OS; a fonte continua sendo
-        cada entrada de ``sub_os``.
-        """
-        folders: List[str] = []
-        years: List[str] = []
-        paths: List[str] = []
-        clients: List[str] = []
-        for entry in record.get("sub_os", []) or []:
-            if not isinstance(entry, dict):
-                continue
-            cls._extend_unique(folders, entry.get("folders", []) or [])
-            cls._extend_unique(years, entry.get("years", []) or [])
-            path = str(entry.get("path", "") or "")
-            if path and path not in paths:
-                paths.append(path)
-            client = str(entry.get("client", "") or "").strip()
-            if client and client not in clients:
-                clients.append(client)
-        ordered_folders = [
-            name for name in cls.DEFAULT_PROJECT_FOLDERS if name in folders
-        ]
-        return {
-            "client": " / ".join(clients),
-            "folders": ordered_folders or folders,
-            "years": sorted(years),
-            "path": paths[0] if paths else "",
-            "paths": paths,
-        }
-
-    @staticmethod
-    def _extend_unique(target: List[str], values: List[str]) -> None:
-        """Adiciona a ``target`` os itens de ``values`` que ainda não existem."""
-        for value in values:
-            if value not in target:
-                target.append(value)
+    # ── Registro da OS (pastas/anos vivem no próprio registro) ──────
 
 
 # ── Derivados de PROJECT_STRUCTURE (NÃO edite — calculados a partir dele) ──

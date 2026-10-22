@@ -1,3 +1,18 @@
+[1.16.0][2026.10.22][15:50] - Fim do sistema de SubOS: a OS é TEXTO com LETRA (169A, 181C) e cada pasta é UMA OS
+  - utils/ProjectStructureUtil.py: NOVO extract_os (chave da OS = primeiro campo após OS_, em MAIÚSCULAS, com zeros à esquerda e LETRA preservados) e project_folder (localiza a pasta OS_<chave>... na pasta-mãe); normalize_os deixa de remover zeros à esquerda (039 continua 039); REMOVIDOS extract_os_number, extract_sub_os, assign_sub_os_letters, group_projects_by_os e aggregate_record
+  - core/model/SubOSModel.py: REMOVIDO; core/model/WorkOrderModel.py: sem a lista sub_os (a OS é texto com letra e guarda cliente/nome comercial/CNPJ)
+  - core/firebase/CloudProjectDatabase.py: NOVO delete_order (remove o documento de uma OS da fonte oficial); o doc_id passa a ser a chave texto (039.json, 169A.json)
+  - plugins/project_database_manager/: refresh_order re-escaneia UMA pasta por OS (record["path"]) e o plugin lê client/folders/years/path direto do registro (sem aggregate_record)
+  - plugins/os_tracker/: OsTrackerService perde build_sub_os/sub_os_codes/sub_os_entry/next_sub_os_code/add_sub_os/_fill_sub_os/ensure_sub_os_folder (novos record_summary, project_folder, ensure_project_folder e _fill_order) e create_order cria a OS (chave texto) já com a pasta OS_<chave>; OsTrackerPlugin perde o seletor e o botão CRIAR SUBOS, mostra OS + Cliente em Dados Gerais e PASTA DA OS nos Atalhos
+  - plugins/limites_db/: removidos FIELD_SUB_OS, DEFAULT_SUB_OS e normalize_sub_os (o campo SUB_OS sai do vetor e das colunas geradas); a OS passa a ser TEXTO nas feições (039, 169A), a KEY é OS-FAZENDA-TALHÃO sem sufixo de SubOS, o arquivo por OS é <BASE>/<OS>/<OS>_limites.shp e a pasta do projeto é localizada por _find_project_folder (ProjectStructureUtil.project_folder)
+  - plugins/limites_db/LimitesPlugin.py: mapeamento de campos e valores manuais sem SubOS e resumo da operação com a lista de OS (os_keys)
+  - plugins/home/HomePlugin.py: seed aponta para add_data/seed_os.py
+  - add_data/: seed_sub_os.py vira seed_os.py (RAW_ROWS com as chaves novas: 039, 050, 053, 059, 068, 169A/169B/169C, 181A/181B/181C) e NOVO migrate_os_keys.py — migração única do banco (Firestore + backups JSON), com backup do .BancoDados, reparo do caminho do arquivo de limites/zonas e remoção dos documentos antigos
+  - utils/ProjectStructureChangelog.py: o changelog Word da OS passa a usar a chave (OS_169A_CHANGELOG.DOCX) e, enquanto o documento novo não existe, continua usando o antigo (OS_169_CHANGELOG.DOCX) para não perder o histórico
+  - config/AetherisToolBox_preferences.json: removidas as preferências selected_subos e LimitesDb.manual.subos
+  - docs/skills/SKILL_PROJECT.md, SKILL_DATABASE.md, SKILL_PLUGIN_CONTRACT.md, CatalogoClasses.md e add_data/README.md: esquema da OS, chave com letra, seed/migração e atalhos documentados
+
+
 [1.15.0][2026.10.22][14:53] - Acompanhamento de OS: painel de Atalhos (um botão por link) + Dados Gerais em 2 colunas
   - resources/widgets/grid/GridButtonPanel.py: NOVO — grade genérica de botões de ação configurada por dicionário (`columns` + `buttons` com `key`/`text`/`type`/`description`), sinal `clicked(key)` e API `button`/`keys`/`set_enabled`/`set_visible`/`set_text` (usa `SimplePrimaryButton` sem glow — `shadow_enabled=False`)
   - plugins/os_tracker/OsTrackerService.py: novos `sub_os_folder` (pasta física da SubOS resolvida pela pasta-mãe) e `changelog_path` (caminho do `.DOCX` da OS via `ProjectStructureChangelog.document_path`); `asset_file_path` passa a resolver o arquivo em CASCATA — **absoluto → relativo à pasta-mãe → relativo à pasta da SubOS** — cobrindo registros antigos ou gravados fora da pasta-mãe

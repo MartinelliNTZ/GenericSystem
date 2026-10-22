@@ -7,24 +7,26 @@ Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
 **Limites** (``MODE_LIMITES``):
     <BASE_DADOS>/limites/limites.shp                       → completão (todas as OS)
     <BASE_DADOS>/limites/<OS>/<OS>_limites.shp             → um arquivo por OS
-    <pasta da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp   → cópia no projeto
+    <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp      → cópia no projeto
 
 **Zonas de Manejo** (``MODE_ZONAS``):
     <BASE_DADOS>/limites/zonas_manejo.shp                  → completão de zonas
     <BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp        → um arquivo por OS
-    <pasta da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+    <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+
+A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra já
+diferencia as OS de um mesmo projeto, então cada OS tem o seu próprio arquivo e a
+sua própria pasta.
 
 Regras de negócio (limites):
 - TALHÃO é obrigatório (sempre vem de um campo do vetor).
 - FAZENDA e OS são obrigatórios (campo mapeado OU valor manual).
-- SUB_OS é ``A`` por padrão; aceita campo mapeado ou valor manual (letra única).
 - AREA_HA é CALCULADA em hectares; AREA_INF guarda a área informada (opcional).
-- A chave ``OS-FAZENDA-TALHÃO`` é única; quando a SubOS NÃO é ``A`` ela recebe o
-  sufixo ``-<SubOS>`` (ex.: ``39-FAZ_X-P3-B``), permitindo o mesmo talhão em
-  SubOS diferentes. Duplicidade BLOQUEIA a importação.
+- A chave ``OS-FAZENDA-TALHÃO`` é única (ex.: ``169A-FAZ_X-P3``); duplicidade
+  BLOQUEIA a importação.
 - Divergência entre área informada e calculada apenas ALERTA (tolerância em %).
-- Depois de gravar, cada OS/SubOS ganha a cópia no projeto e o registro
-  ``limites`` na SubOS do banco (via ``CloudProjectDatabase`` — Contrato 28).
+- Depois de gravar, cada OS ganha a cópia no projeto e o registro ``limites`` na
+  própria OS do banco (via ``CloudProjectDatabase`` — Contrato 28).
 
 Regras de negócio (zonas de manejo):
 - ZONA é obrigatória; FAZENDA e OS também (campo mapeado ou valor manual).
@@ -33,14 +35,14 @@ Regras de negócio (zonas de manejo):
   manual — ele CONSTA em todos os shapes gerados (completão, arquivo da OS na
   base e cópia no projeto); sem indicação a coluna existe, porém vazia.
 - AREA_HA continua sendo CALCULADA em hectares.
-- O registro vai para a chave ``zonas_manejo`` da SubOS.
+- O registro vai para a chave ``zonas_manejo`` da OS.
 
 Atualização (``ATUALIZAR``):
 - Antes de gravar, a ferramenta procura os shapes que já existem (completão,
   arquivo da OS na base e cópia no projeto) e pergunta se devem ser substituídos.
-- Na atualização, as feições das OS/SubOS do vetor são REMOVIDAS dos arquivos de
-  destino e trocadas pelo lote novo — as demais OS/SubOS do arquivo ficam
-  intactas — e a checagem de duplicidade é ignorada.
+- Na atualização, as feições das OS do vetor são REMOVIDAS dos arquivos de
+  destino e trocadas pelo lote novo — as demais OS do arquivo ficam intactas — e
+  a checagem de duplicidade é ignorada.
 
 Validações do vetor (bloqueiam a operação — nada é gravado):
 - **Shapefile completo**: exige ``.shp``, ``.shx`` e ``.dbf`` no mesmo diretório;
@@ -84,7 +86,6 @@ BASE_ROOT = (
 )
 CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
-DEFAULT_SUB_OS = "A"
 DEFAULT_TOLERANCE_PCT = 1.0
 
 # Padrões de entrada aceitos (validados antes de qualquer gravação)
@@ -107,7 +108,6 @@ FIELD_ZONA = "ZONA"
 FIELD_CAMPO = "CAMPO"
 FIELD_FAZENDA = "FAZENDA"
 FIELD_OS = "OS"
-FIELD_SUB_OS = "SUB_OS"
 FIELD_CLIENTE = "CLIENTE"
 FIELD_KEY = "KEY"
 FIELD_AREA_CALC = "AREA_HA"
@@ -117,7 +117,6 @@ LIMITES_FIELDS = [
     FIELD_TALHAO,
     FIELD_FAZENDA,
     FIELD_OS,
-    FIELD_SUB_OS,
     FIELD_CLIENTE,
     FIELD_KEY,
     FIELD_AREA_CALC,
@@ -129,7 +128,6 @@ ZONAS_FIELDS = [
     FIELD_CAMPO,
     FIELD_FAZENDA,
     FIELD_OS,
-    FIELD_SUB_OS,
     FIELD_TALHAO,
     FIELD_CLIENTE,
     FIELD_AREA_CALC,
@@ -145,7 +143,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "project_subfolder": TALHOES_FOLDER,
         "db_key": "limites",
         "fields": LIMITES_FIELDS,
-        "semantic": ("talhao", "fazenda", "os", "subos", "cliente", "area"),
+        "semantic": ("talhao", "fazenda", "os", "cliente", "area"),
         "unique": True,
     },
     MODE_ZONAS: {
@@ -156,7 +154,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "project_subfolder": "",
         "db_key": "zonas_manejo",
         "fields": ZONAS_FIELDS,
-        "semantic": ("zona", "campo", "fazenda", "os", "subos", "talhao", "cliente", "area"),
+        "semantic": ("zona", "campo", "fazenda", "os", "talhao", "cliente", "area"),
         "unique": False,
     },
 }
@@ -167,7 +165,6 @@ GUESS_TOKENS = {
     "campo": ("CAMPO",),
     "fazenda": ("FAZENDA", "PROPRIEDADE"),
     "os": ("OS", "ORDEM"),
-    "subos": ("SUBOS", "SUB_OS", "SUB"),
     "cliente": ("CLIENTE",),
     "area": ("AREA",),
 }
@@ -340,23 +337,23 @@ class LimitesService(BaseUtil):
         return text.upper().strip("_")
 
     @staticmethod
-    def normalize_os(value: Any) -> Optional[int]:
-        """Converte o valor da OS em inteiro (aceita ``039``, ``OS 39`` e ``39.0``)."""
-        text = "" if value is None else str(value).strip()
+    def normalize_os(value: Any) -> Optional[str]:
+        """Normaliza a CHAVE da OS em TEXTO (aceita ``039``, ``OS 169A``, ``169.0``).
+
+        A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``): a letra é o que
+        diferencia as OS de um mesmo projeto. Os zeros à esquerda são PRESERVADOS
+        (``039`` continua ``039``).
+        """
+        text = "" if value is None else str(value).strip().upper()
         if text.lower() in ("", "nan", "none", "<na>"):
             return None
 
         if re.fullmatch(r"\d+\.0+", text):
             text = text.split(".")[0]
 
-        digits = re.sub(r"\D", "", text)
-        return int(digits) if digits else None
-
-    @staticmethod
-    def normalize_sub_os(value: Any) -> str:
-        """Normaliza a SubOS; devolve ``A`` quando o valor está vazio."""
-        text = LimitesService.normalize_text(value)
-        return text or DEFAULT_SUB_OS
+        text = re.sub(r"[^0-9A-Z]", "", text)
+        text = re.sub(r"^OS(?=\d)", "", text)
+        return text or None
 
     @staticmethod
     def parse_float(value: Any) -> Optional[float]:
@@ -401,13 +398,13 @@ class LimitesService(BaseUtil):
     @staticmethod
     def guess_os_from_path(path: str) -> str:
         """
-        Identifica o número da OS no caminho de origem (vazio quando não há padrão).
+        Identifica a OS no caminho de origem (vazio quando não há padrão).
 
-        Prioridade:
-          1. pasta ``OS_<numero>...`` mais próxima do arquivo
-             (ex.: ``OS_210_EDUARDO_ZAGO_BB``);
-          2. prefixo do arquivo ``P<numero>`` (ex.: ``P210_001_01_FAZ_...``);
-          3. token ``OS_<numero>`` no nome do arquivo.
+        A OS pode conter LETRA (ex.: ``OS_169A_...`` → ``169A``). Prioridade:
+          1. pasta ``OS_<chave>...`` mais próxima do arquivo
+             (ex.: ``OS_169A_AGUA_VIVA``);
+          2. prefixo do arquivo ``P<chave>`` (ex.: ``P210_001_01_FAZ_...``);
+          3. token ``OS_<chave>`` no nome do arquivo.
         """
         if not path:
             return ""
@@ -416,7 +413,7 @@ class LimitesService(BaseUtil):
 
         for folder in candidate.parents:
             match = re.search(
-                r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6})(?=\D|$)",
+                r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6}[A-Za-z]?)(?=\D|$)",
                 folder.name,
                 re.IGNORECASE,
             )
@@ -424,12 +421,12 @@ class LimitesService(BaseUtil):
                 return ProjectStructureUtil.normalize_os(match.group(1))
 
         stem = candidate.stem
-        match = re.match(r"^P(\d{1,6})(?=\D|$)", stem, re.IGNORECASE)
+        match = re.match(r"^P(\d{1,6}[A-Za-z]?)(?=\D|$)", stem, re.IGNORECASE)
         if match:
             return ProjectStructureUtil.normalize_os(match.group(1))
 
         match = re.search(
-            r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6})(?=\D|$)",
+            r"(?:^|[_\-\s])OS[_\-\s]?(\d{1,6}[A-Za-z]?)(?=\D|$)",
             stem,
             re.IGNORECASE,
         )
@@ -492,11 +489,7 @@ class LimitesService(BaseUtil):
             "n_features": int(len(prepared)),
             "crs": str(prepared.crs),
             "total_ha": round(float(prepared[FIELD_AREA_CALC].sum()), 4),
-            "os_numbers": sorted({int(value) for value in prepared[FIELD_OS]}),
-            "sub_os": {
-                str(key): int(value)
-                for key, value in prepared[FIELD_SUB_OS].value_counts().items()
-            },
+            "os_keys": sorted({str(value) for value in prepared[FIELD_OS]}),
             "consolidated": consolidated,
             "os_files": [],
             "copies": [],
@@ -525,8 +518,8 @@ class LimitesService(BaseUtil):
         replaced = cls._write_target(consolidated, prepared, fields, config.update)
 
         os_files: List[str] = []
-        for os_number, group in prepared.groupby(FIELD_OS, sort=True):
-            target = cls._os_file_path(config, str(int(os_number)))
+        for os_key, group in prepared.groupby(FIELD_OS, sort=True):
+            target = cls._os_file_path(config, str(os_key))
             replaced += cls._write_target(target, group, fields, config.update)
             os_files.append(target)
 
@@ -573,27 +566,27 @@ class LimitesService(BaseUtil):
         )
 
     @classmethod
-    def _os_file_path(cls, config: LimitesImportConfig, os_number: str) -> str:
+    def _os_file_path(cls, config: LimitesImportConfig, os_key: str) -> str:
         """Caminho do arquivo do modo dentro da pasta da OS na base."""
         settings = cls.settings(config.mode)
         return os.path.join(
-            config.output_root, os_number, f"{os_number}{settings['os_suffix']}.shp"
+            config.output_root, os_key, f"{os_key}{settings['os_suffix']}.shp"
         )
 
     @classmethod
     def _project_copy_path(
         cls,
         project_folder: Path,
-        os_number: str,
+        os_key: str,
         mode: str,
     ) -> Path:
-        """Caminho da cópia do modo dentro da pasta do projeto da SubOS."""
+        """Caminho da cópia do modo dentro da pasta do projeto da OS."""
         settings = cls.settings(mode)
         target_dir = project_folder / settings["project_folder"]
         if settings["project_subfolder"]:
             target_dir = target_dir / settings["project_subfolder"]
 
-        return target_dir / f"{os_number}{settings['os_suffix']}.shp"
+        return target_dir / f"{os_key}{settings['os_suffix']}.shp"
 
     # ── Verificação de shapes existentes ────────────────────────────
 
@@ -602,7 +595,7 @@ class LimitesService(BaseUtil):
         """
         Localiza os shapes do vetor que JÁ existem na base e nos projetos.
 
-        Lê e valida o vetor (mesmas regras da importação) para descobrir as OS/SubOS
+        Lê e valida o vetor (mesmas regras da importação) para descobrir as OS
         e devolve os arquivos que uma atualização substituiria.
 
         Raises:
@@ -614,15 +607,15 @@ class LimitesService(BaseUtil):
         cls.validate_vector(config.vector_path, gdf)
 
         prepared = cls._prepare(gdf, config)
-        os_numbers = sorted({int(value) for value in prepared[FIELD_OS]})
+        os_keys = sorted({str(value) for value in prepared[FIELD_OS]})
 
         targets: List[str] = []
         consolidated = cls._consolidated_path(config)
         if os.path.exists(consolidated):
             targets.append(consolidated)
 
-        for number in os_numbers:
-            path = cls._os_file_path(config, str(number))
+        for os_key in os_keys:
+            path = cls._os_file_path(config, os_key)
             if os.path.exists(path):
                 targets.append(path)
 
@@ -632,13 +625,13 @@ class LimitesService(BaseUtil):
             "Shapes existentes verificados",
             code="LIM_EXISTING",
             mode=config.mode,
-            n_os=len(os_numbers),
+            n_os=len(os_keys),
             n_targets=len(targets),
         )
         return {
             "mode": config.mode,
             "n_features": int(len(prepared)),
-            "os_numbers": os_numbers,
+            "os_keys": os_keys,
             "targets": targets,
         }
 
@@ -648,31 +641,25 @@ class LimitesService(BaseUtil):
         prepared: Any,
         config: LimitesImportConfig,
     ) -> List[str]:
-        """Caminhos das cópias no projeto que já existem para as OS/SubOS do lote."""
+        """Caminhos das cópias no projeto que já existem para as OS do lote."""
         mother = cls._load_mother_folder()
         if mother is None:
             return []
 
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
-        projects_by_os = ProjectStructureUtil.group_projects_by_os(
-            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
-        )
         records: Dict[str, Optional[Dict[str, Any]]] = {}
         found: List[str] = []
 
-        pairs = prepared[[FIELD_OS, FIELD_SUB_OS]].drop_duplicates()
-        for os_number, sub_os in pairs.itertuples(index=False, name=None):
-            number = str(int(os_number))
-            if number not in records:
-                records[number] = cls._load_order(number, logger)
+        for os_key in prepared[FIELD_OS].drop_duplicates():
+            key = str(os_key)
+            if key not in records:
+                records[key] = cls._load_order(key, logger)
 
-            folder, _ = cls._find_sub_os_folder(
-                mother, records[number], number, str(sub_os), projects_by_os
-            )
+            folder, _ = cls._find_project_folder(mother, records[key], key)
             if folder is None:
                 continue
 
-            target = cls._project_copy_path(folder, number, config.mode)
+            target = cls._project_copy_path(folder, key, config.mode)
             if target.is_file():
                 found.append(str(target))
 
@@ -696,8 +683,7 @@ class LimitesService(BaseUtil):
         zonas: List[str] = []
         campos: List[str] = []
         fazendas: List[str] = []
-        os_numbers: List[int] = []
-        sub_os_list: List[str] = []
+        os_keys: List[str] = []
         clientes: List[str] = []
         areas: List[Optional[float]] = []
         keys: List[str] = []
@@ -721,15 +707,9 @@ class LimitesService(BaseUtil):
             if not fazenda:
                 problems.append(f"{label}: FAZENDA vazia (obrigatória).")
 
-            os_number = cls.normalize_os(columns["os"][index])
-            if os_number is None:
+            os_key = cls.normalize_os(columns["os"][index])
+            if os_key is None:
                 problems.append(f"{label}: OS vazia ou inválida (obrigatória).")
-
-            sub_os = cls.normalize_sub_os(columns["subos"][index])
-            if not re.fullmatch(r"[A-Z]", sub_os):
-                problems.append(
-                    f"{label}: SubOS '{sub_os}' inválida — informe uma única letra (ex.: A)."
-                )
 
             area = cls.parse_float(columns["area"][index])
             if area is not None and area <= 0:
@@ -739,15 +719,14 @@ class LimitesService(BaseUtil):
             zonas.append(zona)
             campos.append(campo)
             fazendas.append(fazenda)
-            sub_os_list.append(sub_os)
             clientes.append(cls.normalize_text(columns["cliente"][index]))
 
-            if os_number is None or not fazenda:
-                os_numbers.append(0)
+            if os_key is None or not fazenda:
+                os_keys.append("")
                 keys.append("")
                 continue
 
-            os_numbers.append(int(os_number))
+            os_keys.append(os_key)
 
             if is_zonas:
                 keys.append("")
@@ -757,10 +736,7 @@ class LimitesService(BaseUtil):
                 keys.append("")
                 continue
 
-            key = f"{int(os_number)}-{fazenda}-{talhao}"
-            if sub_os != DEFAULT_SUB_OS:
-                key = f"{key}-{sub_os}"
-            keys.append(key)
+            keys.append(f"{os_key}-{fazenda}-{talhao}")
 
         if problems:
             raise LimitesValidationError(cls._limit_problems(problems))
@@ -771,8 +747,7 @@ class LimitesService(BaseUtil):
             prepared[FIELD_CAMPO] = campos
         prepared[FIELD_TALHAO] = talhoes
         prepared[FIELD_FAZENDA] = fazendas
-        prepared[FIELD_OS] = os_numbers
-        prepared[FIELD_SUB_OS] = sub_os_list
+        prepared[FIELD_OS] = os_keys
         prepared[FIELD_CLIENTE] = clientes
         prepared[FIELD_AREA_INF] = pd.Series(areas, index=prepared.index, dtype="float64")
         if not is_zonas:
@@ -810,7 +785,7 @@ class LimitesService(BaseUtil):
 
             calculated = float(row[FIELD_AREA_CALC])
             if is_zonas:
-                key = f"{int(row[FIELD_OS])}-{row[FIELD_FAZENDA]}-{row[FIELD_ZONA]}"
+                key = f"{row[FIELD_OS]}-{row[FIELD_FAZENDA]}-{row[FIELD_ZONA]}"
             else:
                 key = str(row[FIELD_KEY])
 
@@ -830,12 +805,7 @@ class LimitesService(BaseUtil):
         problems: List[str] = []
         seen: set = set()
 
-        sub_values = (
-            gdf[FIELD_SUB_OS] if FIELD_SUB_OS in gdf.columns
-            else [""] * len(gdf)
-        )
-
-        for key, sub_os in zip(gdf[FIELD_KEY], sub_values):
+        for key in gdf[FIELD_KEY]:
             key = str(key).strip()
             if not key:
                 continue
@@ -845,32 +815,22 @@ class LimitesService(BaseUtil):
 
             seen.add(key)
             if key in existing:
-                problems.append(f"{key}: já existe na base (SubOS {existing[key]}).")
+                problems.append(f"{key}: já existe na base.")
 
         if problems:
             raise LimitesValidationError(cls._limit_problems(problems))
 
     @classmethod
-    def _load_keys(cls, consolidated_path: str) -> Dict[str, str]:
+    def _load_keys(cls, consolidated_path: str) -> set:
         """Lê as chaves já existentes no completão (vazio quando o arquivo não existe)."""
         if not os.path.exists(consolidated_path):
-            return {}
+            return set()
 
         gdf = VectorLayerSource.read_geodataframe(consolidated_path, tool_key=_TOOL_KEY)
         if FIELD_KEY not in gdf.columns:
-            return {}
+            return set()
 
-        sub_values = (
-            gdf[FIELD_SUB_OS] if FIELD_SUB_OS in gdf.columns
-            else [""] * len(gdf)
-        )
-
-        keys: Dict[str, str] = {}
-        for key, sub_os in zip(gdf[FIELD_KEY], sub_values):
-            text = str(key).strip()
-            if text:
-                keys[text] = str(sub_os).strip()
-        return keys
+        return {str(key).strip() for key in gdf[FIELD_KEY] if str(key).strip()}
 
     # ── Escrita ─────────────────────────────────────────────────────
 
@@ -911,7 +871,7 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def _replace_and_write(cls, target: str, new_gdf: Any, fields: List[str]) -> int:
-        """Substitui as feições das OS/SubOS do lote no destino e grava de forma atômica."""
+        """Substitui as feições das OS do lote no destino e grava de forma atômica."""
         if not os.path.exists(target):
             VectorLayerSource.write_geodataframe_atomic(
                 new_gdf, target, tool_key=_TOOL_KEY
@@ -919,7 +879,7 @@ class LimitesService(BaseUtil):
             return 0
 
         existing = cls._read_existing(target, fields)
-        kept = cls._drop_batch_pairs(existing, new_gdf)
+        kept = cls._drop_batch_os(existing, new_gdf)
         removed = len(existing) - len(kept)
 
         if len(kept) == 0:
@@ -937,7 +897,7 @@ class LimitesService(BaseUtil):
         """Lê o destino garantindo as colunas canônicas do modo antes de mesclar."""
         existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
         defaults = {
-            FIELD_OS: 0,
+            FIELD_OS: "",
             FIELD_AREA_CALC: 0.0,
             FIELD_AREA_INF: float("nan"),
         }
@@ -948,17 +908,10 @@ class LimitesService(BaseUtil):
         return existing[fields + [existing.geometry.name]]
 
     @staticmethod
-    def _drop_batch_pairs(existing: Any, batch: Any) -> Any:
-        """Remove do arquivo existente as feições das OS/SubOS presentes no lote."""
-        pairs = {
-            (LimitesService.normalize_os(number), LimitesService.normalize_sub_os(letter))
-            for number, letter in zip(batch[FIELD_OS], batch[FIELD_SUB_OS])
-        }
-        keep = [
-            (LimitesService.normalize_os(number), LimitesService.normalize_sub_os(letter))
-            not in pairs
-            for number, letter in zip(existing[FIELD_OS], existing[FIELD_SUB_OS])
-        ]
+    def _drop_batch_os(existing: Any, batch: Any) -> Any:
+        """Remove do arquivo existente as feições das OS presentes no lote."""
+        keys = {str(value).strip() for value in batch[FIELD_OS]}
+        keep = [str(value).strip() not in keys for value in existing[FIELD_OS]]
         return existing[keep]
 
     @staticmethod
@@ -978,7 +931,7 @@ class LimitesService(BaseUtil):
         payload: Dict[str, Any],
         logger: Any,
     ) -> None:
-        """Copia o resultado para a pasta do projeto da SubOS e registra no banco."""
+        """Copia o resultado para a pasta do projeto da OS e registra no banco."""
         settings = cls.settings(config.mode)
         warnings: List[str] = payload["warnings"]
 
@@ -990,33 +943,23 @@ class LimitesService(BaseUtil):
             )
             return
 
-        projects_by_os = ProjectStructureUtil.group_projects_by_os(
-            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
-        )
         records: Dict[str, Optional[Dict[str, Any]]] = {}
 
-        for (os_number, sub_os), group in prepared.groupby(
-            [FIELD_OS, FIELD_SUB_OS], sort=True
-        ):
-            number = str(int(os_number))
-            letter = str(sub_os)
+        for os_key, group in prepared.groupby(FIELD_OS, sort=True):
+            key = str(os_key)
 
-            if number not in records:
-                records[number] = cls._load_order(number, logger)
-            record = records[number]
+            if key not in records:
+                records[key] = cls._load_order(key, logger)
+            record = records[key]
 
-            folder, reason = cls._find_sub_os_folder(
-                mother, record, number, letter, projects_by_os
-            )
+            folder, reason = cls._find_project_folder(mother, record, key)
             if folder is None:
-                warnings.append(
-                    f"OS {number} · SubOS {letter}: {reason} — cópia no projeto não gerada."
-                )
+                warnings.append(f"OS {key}: {reason} — cópia no projeto não gerada.")
                 continue
 
             try:
                 copy_path, removed = cls._write_project_copy(
-                    folder, number, group, config.mode, config.update
+                    folder, key, group, config.mode, config.update
                 )
             except Exception as e:
                 logger.error(
@@ -1026,7 +969,7 @@ class LimitesService(BaseUtil):
                     error=str(e),
                 )
                 warnings.append(
-                    f"OS {number} · SubOS {letter}: falha ao gravar a cópia no projeto ({e})."
+                    f"OS {key}: falha ao gravar a cópia no projeto ({e})."
                 )
                 continue
 
@@ -1035,21 +978,19 @@ class LimitesService(BaseUtil):
 
             if record is None:
                 warnings.append(
-                    f"OS {number} · SubOS {letter}: OS não encontrada no banco — "
+                    f"OS {key}: OS não encontrada no banco — "
                     "o resultado não foi registrado."
                 )
                 continue
 
-            if cls._register_limits(mother, record, letter, copy_path, group, config):
+            if cls._register_limits(mother, record, copy_path, group, config):
                 payload["db_updated"] += 1
             else:
-                warnings.append(
-                    f"OS {number} · SubOS {letter}: falha ao registrar no banco."
-                )
+                warnings.append(f"OS {key}: falha ao registrar no banco.")
 
     @classmethod
     def _structure_warnings(cls, prepared: Any, config: LimitesImportConfig) -> List[str]:
-        """Antes de gravar, avisa sobre projetos/SubOS que não receberão a cópia."""
+        """Antes de gravar, avisa sobre projetos que não receberão a cópia."""
         settings = cls.settings(config.mode)
         mother = cls._load_mother_folder()
         if mother is None:
@@ -1058,81 +999,50 @@ class LimitesService(BaseUtil):
                 f"{settings['project_folder']} não será gerada."
             ]
 
-        projects_by_os = ProjectStructureUtil.group_projects_by_os(
-            ProjectStructureUtil.discover_projects(mother, tool_key=_TOOL_KEY)
-        )
         warnings: List[str] = []
-        pairs = prepared[[FIELD_OS, FIELD_SUB_OS]].drop_duplicates()
-
-        for os_number, sub_os in pairs.itertuples(index=False, name=None):
-            number = str(int(os_number))
-            letter = str(sub_os)
-            folder, reason = cls._find_sub_os_folder(
-                mother, None, number, letter, projects_by_os
-            )
+        for os_key in prepared[FIELD_OS].drop_duplicates():
+            key = str(os_key)
+            folder, reason = cls._find_project_folder(mother, None, key)
             if folder is None:
-                warnings.append(f"OS {number} · SubOS {letter}: {reason}.")
+                warnings.append(f"OS {key}: {reason}.")
 
         return warnings
 
     @classmethod
-    def _find_sub_os_folder(
+    def _find_project_folder(
         cls,
         mother: Path,
         record: Optional[Dict[str, Any]],
-        os_number: str,
-        sub_os: str,
-        projects_by_os: Dict[str, List[Path]],
+        os_key: str,
     ) -> Tuple[Optional[Path], str]:
-        """Localiza a pasta do projeto da SubOS (banco primeiro, disco como fallback)."""
+        """Localiza a pasta do projeto da OS (banco primeiro, disco como fallback)."""
         if record:
-            for entry in record.get("sub_os", []) or []:
-                if not isinstance(entry, dict):
-                    continue
-                if str(entry.get("sub_os", "")) != sub_os:
-                    continue
-                rel = str(entry.get("path", "") or "")
-                if rel:
-                    folder = ProjectStructureUtil.resolve_path(mother, rel)
-                    if folder.is_dir():
-                        return folder, ""
-                break
+            rel = str(record.get("path", "") or "")
+            if rel:
+                folder = ProjectStructureUtil.resolve_path(mother, rel)
+                if folder.is_dir():
+                    return folder, ""
 
-        candidates = projects_by_os.get(
-            ProjectStructureUtil.normalize_os(os_number), []
+        folder = ProjectStructureUtil.project_folder(
+            mother, os_key, tool_key=_TOOL_KEY
         )
+        if folder is not None:
+            return folder, ""
 
-        for folder in candidates:
-            if ProjectStructureUtil.extract_sub_os(folder.name) == sub_os:
-                return folder, ""
-
-        if sub_os == DEFAULT_SUB_OS:
-            without_letter = [
-                folder for folder in candidates
-                if not ProjectStructureUtil.extract_sub_os(folder.name)
-            ]
-            if len(without_letter) == 1:
-                return without_letter[0], ""
-
-        letters = ProjectStructureUtil.assign_sub_os_letters(candidates)
-        for folder, letter in letters.items():
-            if letter == sub_os:
-                return folder, ""
-
-        return None, f"pasta da SubOS {sub_os} não encontrada em {mother}"
+        return None, f"pasta da OS {os_key} não encontrada em {mother}"
 
     @classmethod
     def _write_project_copy(
         cls,
         project_folder: Path,
-        os_number: str,
+        os_key: str,
         group: Any,
         mode: str,
         replace: bool = False,
     ) -> Tuple[Path, int]:
         """Grava (ou substitui) a cópia na pasta do projeto e devolve o caminho."""
         settings = cls.settings(mode)
-        target = cls._project_copy_path(project_folder, os_number, mode)
+        target = cls._project_copy_path(project_folder, os_key, mode)
         removed = cls._write_target(str(target), group, settings["fields"], replace)
         return target, removed
 
@@ -1155,30 +1065,15 @@ class LimitesService(BaseUtil):
         cls,
         mother: Path,
         record: Dict[str, Any],
-        sub_os: str,
         file_path: Path,
         group: Any,
         config: LimitesImportConfig,
     ) -> bool:
-        """Marca na SubOS do banco que o limite foi inserido (Firestore + backup JSON)."""
-        entries = [
-            entry for entry in record.get("sub_os", []) or []
-            if isinstance(entry, dict)
-        ]
-        entry = next(
-            (item for item in entries if str(item.get("sub_os", "")) == sub_os),
-            None,
-        )
-        if entry is None:
-            entry = {"sub_os": sub_os}
-            entries.append(entry)
-            entries.sort(key=lambda item: str(item.get("sub_os", "")))
-            record["sub_os"] = entries
-
+        """Marca na OS do banco que o limite foi inserido (Firestore + backup JSON)."""
         settings = cls.settings(config.mode)
         db_key = settings["db_key"]
 
-        entry[db_key] = {
+        record[db_key] = {
             "inserted_at": datetime.now().isoformat(timespec="seconds"),
             "file": cls._stored_file_path(mother, file_path),
             "source": os.path.basename(config.vector_path),
@@ -1194,8 +1089,7 @@ class LimitesService(BaseUtil):
             cls._get_logger(_TOOL_KEY, "LimitesService").error(
                 "Falha ao registrar no banco",
                 code="LIM_DB_SAVE_ERR",
-                os_number=str(record.get("os", "")),
-                sub_os=sub_os,
+                os_key=str(record.get("os", "")),
                 db_key=db_key,
                 error=str(e),
             )

@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-OsTrackerService — Lógica do Acompanhamento de OS (OS → SubOS → pastas)
-=======================================================================
+OsTrackerService — Lógica do Acompanhamento de OS (OS → pastas)
+===============================================================
 Lógica pura (sem widgets Qt):
 
 - ``load_orders`` lê os registros de OS da FONTE OFICIAL (Firebase) via a
   classe de banco ``CloudProjectDatabase`` (o plugin NUNCA toca no JSON).
 - ``load_changes`` lê as alterações de UMA OS (changelog da estrutura) via
   ``CloudStructureDatabase.load_changes``.
-- ``build_sub_os`` converte as entradas ``sub_os`` em modelos ``SubOS``.
-- ``create_order`` / ``add_sub_os`` criam OS/SubOS na base (grava no Firebase).
+- ``create_order`` cria a OS na base (grava no Firebase).
 - ``add_folders`` cria as pastas padrão selecionadas dentro da pasta da OS.
+
+A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra é o
+que diferencia as OS de um mesmo projeto. Cada OS tem UMA pasta em disco
+(``OS_<chave>_...``) e guarda no próprio registro o cliente, o nome comercial, o
+CNPJ, o caminho e as pastas/anos criados.
 
 Uso:
     from plugins.os_tracker.OsTrackerService import OsTrackerService
 
     orders = OsTrackerService.load_orders()
-    changes = OsTrackerService.load_changes("171")
-    sub_os = OsTrackerService.build_sub_os(record)
+    changes = OsTrackerService.load_changes("169A")
+    folder = OsTrackerService.project_folder(mother, record)
 """
 
 from __future__ import annotations
@@ -29,7 +33,6 @@ from typing import Any, Dict, List, Optional
 from core.enum.ToolKey import ToolKey
 from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
-from core.model.SubOSModel import SubOS
 from utils.BaseUtil import BaseUtil
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
 from utils.ProjectStructureCreator import ProjectStructureCreator
@@ -37,7 +40,7 @@ from utils.ProjectStructureUtil import ProjectStructureUtil
 
 
 class OsTrackerService(BaseUtil):
-    """Lê e mantém os registros de OS/SubOS e as pastas associadas."""
+    """Lê e mantém os registros de OS e as pastas associadas."""
 
     RECENT_CHANGES_LIMIT = 6
     _CHANGE_SUMMARY_LABELS = (
@@ -122,75 +125,35 @@ class OsTrackerService(BaseUtil):
         return cls.format_when(str(change.get("detected_at", "") or ""), tool_key)
 
     @classmethod
-    def build_sub_os(cls, record: Dict[str, Any]) -> List[SubOS]:
-        """Converte as entradas ``sub_os`` de um registro em modelos ``SubOS``."""
-        models: List[SubOS] = []
-        for entry in record.get("sub_os", []) or []:
-            models.append(
-                SubOS(
-                    code=str(entry.get("sub_os", "")),
-                    name=str(entry.get("client", "")),
-                    commercial_name=str(entry.get("commercial_name", "")),
-                    document=str(entry.get("cnpj", "")),
-                )
-            )
-        return models
-
-    @classmethod
     def record_summary(cls, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Resume cliente/pastas/anos/caminho da OS a partir das suas SubOS."""
-        return ProjectStructureUtil.aggregate_record(record)
+        """Resume cliente/pastas/anos/caminho do registro da OS."""
+        return {
+            "client": str(record.get("client", "") or ""),
+            "folders": list(record.get("folders") or []),
+            "years": list(record.get("years") or []),
+            "path": str(record.get("path", "") or ""),
+        }
 
     @classmethod
     def order_label(cls, record: Dict[str, Any]) -> str:
-        """Rótulo exibido no seletor de OS (``OS <numero> — <cliente>``)."""
-        number = str(record.get("os", "")).strip()
+        """Rótulo exibido no seletor de OS (``OS <chave> — <cliente>``)."""
+        os_key = str(record.get("os", "")).strip()
         client = cls.record_summary(record)["client"].strip()
-        return f"OS {number} — {client}" if client else f"OS {number}"
+        return f"OS {os_key} — {client}" if client else f"OS {os_key}"
 
-    @classmethod
-    def sub_os_codes(cls, record: Dict[str, Any]) -> List[str]:
-        """Lista as letras de SubOS de um registro (ordenadas)."""
-        codes = [
-            str(entry.get("sub_os", ""))
-            for entry in record.get("sub_os", []) or []
-            if isinstance(entry, dict)
-        ]
-        return sorted(code for code in codes if code)
-
-    @classmethod
-    def sub_os_entry(
-        cls, record: Dict[str, Any], code: str
-    ) -> Optional[Dict[str, Any]]:
-        """Retorna a entrada ``sub_os`` da letra informada (ou ``None``)."""
-        for entry in record.get("sub_os", []) or []:
-            if isinstance(entry, dict) and str(entry.get("sub_os", "")) == code:
-                return entry
-        return None
-
-    @classmethod
-    def next_sub_os_code(cls, record: Dict[str, Any]) -> str:
-        """Próxima letra de SubOS livre (A, B, C, ...)."""
-        used = set(cls.sub_os_codes(record))
-        for index in range(26):
-            letter = chr(ord("A") + index)
-            if letter not in used:
-                return letter
-        return ""
-
-    # ── Base de Limites/Zonas gravada na SubOS ──────────────────────
+    # ── Base de Limites/Zonas gravada na OS ─────────────────────────
 
     @classmethod
     def asset_info(
-        cls, entry: Optional[Dict[str, Any]], key: str
+        cls, record: Optional[Dict[str, Any]], key: str
     ) -> Dict[str, Any]:
         """
-        Resumo do asset ``limites``/``zonas_manejo`` gravado na SubOS pelo banco.
+        Resumo do asset ``limites``/``zonas_manejo`` gravado na OS pelo banco.
 
         Chaves: ``has``, ``features``, ``area_ha``, ``file``, ``source`` e
         ``inserted_at``.
         """
-        data = (entry or {}).get(key)
+        data = (record or {}).get(key)
         if not isinstance(data, dict) or not data:
             return {
                 "has": False,
@@ -214,16 +177,16 @@ class OsTrackerService(BaseUtil):
     def asset_file_path(
         cls,
         mother: Optional[Path],
-        entry: Optional[Dict[str, Any]],
+        record: Optional[Dict[str, Any]],
         key: str,
     ) -> str:
-        """Caminho ABSOLUTO do arquivo do asset gravado na SubOS.
+        """Caminho ABSOLUTO do arquivo do asset gravado na OS.
 
         O banco guarda o caminho RELATIVO à pasta-mãe; registros antigos podem ter
         caminho absoluto ou apenas o nome do arquivo. A resolução tenta, na ordem:
-        caminho absoluto → relativo à pasta-mãe → relativo à pasta da SubOS.
+        caminho absoluto → relativo à pasta-mãe → relativo à pasta da OS.
         """
-        rel = cls.asset_info(entry, key)["file"]
+        rel = cls.asset_info(record, key)["file"]
         if not rel:
             return ""
 
@@ -232,7 +195,7 @@ class OsTrackerService(BaseUtil):
             return str(candidate)
 
         mother_path = Path(mother) if mother is not None else None
-        folder = cls.sub_os_folder(mother_path, entry)
+        folder = cls.project_folder(mother_path, record)
         for base in (mother_path, folder):
             if base is None:
                 continue
@@ -243,25 +206,33 @@ class OsTrackerService(BaseUtil):
         base = mother_path or folder
         return str(ProjectStructureUtil.resolve_path(base, rel)) if base else rel
 
-    # ── Atalhos (pastas/arquivos da SubOS) ──────────────────────────
+    # ── Atalhos (pasta/arquivo da OS) ───────────────────────────────
 
     @classmethod
-    def sub_os_folder(
-        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
+    def project_folder(
+        cls, mother: Optional[Path], record: Optional[Dict[str, Any]]
     ) -> Optional[Path]:
-        """Pasta física da SubOS (resolvida pela pasta-mãe), ou ``None``."""
-        rel = str((entry or {}).get("path", "") or "")
-        if not rel:
-            return None
+        """Pasta física da OS (resolvida pela pasta-mãe), ou ``None``.
+
+        Usa o caminho gravado no registro; quando ele não existe em disco, procura
+        a pasta ``OS_<chave>...`` na pasta-mãe.
+        """
+        rel = str((record or {}).get("path", "") or "")
         base = Path(mother) if mother is not None else None
-        return ProjectStructureUtil.resolve_path(base, rel)
+        if rel:
+            folder = ProjectStructureUtil.resolve_path(base, rel)
+            if folder.is_dir():
+                return folder
+        return ProjectStructureUtil.project_folder(
+            base, str((record or {}).get("os", "") or "")
+        )
 
     @classmethod
     def changelog_path(
-        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
+        cls, mother: Optional[Path], record: Optional[Dict[str, Any]]
     ) -> str:
         """Caminho do changelog Word da OS (``""`` sem pasta cadastrada)."""
-        folder = cls.sub_os_folder(mother, entry)
+        folder = cls.project_folder(mother, record)
         if folder is None:
             return ""
         return str(ProjectStructureChangelog.document_path(folder))
@@ -288,68 +259,29 @@ class OsTrackerService(BaseUtil):
     def create_order(
         cls,
         mother: Optional[Path],
-        os_number: str,
+        os_key: str,
         name: str = "",
         client: str = "",
         commercial_name: str = "",
         cnpj: str = "",
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> Dict[str, Any]:
-        """Cria uma OS (numero obrigatório) com a SubOS ``A`` automática.
+        """Cria uma OS (chave obrigatória — pode conter letra, ex.: ``169A``).
 
-        Preserva uma OS já existente (mescla). Grava direto no Firebase.
+        Preserva uma OS já existente (mescla) e garante a pasta ``OS_<chave>`` em
+        disco. Grava direto no Firebase.
         """
-        number = ProjectStructureUtil.normalize_os(os_number)
-        record = CloudProjectDatabase.get_order(number, tool_key=tool_key) or {}
-        if not record:
-            record = {"os": number, "name": "", "sub_os": []}
-        record["os"] = number
+        key = ProjectStructureUtil.normalize_os(os_key)
+        record = CloudProjectDatabase.get_order(key, tool_key=tool_key) or {}
+        record["os"] = key
         if name:
             record["name"] = name
-        subs = {
-            str(entry.get("sub_os", "")): entry
-            for entry in record.get("sub_os", []) or []
-            if isinstance(entry, dict)
-        }
-        entry = subs.get("A")
-        if entry is None:
-            entry = {"sub_os": "A"}
-            subs["A"] = entry
-        cls._fill_sub_os(entry, client, commercial_name, cnpj)
-        record["sub_os"] = sorted(
-            subs.values(), key=lambda item: str(item.get("sub_os", ""))
-        )
-        CloudProjectDatabase.save_order(
-            record, mother=str(mother) if mother else "", tool_key=tool_key
-        )
-        return record
-
-    @classmethod
-    def add_sub_os(
-        cls,
-        mother: Optional[Path],
-        record: Dict[str, Any],
-        code: str = "",
-        client: str = "",
-        commercial_name: str = "",
-        cnpj: str = "",
-        tool_key: str = ToolKey.OS_TRACKER.value,
-    ) -> Dict[str, Any]:
-        """Adiciona uma SubOS à OS (letra automática quando vazia) e grava."""
-        letter = (code or cls.next_sub_os_code(record)).strip().upper()
-        subs = {
-            str(entry.get("sub_os", "")): entry
-            for entry in record.get("sub_os", []) or []
-            if isinstance(entry, dict)
-        }
-        entry = subs.get(letter)
-        if entry is None:
-            entry = {"sub_os": letter}
-            subs[letter] = entry
-        cls._fill_sub_os(entry, client, commercial_name, cnpj)
-        record["sub_os"] = sorted(
-            subs.values(), key=lambda item: str(item.get("sub_os", ""))
-        )
+        cls._fill_order(record, client, commercial_name, cnpj)
+        if mother:
+            folder = cls.ensure_project_folder(mother, record, tool_key=tool_key)
+            record["path"] = ProjectStructureUtil.to_relative_path(
+                Path(mother), folder
+            )
         CloudProjectDatabase.save_order(
             record, mother=str(mother) if mother else "", tool_key=tool_key
         )
@@ -360,66 +292,58 @@ class OsTrackerService(BaseUtil):
         cls,
         mother: Optional[Path],
         record: Dict[str, Any],
-        code: str,
         folder_names: List[str],
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> Dict[str, Any]:
-        """Cria as pastas padrão selecionadas na pasta da SubOS e atualiza a base."""
-        entry = cls.sub_os_entry(record, code)
-        if entry is None:
-            return {"created": 0, "path": ""}
-        project = cls.ensure_sub_os_folder(mother, record, entry, tool_key=tool_key)
+        """Cria as pastas padrão selecionadas na pasta da OS e atualiza a base."""
+        project = cls.ensure_project_folder(mother, record, tool_key=tool_key)
         created = ProjectStructureCreator.create_project_folders(
             project, folder_names, tool_key=tool_key
         )
         data = ProjectStructureUtil.collect_created_data(project, tool_key=tool_key)
-        entry["folders"] = data["folders"]
-        entry["years"] = data["years"]
+        record["path"] = ProjectStructureUtil.to_relative_path(mother, project)
+        record["folders"] = data["folders"]
+        record["years"] = data["years"]
         CloudProjectDatabase.save_order(
             record, mother=str(mother) if mother else "", tool_key=tool_key
         )
         return {"created": created, "path": str(project)}
 
     @classmethod
-    def ensure_sub_os_folder(
+    def ensure_project_folder(
         cls,
         mother: Optional[Path],
         record: Dict[str, Any],
-        entry: Dict[str, Any],
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> Path:
-        """Garante a pasta física da SubOS (cria ``OS_<numero>`` se não existir)."""
+        """Garante a pasta física da OS (cria ``OS_<chave>`` se não existir)."""
         mother_path = Path(mother) if mother else None
-        rel = str(entry.get("path", "") or "")
+        rel = str(record.get("path", "") or "")
         if rel:
             folder = ProjectStructureUtil.resolve_path(mother_path, rel)
             if folder.exists():
                 return folder
-        number = ProjectStructureUtil.normalize_os(str(record.get("os", "")))
-        code = str(entry.get("sub_os", "") or "").upper()
-        name = f"OS_{int(number):03d}" if number.isdigit() else f"OS_{number}"
-        if code and code != "A":
-            name = f"{name}_{code}"
+        key = ProjectStructureUtil.normalize_os(str(record.get("os", "")))
         base = mother_path if mother_path is not None else Path(".")
-        folder = base / name
+        folder = base / f"{ProjectStructureUtil.PROJECT_PREFIX}{key}"
         folder.mkdir(parents=True, exist_ok=True)
-        entry["path"] = ProjectStructureUtil.to_relative_path(mother_path, folder)
+        record["path"] = ProjectStructureUtil.to_relative_path(mother_path, folder)
         return folder
 
     @staticmethod
-    def _fill_sub_os(
-        entry: Dict[str, Any], client: str, commercial_name: str, cnpj: str
+    def _fill_order(
+        record: Dict[str, Any], client: str, commercial_name: str, cnpj: str
     ) -> None:
-        """Preenche os campos da SubOS (sem apagar o que já existe)."""
+        """Preenche os campos da OS (sem apagar o que já existe)."""
         if client:
-            entry["client"] = client
+            record["client"] = client
         if commercial_name:
-            entry["commercial_name"] = commercial_name
+            record["commercial_name"] = commercial_name
         if cnpj:
-            entry["cnpj"] = cnpj
-        entry.setdefault("path", "")
-        entry.setdefault("folders", [])
-        entry.setdefault("years", [])
-        entry.setdefault("client", "")
-        entry.setdefault("commercial_name", "")
-        entry.setdefault("cnpj", "")
+            record["cnpj"] = cnpj
+        record.setdefault("path", "")
+        record.setdefault("folders", [])
+        record.setdefault("years", [])
+        record.setdefault("client", "")
+        record.setdefault("commercial_name", "")
+        record.setdefault("cnpj", "")

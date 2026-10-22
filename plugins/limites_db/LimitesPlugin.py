@@ -14,26 +14,29 @@ Ambos gravam:
     <BASE_DADOS>/limites/<OS>/<OS>_limites.shp
     <BASE_DADOS>/limites/zonas_manejo.shp     → completão de zonas
     <BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp
-    <projeto da SubOS>/08_LIMITES/TALHOES/<OS>_limites.shp
-    <projeto da SubOS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+    <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp
+    <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 
 Fluxo: escolhe o modo → seleciona o vetor → mapeia os campos → informa
 manualmente o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a
 área, grava na base, copia para o projeto e registra no banco).
 
+A OS é TEXTO e pode conter LETRA (ex.: ``169A``) — a letra diferencia as OS de um
+mesmo projeto, então cada OS tem o seu próprio arquivo/pasta.
+
 O ATUALIZAR procura os shapes que já existem nas pastas (completão, arquivo da OS
 na base e cópia no projeto), pergunta se devem ser substituídos e troca as feições
-das OS/SubOS do vetor nesses arquivos — as demais OS/SubOS ficam intactas.
+das OS do vetor nesses arquivos — as demais OS ficam intactas.
 
 No modo **Zonas de Manejo** existe o **Campo de manejo** (``CAMPO``): opcional,
 pode ser mapeado do vetor ou informado nos valores manuais e, quando indicado,
 consta em TODOS os shapes gerados (completão, arquivo da OS e cópia no projeto).
 
 Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
-SubOS, cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o
-vetor, o auto-preenchimento da OS pelo caminho passa a mandar — só um valor
-digitado pelo usuário no campo é preservado. O **mapeamento de campos NÃO vai
-para as preferências** — é sempre recalculado a partir dos campos do vetor.
+cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o vetor, o
+auto-preenchimento da OS pelo caminho passa a mandar — só um valor digitado pelo
+usuário no campo é preservado. O **mapeamento de campos NÃO vai para as
+preferências** — é sempre recalculado a partir dos campos do vetor.
 """
 
 from __future__ import annotations
@@ -47,7 +50,6 @@ from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.limites_db.LimitesService import (
     BASE_ROOT,
-    DEFAULT_SUB_OS,
     DEFAULT_TOLERANCE_PCT,
     MODE_LIMITES,
     MODE_SETTINGS,
@@ -81,8 +83,7 @@ class LimitesPlugin(BasePlugin):
         MODE_LIMITES: (
             ("talhao", "Talhão *", "Campo obrigatório: nome do talhão."),
             ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
-            ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
-            ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
+            ("os", "OS", "Se não mapeado, informe a OS no valor manual (ex.: 169A)."),
             ("cliente", "Cliente", "Campo do cliente (opcional)."),
             ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
         ),
@@ -94,8 +95,7 @@ class LimitesPlugin(BasePlugin):
                 "Campo OPCIONAL do campo de manejo — quando indicado consta em todos os shapes.",
             ),
             ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
-            ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
-            ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
+            ("os", "OS", "Se não mapeado, informe a OS no valor manual (ex.: 169A)."),
             ("talhao", "Talhão", "Opcional nas zonas de manejo."),
             ("cliente", "Cliente", "Campo do cliente (opcional)."),
             ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
@@ -139,7 +139,7 @@ class LimitesPlugin(BasePlugin):
                     "type": "danger",
                     "description": (
                         "Procura os shapes que já existem nas pastas e, com sua confirmação, "
-                        "substitui as feições das OS/SubOS do vetor"
+                        "substitui as feições das OS do vetor"
                     ),
                 },
             },
@@ -266,8 +266,7 @@ class LimitesPlugin(BasePlugin):
         painel_manual = GroupPainel("Valores Manuais")
         self._manual = GridLineEdit({
             "fazenda": {"label": "Fazenda", "placeholder": "Obrigatória se não mapeada"},
-            "os": {"label": "OS", "placeholder": "Obrigatória se não mapeada"},
-            "subos": {"label": "SubOS", "default": DEFAULT_SUB_OS, "placeholder": "A"},
+            "os": {"label": "OS", "placeholder": "Obrigatória se não mapeada (ex.: 169A)"},
             "campo": {
                 "label": "Campo de manejo",
                 "placeholder": "Opcional (zonas)",
@@ -537,7 +536,7 @@ class LimitesPlugin(BasePlugin):
             field_map=field_map,
             manual={
                 key: manual.get(key, "")
-                for key in ("fazenda", "os", "subos", "campo", "cliente", "area")
+                for key in ("fazenda", "os", "campo", "cliente", "area")
             },
             tolerance_pct=tolerance,
             mode=self._mode,
@@ -623,8 +622,8 @@ class LimitesPlugin(BasePlugin):
             title="Atualizar shapes existentes",
             detail=(
                 f"{self._format_int(payload.get('n_features', 0))} feição(ões) do vetor "
-                "substituem as feições das mesmas OS/SubOS nos arquivos abaixo "
-                "(as demais OS/SubOS são preservadas):\n\n"
+                "substituem as feições das mesmas OS nos arquivos abaixo "
+                "(as demais OS são preservadas):\n\n"
                 + "\n".join(targets)
             ),
             parent=self,
@@ -710,8 +709,7 @@ class LimitesPlugin(BasePlugin):
 
         warnings = payload.get("warnings", []) or []
         detail = "\n".join(warnings)
-        os_numbers = payload.get("os_numbers", []) or []
-        subs = payload.get("sub_os", {}) or {}
+        os_keys = payload.get("os_keys", []) or []
         mode_label = MODE_SETTINGS.get(
             payload.get("mode", MODE_LIMITES), MODE_SETTINGS[MODE_LIMITES]
         )["label"]
@@ -719,8 +717,7 @@ class LimitesPlugin(BasePlugin):
         stats = (
             f"Modo: {mode_label}\n"
             f"{self._format_int(payload.get('n_features', 0))} feição(ões)\n"
-            f"OS: {', '.join(str(number) for number in os_numbers) or '—'}\n"
-            f"SubOS: {self._format_sub_os(subs)}\n"
+            f"OS: {', '.join(str(key) for key in os_keys) or '—'}\n"
             f"Área calculada: {self._format_number(payload.get('total_ha', 0.0))} ha"
         )
 
@@ -853,15 +850,6 @@ class LimitesPlugin(BasePlugin):
             shown += f" (+{extra})"
 
         return shown if len(shown) <= 80 else f"{shown[:77]}…"
-
-    @staticmethod
-    def _format_sub_os(sub_counts: dict) -> str:
-        """Formata a contagem por SubOS."""
-        if not sub_counts:
-            return "—"
-        return ", ".join(
-            f"{key} ({value})" for key, value in sub_counts.items()
-        )
 
     @staticmethod
     def _format_int(value) -> str:

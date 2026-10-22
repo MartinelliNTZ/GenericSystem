@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 
 from docx import Document
@@ -92,14 +93,33 @@ class ProjectStructureChangelog(BaseUtil):
 
     @classmethod
     def _document_name(cls, os_folder: Path) -> str:
-        """Nome base do documento (``OS_039``) a partir da pasta da OS."""
-        raw = ProjectStructureUtil.extract_os_number(os_folder.name)
-        number = ProjectStructureUtil.normalize_os(raw)
-        if not number:
+        """Nome base do documento (``OS_039``/``OS_169A``) a partir da pasta da OS."""
+        key = ProjectStructureUtil.extract_os(os_folder.name)
+        if not key:
             return os_folder.name
-        if number.isdigit():
-            return f"OS_{int(number):03d}"
-        return f"OS_{number}"
+        if key.isdigit():
+            return f"OS_{int(key):03d}"
+        return cls._legacy_document_name(os_folder, key) or f"OS_{key}"
+
+    @classmethod
+    def _legacy_document_name(cls, os_folder: Path, key: str) -> str:
+        """Nome do changelog ANTERIOR à letra da OS (``OS_169A`` → ``OS_169``).
+
+        As OS que ganharam letra no nome da pasta (ex.: ``OS_169A_...``) já têm
+        o documento com o nome antigo (``OS_169_CHANGELOG.DOCX``). Enquanto o
+        documento novo não existir, o antigo continua sendo usado para não
+        perder o histórico.
+        """
+        digits = re.sub(r"\D", "", key)
+        if not digits:
+            return ""
+        legacy = f"OS_{int(digits):03d}"
+        folder = os_folder / cls.FOLDER_NAME
+        if not (folder / f"{legacy}{cls.DOCUMENT_SUFFIX}").is_file():
+            return ""
+        if (folder / f"OS_{key}{cls.DOCUMENT_SUFFIX}").is_file():
+            return ""
+        return legacy
 
     # ── Gravação ────────────────────────────────────────────────────
 

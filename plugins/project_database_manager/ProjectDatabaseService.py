@@ -5,7 +5,7 @@ ProjectDatabaseService — Lógica do Banco de Dados de Projetos (OS)
 Lógica pura (sem widgets Qt) da NOVA regra de negócio:
 
 - O Banco de Dados **não cria mais OS**. Ele consulta a fonte oficial
-  (Firebase) as OS já existentes e, para cada SubOS com pasta associada,
+  (Firebase) as OS já existentes e, para cada OS com pasta associada,
   **re-escaneia a pasta em disco** e atualiza ``folders``/``years``.
 - Os caminhos são gravados RELATIVOS à pasta-mãe (portável).
 - ``ProjectDatabaseWorker`` (QRunnable) executa a varredura em background,
@@ -40,50 +40,46 @@ class ProjectDatabaseService(BaseUtil):
         record: Dict[str, Any],
         tool_key: str = _TOOL_KEY,
     ) -> Dict[str, Any]:
-        """Re-escaneia as pastas de UMA OS e atualiza ``folders``/``years``.
+        """Re-escaneia a pasta de UMA OS e atualiza ``folders``/``years``.
 
-        O caminho de cada SubOS é normalizado para RELATIVO à pasta-mãe. SubOS
-        cuja pasta não existe em disco é reportada em ``missing``. Retorna o
-        resumo das mudanças (para o modal de resumo).
+        O caminho da OS é normalizado para RELATIVO à pasta-mãe. A OS cuja pasta
+        não existe em disco é reportada em ``missing``. Retorna o resumo das
+        mudanças (para o modal de resumo).
         """
-        os_number = str(record.get("os", ""))
+        os_key = str(record.get("os", ""))
         summary: Dict[str, Any] = {
-            "os": os_number,
+            "os": os_key,
             "updated": False,
             "folders_added": 0,
             "years_added": 0,
             "missing": [],
         }
-        for entry in record.get("sub_os", []) or []:
-            if not isinstance(entry, dict):
-                continue
-            code = str(entry.get("sub_os", ""))
-            rel = str(entry.get("path", "") or "")
-            if not rel:
-                summary["missing"].append(f"OS {os_number} · SubOS {code or '?'}")
-                continue
-            folder = ProjectStructureUtil.resolve_path(mother, rel)
-            entry["path"] = ProjectStructureUtil.to_relative_path(mother, folder)
-            if not folder.exists():
-                summary["missing"].append(f"OS {os_number} · SubOS {code or '?'}")
-                continue
-            data = ProjectStructureUtil.collect_created_data(
-                folder, tool_key=tool_key
-            )
-            before = (
-                list(entry.get("folders") or []),
-                list(entry.get("years") or []),
-            )
-            entry["folders"] = data["folders"]
-            entry["years"] = data["years"]
-            if (data["folders"], data["years"]) != before:
-                summary["updated"] = True
-            summary["folders_added"] += sum(
-                1 for name in data["folders"] if name not in before[0]
-            )
-            summary["years_added"] += sum(
-                1 for year in data["years"] if year not in before[1]
-            )
+        rel = str(record.get("path", "") or "")
+        if not rel:
+            summary["missing"].append(f"OS {os_key}")
+            return summary
+
+        folder = ProjectStructureUtil.resolve_path(mother, rel)
+        record["path"] = ProjectStructureUtil.to_relative_path(mother, folder)
+        if not folder.exists():
+            summary["missing"].append(f"OS {os_key}")
+            return summary
+
+        data = ProjectStructureUtil.collect_created_data(folder, tool_key=tool_key)
+        before = (
+            list(record.get("folders") or []),
+            list(record.get("years") or []),
+        )
+        record["folders"] = data["folders"]
+        record["years"] = data["years"]
+        if (data["folders"], data["years"]) != before:
+            summary["updated"] = True
+        summary["folders_added"] += sum(
+            1 for name in data["folders"] if name not in before[0]
+        )
+        summary["years_added"] += sum(
+            1 for year in data["years"] if year not in before[1]
+        )
         return summary
 
     @classmethod

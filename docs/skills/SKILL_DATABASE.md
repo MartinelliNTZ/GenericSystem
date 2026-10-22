@@ -57,50 +57,42 @@ pasta-mãe, além do **log desacoplado** do banco de dados.
 ## Registro de OS (schema)
 
 Cada registro da lista `projects` do consolidado (e cada `*.json`) representa
-**UMA OS**. **As pastas pertencem à SubOS, não à OS**: cada pasta da OS em disco
-vira UMA SubOS e é a SubOS que possui `path`/`folders`/`years`. O registro da OS
-guarda apenas o número + a lista de SubOS:
+**UMA OS**, que corresponde a **UMA pasta em disco**. A OS é **TEXTO** e pode
+conter **LETRA** (ex.: `169A`): a letra é o que diferencia as OS de um mesmo
+projeto. O registro guarda TUDO no próprio nível — cliente, nome comercial, CNPJ,
+caminho e pastas/anos criados:
 
 ```json
 {
-  "os": "181",
+  "os": "181C",
   "name": "",
-  "updated_at": "2026-10-06T16:40:00",
-  "sub_os": [
-    {"sub_os": "A", "path": "OS_181_RENNER_A_...", "folders": ["05_ASA"], "years": ["2024"],
-     "client": "Capricornio Renner", "commercial_name": "GRUPO JCN", "cnpj": ""},
-    {"sub_os": "B", "path": "OS_181_RENNER_B_...", "folders": ["01_..."], "years": [],
-     "client": "...", "commercial_name": "...", "cnpj": ""}
-  ]
+  "path": "OS_181C_RENNER_Grupo Salazar - Faz Rio Alegre",
+  "folders": ["01_Acessos_Plataforma_IA_AGLIBS", "05_ASA"],
+  "years": ["2024"],
+  "client": "Grupo Salazar - Faz Rio Alegre",
+  "commercial_name": "GRUPO JCN",
+  "cnpj": "",
+  "updated_at": "2026-10-06T16:40:00"
 }
 ```
 
-- **`os`** é o número **normalizado** (``039`` → ``39``).
-- A chave **`sub_os`** guarda **OS → SubOS → (path, folders, years, cliente,
-  nome comercial, CNPJ)** — uma entrada por pasta da OS, com os dados daquela
-  SubOS.
-- **Uma pasta = uma SubOS**: o refresh associa cada pasta a uma SubOS. Uma OS
-  recém-criada tem a SubOS `A` (sem pasta até usar ADICIONAR PASTA).
-- A letra da **SubOS** vem do **nome da pasta** quando todas as pastas da OS têm
-  letra (ex.: ``OS_181_RENNER_A_...`` → ``"A"``); senão é atribuída por **ordem**
-  (`ProjectStructureUtil.assign_sub_os_letters`): 1ª pasta → ``A`` (uma pasta
-  única fica sempre em ``A``) e, com várias pastas do mesmo número, a OS é
-  subdividida em ``A``, ``B``, ``C``…
-- A **OS não guarda** `client`/`folders`/`years`/`path`: cliente / nome comercial
-  / CNPJ e as pastas/anos ficam **em cada `sub_os`**. Telas que resumem a OS
-  agregam esses dados com `ProjectStructureUtil.aggregate_record`.
-- O **cliente não** é derivado do nome da pasta: é **associado** pelo seed
-  (`add_data/seed_sub_os.py`) via a letra da SubOS.
-- O `path` de cada SubOS é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`),
-  resolvido em runtime por `ProjectStructureUtil.resolve_path` — portável entre
-  computadores.
-- Quando a ferramenta **Base de Limites** importa um vetor, ela grava em cada
-  SubOS a chave **`limites`** (via `CloudProjectDatabase.save_order`):
+- **`os`** é a chave da OS em TEXTO: os zeros à esquerda são PRESERVADOS
+  (`OS_039_Bunge` → `039`) e a letra faz parte da chave (`OS_169B_DARRO` → `169B`).
+  É ela que dá nome ao documento/JSON (`039.json`, `169B.json`).
+- **O campo/list `sub_os` NÃO existe mais** — o sistema de SubOS foi eliminado:
+  cada pasta é uma OS independente (uma pasta = uma OS).
+- A chave sai do nome da pasta por `ProjectStructureUtil.extract_os` (primeiro
+  campo após `OS_`) e é normalizada por `normalize_os` (maiúsculas, zeros e letra
+  preservados).
+- O `path` é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`), resolvido em
+  runtime por `ProjectStructureUtil.resolve_path` — portável entre computadores.
+- Quando a ferramenta **Base de Limites** importa um vetor, ela grava no registro
+  da OS a chave **`limites`** (via `CloudProjectDatabase.save_order`):
 
   ```json
   "limites": {
     "inserted_at": "2026-10-21T16:57:00",
-    "file": "OS_039_Bunge/08_LIMITES/TALHOES/39_limites.shp",
+    "file": "OS_039_Bunge/08_LIMITES/TALHOES/039_limites.shp",
     "source": "P230_001_01_OURO_VERDE_TALHOES.shp",
     "features": 12,
     "area_ha": 1234.5678
@@ -112,30 +104,31 @@ guarda apenas o número + a lista de SubOS:
     pasta-mãe (ex.: projeto em outro drive), o caminho **ABSOLUTO** é gravado
     (`LimitesService._stored_file_path`) para o registro continuar abrindo no
     Explorer.
-  - Ao **ATUALIZAR** pela Base de Limites, o mesmo objeto é reescrito na SubOS
+  - Ao **ATUALIZAR** pela Base de Limites, o mesmo objeto é reescrito na OS
     (`inserted_at`, `file`, `source`, `features` e `area_ha` do novo vetor) — as
-    feições antigas das OS/SubOS do vetor são substituídas no completão, no
-    arquivo da OS e na cópia do projeto.
+    feições antigas das OS do vetor são substituídas no completão, no arquivo da
+    OS e na cópia do projeto.
   - O **ATUALIZAR DADOS** do Banco de Dados preserva `limites` — ele só reescreve
-    `folders`/`years` de cada SubOS.
+    `folders`/`years` de cada OS.
 - No modo **Zonas de Manejo** a mesma ferramenta grava a chave **`zonas_manejo`**
-  na SubOS (mesma estrutura, com `file` apontando para
-  `13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`). As duas chaves convivem na SubOS
+  no registro da OS (mesma estrutura, com `file` apontando para
+  `13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`). As duas chaves convivem no registro
   e também são preservadas pelo ATUALIZAR DADOS.
-- O seed **cria a base de OS** (OS + SubOS + pasta, garantindo a SubOS A) direto
-  no Firestore via `CloudProjectDatabase`. Novas OS são criadas pelo
-  **Acompanhamento de OS** (botão CRIAR OS; só o número é obrigatório).
+- O seed **cria a base de OS** (OS + cliente + pasta) direto no Firestore via
+  `CloudProjectDatabase` (`add_data/seed_os.py`). Novas OS são criadas pelo
+  **Acompanhamento de OS** (botão CRIAR OS; só a chave é obrigatória — pode conter
+  letra, ex.: `169A`).
 - O **Banco de Dados** (ATUALIZAR DADOS) **não cria OS**: consulta o Firestore as
   OS existentes, re-escaneia as pastas e atualiza `folders`/`years`, exibindo um
   modal de resumo. Plugins têm **zero contato** com o JSON (Contrato 28).
 
 > A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse
 > registro para exibir os dados da OS selecionada no painel **Dados Gerais** —
-> OS/SubOS, pastas/anos criados e as infos de cada base (`limites`/`zonas_manejo`:
+> OS, cliente, pastas/anos criados e as infos de cada base (`limites`/`zonas_manejo`:
 > feições e área em hectares — `OsTrackerService.asset_info`) — e o painel
 > **Atalhos**, que exibe **um botão por link registrado** (`LIMITES`/`ZONAS DE
 > MANEJO`) abrindo a pasta do arquivo, cujo caminho é resolvido por
-> `asset_file_path` (absoluto → relativo à pasta-mãe → relativo à pasta da SubOS).
+> `asset_file_path` (absoluto → relativo à pasta-mãe → relativo à pasta da OS).
 > No painel **Últimas alterações no banco** fica o changelog da estrutura
 > (`CloudStructureDatabase.load_changes`, ordenado por `detected_at`).
 
@@ -176,7 +169,7 @@ Configuração mínima (seção `Firebase` em `config/<APP_SLUG>_preferences.jso
 ```
 Usuário clica ATUALIZAR DADOS
   → FirebaseWorker(CloudProjectDatabase.load_orders) consulta as OS existentes no Firestore
-  → ProjectDatabaseWorker re-escaneia as pastas das SubOS (background)
+  → ProjectDatabaseWorker re-escaneia as pastas das OS (background)
   → FirebaseWorker(CloudProjectDatabase.save_orders) grava no Firestore
       → e a própria classe gera os backups JSON (atômico): .BancoDados/*.json + consolidado
   → modal de resumo (MessageBox.show_info)

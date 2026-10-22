@@ -3,12 +3,12 @@
 Pasta de scripts **somente para desenvolvimento**. Não faz parte do runtime do
 Aetheris ToolBox.
 
-## `seed_sub_os.py`
+## `seed_os.py`
 
-Cria, **direto no Firebase (Cloud Firestore, coleção `banco_dados`)**, a BASE de
-OS já existente: um registro por OS com as suas **SubOS** (cliente, nome
-comercial e CNPJ) e a **pasta associada** (caminho **RELATIVO** à pasta-mãe —
-portável entre computadores). Toda OS ganha ao menos a **SubOS A**.
+Cria/atualiza, **direto no Firebase (Cloud Firestore, coleção `banco_dados`)**, a
+BASE de OS já existente: um registro por OS (a chave é **TEXTO** e pode conter
+**LETRA**, ex.: `169A`) com o cliente, o nome comercial, o CNPJ e a **pasta
+associada** (caminho **RELATIVO** à pasta-mãe — portável entre computadores).
 
 O Firestore é a **fonte oficial**. Os backups JSON em `.BancoDados` são gerados
 pela **classe de banco** `CloudProjectDatabase` (o script nunca grava JSON). A
@@ -19,13 +19,13 @@ OS** (botão CRIAR OS).
 
 ```powershell
 # Usa a pasta-mãe da preferência do Gerenciador de Estrutura
-python add_data/seed_sub_os.py
+python add_data/seed_os.py
 
 # Pasta-mãe explícita
-python add_data/seed_sub_os.py --mother "C:/caminho/pasta-mae"
+python add_data/seed_os.py --mother "C:/caminho/pasta-mae"
 
 # Só mostra o resumo (não envia nada ao Firebase)
-python add_data/seed_sub_os.py --dry-run
+python add_data/seed_os.py --dry-run
 ```
 
 > ⚠️ O script exige credenciais Firebase (conta de serviço ou login). Ele grava
@@ -41,19 +41,37 @@ python add_data/seed_sub_os.py --dry-run
 
 ### Comportamento
 
-- Agrupa por **número de OS** (normalizado, `039` → `39`): todas as pastas de
-  uma OS ficam em um **único registro**.
-- **Uma pasta = uma SubOS**: a SubOS é derivada da estrutura de pastas (a letra
-  é lida do nome da pasta — ex.: `OS_181_RENNER_A_...` → `A`).
-- O `path` de cada SubOS é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`).
-- Mescla a categorização por **letra da SubOS**: preenche `client`,
-  `commercial_name` e `cnpj` **sem apagar** `path`/`folders`/`years`.
-- **Garante a SubOS A** em toda OS.
-- As pastas/anos ficam **dentro da SubOS** (não no nível da OS).
+- A chave da OS é a **mesma chave do nome da pasta** (`OS_039_Bunge` → `039`,
+  `OS_169B_DARRO` → `169B`): zeros à esquerda e letra são preservados.
+- **Uma pasta = UMA OS**: cada registro é uma OS independente (o sistema de SubOS
+  foi eliminado).
+- O `path` é gravado **RELATIVO à pasta-mãe** (ex.: `OS_039_Bunge`).
+- Mescla a categorização: preenche `client`, `commercial_name` e `cnpj` **sem
+  apagar** `path`/`folders`/`years`.
+- As pastas/anos são varridos da pasta da OS em disco.
 
 > Lê o estado atual **do Firestore** (via `CloudProjectDatabase.load_orders`)
 > para preservar o que não é semeado.
 
-> O formulário enviado por linha é:
-> `{"sub_os": "A", "path": "...", "folders": [...], "years": [...],
+> O formulário enviado por OS é:
+> `{"os": "169B", "name": "", "path": "...", "folders": [...], "years": [...],
 > "client": "...", "commercial_name": "...", "cnpj": "..."}`.
+
+## `migrate_os_keys.py`
+
+Migração ÚNICA do esquema ANTIGO (`os` sem zeros + lista `sub_os`) para o esquema
+NOVO (**sem SubOS**): a chave de cada registro passa a ser a chave da pasta
+(`39` → `039`; `169` + SubOS `B` → `169B`) e cliente/nome comercial/CNPJ/caminho/
+pastas/anos/bases (`limites`/`zonas_manejo`) passam para o PRÓPRIO registro.
+
+```powershell
+# Só mostra o plano (não grava nada)
+python add_data/migrate_os_keys.py --dry-run
+
+# Migra (Firestore + backups JSON) — faz backup do .BancoDados antes
+python add_data/migrate_os_keys.py
+```
+
+> Antes de gravar, o script copia `<pasta-mãe>/.BancoDados` para
+> `<pasta-mãe>/.BancoDados_backup_<AAAAMMDDHHMMSS>` e, ao final, remove do
+> Firestore os documentos das chaves antigas.
