@@ -25,13 +25,11 @@ O ATUALIZAR procura os shapes que já existem nas pastas (completão, arquivo da
 na base e cópia no projeto), pergunta se devem ser substituídos e troca as feições
 das OS/SubOS do vetor nesses arquivos — as demais OS/SubOS ficam intactas.
 
-A OS manual é preenchida automaticamente pelo padrão do caminho de origem
-(`OS_<numero>` na pasta ou `P<numero>` no arquivo) APENAS quando o campo está
-vazio — valores digitados ou restaurados das preferências nunca são sobrescritos.
-
-Preferências: modo, vetor e valores manuais (fazenda, OS, SubOS, cliente, área e
-tolerância) são salvos e restaurados. O **mapeamento de campos NÃO vai para as
-preferências** — é sempre recalculado a partir dos campos do vetor carregado.
+Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
+SubOS, cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o
+vetor, o auto-preenchimento da OS pelo caminho passa a mandar — só um valor
+digitado pelo usuário no campo é preservado. O **mapeamento de campos NÃO vai
+para as preferências** — é sempre recalculado a partir dos campos do vetor.
 """
 
 from __future__ import annotations
@@ -105,6 +103,9 @@ class LimitesPlugin(BasePlugin):
         self._inspect_worker = None
         self._import_worker = None
         self._existing_worker = None
+        self._auto_os = ""
+        self._os_locked = False
+        self._setting_auto_os = False
 
         super().__init__(
             tool_key=ToolKey.LIMITES_DB.value,
@@ -151,11 +152,14 @@ class LimitesPlugin(BasePlugin):
     # ── Preferências ────────────────────────────────────────────────
 
     def load_prefs(self) -> None:
-        """Restaura modo, vetor e valores manuais.
+        """Restaura modo, vetor e valores manuais (preferências são o estado inicial).
 
         O **mapeamento de campos NÃO é persistido** — ele é sempre recalculado a
-        partir dos campos do vetor carregado, então um campo auto-preenchido nunca
-        substitui (nem é substituído por) uma preferência do usuário.
+        partir dos campos do vetor carregado.
+
+        A OS restaurada vale como estado inicial: ao TROCAR o vetor, o
+        auto-preenchimento do caminho passa a mandar (só um valor digitado pelo
+        usuário no campo é preservado).
         """
         self.preferences.pop("field_map", None)
         Preferences.remove_tool_prefs(self.tool_key, ["field_map"])
@@ -172,6 +176,8 @@ class LimitesPlugin(BasePlugin):
                 block_signals=True,
             )
 
+        self._os_locked = False
+
         path = self.preferences.get("vector_path", "") or ""
         if not path:
             return
@@ -181,6 +187,10 @@ class LimitesPlugin(BasePlugin):
             self._selector[self._SELECTOR_KEY].set_path(path)
         finally:
             self._restoring = False
+
+        guess = LimitesService.guess_os_from_path(path)
+        if guess and self._manual.get("os").strip() == guess:
+            self._auto_os = guess
 
     def save_prefs(self) -> None:
         """Persiste modo, vetor e valores manuais (mapeamento de campos fica fora)."""
@@ -303,12 +313,13 @@ class LimitesPlugin(BasePlugin):
     # ── Inspeção do vetor ───────────────────────────────────────────
 
     def _inspect_saved_path(self) -> None:
-        """Inspeciona o vetor restaurado das preferências (sem sobrescrever valores salvos)."""
+        """Inspeciona o vetor restaurado das preferências (sem sobrescrever a OS salva)."""
         path = self._selector[self._SELECTOR_KEY].path()
         if not (path and os.path.isfile(path)):
             return
 
-        self._autofill_os(path)
+        if not self._manual.get("os").strip():
+            self._autofill_os(path)
         self._start_inspect(path)
 
     def _on_input_changed(self, label: str, paths: list) -> None:
@@ -327,24 +338,38 @@ class LimitesPlugin(BasePlugin):
         self._persist_prefs()
 
     def _on_manual_changed(self, key: str, value: str) -> None:
-        """Salva os valores manuais quando um campo muda (``key``/``value`` vêm do sinal)."""
+        """Marca a OS digitada pelo usuário e mantém os valores manuais salvos."""
+        if key == "os" and not self._setting_auto_os:
+            self._os_locked = bool(value.strip())
         self.save_prefs()
 
     def _autofill_os(self, path: str) -> None:
-        """Preenche a OS manual pelo caminho APENAS quando o campo está vazio.
+        """Preenche a OS manual pelo padrão do caminho ao TROCAR o vetor.
 
-        Valores restaurados das preferências ou digitados pelo usuário nunca são
-        sobrescritos pelo palpite do caminho — limpe o campo para voltar a preencher.
+        O auto-preenchimento manda sobre o valor que veio das preferências — apenas
+        um valor DIGITADO pelo usuário no campo é preservado.
         """
-        current = self._manual.get("os").strip()
-        if current:
-            return
-
         guess = LimitesService.guess_os_from_path(path)
         if not guess:
             return
 
-        self._manual.set("os", guess)
+        current = self._manual.get("os").strip()
+        if self._os_locked and current and current != self._auto_os:
+            self.logger.info(
+                f"OS manual mantida ({current}) — o caminho sugere {guess}",
+                code="LIM_OS_KEPT",
+            )
+            return
+
+        self._setting_auto_os = True
+        try:
+            self._manual.set("os", guess)
+        finally:
+            self._setting_auto_os = False
+
+        self._auto_os = guess
+        self._os_locked = False
+
         self.logger.info(
             f"OS preenchida pelo caminho de origem: {guess}",
             code="LIM_OS_GUESS",
