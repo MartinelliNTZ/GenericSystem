@@ -21,8 +21,9 @@ O painel **Base de Limites e Zonas** exibe os dados que o banco guarda na SubOS
 de origem e data de registro) e o arquivo de cada um abre no Explorer com um
 clique.
 
-O painel **Atalhos** abre, com um clique, a pasta da SubOS, a pasta
-``LIMITE ZM`` e o changelog Word da OS
+O painel **Atalhos** abre, com um clique, a pasta da SubOS, a pasta do arquivo de
+cada base obtida (``LIMITES`` e ``ZONAS DE MANEJO`` — um botão por link registrado
+no banco, escondido quando a SubOS não tem o registro) e o changelog Word da OS
 (``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``).
 """
 
@@ -50,10 +51,7 @@ from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from resources.widgets.simple.SimpleSelector import SimpleSelector
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
-from utils.ProjectStructureUtil import (
-    DEFAULT_PROJECT_FOLDERS,
-    ProjectStructureUtil,
-)
+from utils.ProjectStructureUtil import DEFAULT_PROJECT_FOLDERS
 
 
 class OsTrackerPlugin(BasePlugin):
@@ -67,8 +65,13 @@ class OsTrackerPlugin(BasePlugin):
 
     # Atalhos do painel "Atalhos": (chave, texto, descrição)
     _SHORTCUTS = (
-        ("path", "CAMINHO DA PASTA", "Abre a pasta da SubOS no Explorer"),
-        ("zm", "LIMITE ZM", "Abre a pasta LIMITE ZM da SubOS no Explorer"),
+        ("path", "PASTA DA SUBOS", "Abre a pasta da SubOS no Explorer"),
+        ("limites", "LIMITES", "Abre a pasta do arquivo de limites da SubOS"),
+        (
+            "zonas_manejo",
+            "ZONAS DE MANEJO",
+            "Abre a pasta do arquivo de zonas de manejo da SubOS",
+        ),
         ("changelog", "CHANGELOG (WORD)", "Abre o changelog Word da OS"),
     )
 
@@ -81,7 +84,6 @@ class OsTrackerPlugin(BasePlugin):
         self._changes_worker: Optional[FirebaseWorker] = None
         self._asset_paths: Dict[str, str] = {}
         self._shortcut_paths: Dict[str, str] = {}
-        self._sub_folder = ""
         super().__init__(
             tool_key=ToolKey.OS_TRACKER.value,
             parent=parent,
@@ -179,14 +181,7 @@ class OsTrackerPlugin(BasePlugin):
                 "value": "—",
                 "description": "Soma da área (hectares) de limites e zonas de manejo da SubOS",
             },
-            "path": {
-                "label": "Caminho",
-                "value": "—",
-                "link": True,
-                "description": "Clique para abrir a pasta da SubOS",
-            },
         }, columns=2)
-        self._general.link_clicked.connect(self._on_general_link)
         grupo_geral.group_layout.addWidget(self._general)
 
         grupo_atalhos = GroupPainel("Atalhos")
@@ -424,15 +419,12 @@ class OsTrackerPlugin(BasePlugin):
         folders = list((entry or {}).get("folders", []) or [])
         years = list((entry or {}).get("years", []) or [])
         features, area_ha = self._asset_totals(entry)
-        resolved = self._resolve_path(str((entry or {}).get("path", "") or ""))
-        self._sub_folder = resolved
         self._general.set("os", os_number or "—")
         self._general.set("subos", code)
         self._general.set("folders", str(len(folders)))
         self._general.set("years", str(len(years)))
         self._general.set("features", self._format_int(features))
         self._general.set("area", self._format_number(area_ha))
-        self._general.set("path", resolved or "—", url=resolved or None)
 
     def _render_assets(self, entry: Optional[Dict[str, Any]]) -> None:
         """Exibe se a SubOS tem limites/zonas no banco e o arquivo de cada um."""
@@ -451,13 +443,16 @@ class OsTrackerPlugin(BasePlugin):
             )
 
     def _render_shortcuts(self, entry: Optional[Dict[str, Any]]) -> None:
-        """Resolve os caminhos dos atalhos (pasta da SubOS, LIMITE ZM e Word)."""
+        """Resolve os atalhos e exibe um botão por link (limites/zonas) obtido."""
         folder = OsTrackerService.sub_os_folder(self._mother_folder, entry)
         self._shortcut_paths = {
             "path": str(folder) if folder is not None else "",
-            "zm": OsTrackerService.zm_folder(self._mother_folder, entry),
             "changelog": OsTrackerService.changelog_path(self._mother_folder, entry),
         }
+        for key, _label, _file_label in self._ASSETS:
+            path = OsTrackerService.asset_file_path(self._mother_folder, entry, key)
+            self._shortcut_paths[key] = path
+            self._shortcuts.set_visible(key, bool(path))
 
     @classmethod
     def _asset_text(cls, info: Dict[str, Any]) -> str:
@@ -490,12 +485,6 @@ class OsTrackerPlugin(BasePlugin):
         if when:
             lines.append(f"Registrado em: {when}")
         return "\n".join(lines) or "Registro presente na SubOS."
-
-    def _resolve_path(self, rel_path: str) -> str:
-        """Resolve um caminho relativo para exibição (absoluto local)."""
-        if not rel_path or self._mother_folder is None:
-            return rel_path or ""
-        return str(ProjectStructureUtil.resolve_path(self._mother_folder, rel_path))
 
     def _render_changes(self) -> None:
         """Reconstrói os cards das últimas alterações registradas no banco."""
@@ -562,14 +551,8 @@ class OsTrackerPlugin(BasePlugin):
             return
         self._open_path(path)
 
-    def _on_general_link(self, key: str, url: str) -> None:
-        """Abre no Explorer a pasta da SubOS exibida em Dados Gerais."""
-        if key != "path" or not self._sub_folder:
-            return
-        self._open_path(self._sub_folder)
-
     def _on_shortcut(self, key: str) -> None:
-        """Abre o alvo do atalho clicado (pasta da SubOS, LIMITE ZM ou Word)."""
+        """Abre o alvo do atalho clicado (pasta da SubOS, limites/zonas ou Word)."""
         path = self._shortcut_paths.get(key, "")
         if not path:
             MessageBox.show_warning(

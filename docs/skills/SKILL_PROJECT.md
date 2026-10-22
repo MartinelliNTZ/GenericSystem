@@ -451,13 +451,16 @@ alteradas.
   SubOS em "Dados Gerais" também).
 - O painel **"Dados Gerais"** exibe TODOS os dados em um único `GridLabel` de
   **2 colunas**, na mesma formatação: OS, SubOS, pastas criadas, anos criados,
-  **feições** e **área em ha** (soma de `limites` + `zonas_manejo`) e o caminho da
-  SubOS (link clicável). O painel **"Atalhos"** (`GridButtonPanel`) abre, com um
-  clique, a **pasta da SubOS** (`OsTrackerService.sub_os_folder`), a pasta
-  **LIMITE ZM** (`OsTrackerService.zm_folder`; candidatos `00_ARCGIS/01_SHP/ZM` →
-  `00_ARCGIS/ZM` → `ZM`) e o **changelog Word** da OS
+  **feições** e **área em ha** (soma de `limites` + `zonas_manejo`). O painel
+  **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da SubOS**
+  (`OsTrackerService.sub_os_folder`), a **pasta do arquivo de cada base obtida**
+  (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido quando a
+  SubOS não tem o registro) e o **changelog Word** da OS
   (`OsTrackerService.changelog_path` → `ProjectStructureChangelog.document_path`),
-  aberto no aplicativo padrão. O painel **"Últimas alterações da OS"** continua
-  vindo do **banco** (`estrutura_changelog`), nunca do Word.
+  aberto no aplicativo padrão. O caminho do arquivo de limites/zonas
+  (`asset_file_path`) é resolvido em cascata — **absoluto → relativo à pasta-mãe →
+  relativo à pasta da SubOS** — cobrindo registros antigos ou gravados fora da
+  pasta-mãe. O painel **"Últimas alterações da OS"** continua vindo do **banco**
+  (`estrutura_changelog`), nunca do Word.
 - `python-docx` é dependência declarada em `requirements.txt`.
 

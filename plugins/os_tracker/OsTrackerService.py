@@ -40,8 +40,6 @@ class OsTrackerService(BaseUtil):
     """Lê e mantém os registros de OS/SubOS e as pastas associadas."""
 
     RECENT_CHANGES_LIMIT = 6
-    # Pastas candidatas do "LIMITE ZM" dentro da pasta da SubOS (ordem de prioridade).
-    ZM_CANDIDATES = ("00_ARCGIS/01_SHP/ZM", "00_ARCGIS/ZM", "ZM")
     _CHANGE_SUMMARY_LABELS = (
         ("pasta(s) criada(s)", "added_folders"),
         ("pasta(s) removida(s)", "removed_folders"),
@@ -219,13 +217,31 @@ class OsTrackerService(BaseUtil):
         entry: Optional[Dict[str, Any]],
         key: str,
     ) -> str:
-        """Caminho ABSOLUTO do arquivo do asset (o banco guarda o caminho relativo)."""
+        """Caminho ABSOLUTO do arquivo do asset gravado na SubOS.
+
+        O banco guarda o caminho RELATIVO à pasta-mãe; registros antigos podem ter
+        caminho absoluto ou apenas o nome do arquivo. A resolução tenta, na ordem:
+        caminho absoluto → relativo à pasta-mãe → relativo à pasta da SubOS.
+        """
         rel = cls.asset_info(entry, key)["file"]
         if not rel:
             return ""
-        if mother is None:
-            return rel
-        return str(ProjectStructureUtil.resolve_path(Path(mother), rel))
+
+        candidate = Path(rel)
+        if candidate.is_absolute():
+            return str(candidate)
+
+        mother_path = Path(mother) if mother is not None else None
+        folder = cls.sub_os_folder(mother_path, entry)
+        for base in (mother_path, folder):
+            if base is None:
+                continue
+            resolved = ProjectStructureUtil.resolve_path(base, rel)
+            if resolved.exists():
+                return str(resolved)
+
+        base = mother_path or folder
+        return str(ProjectStructureUtil.resolve_path(base, rel)) if base else rel
 
     # ── Atalhos (pastas/arquivos da SubOS) ──────────────────────────
 
@@ -239,20 +255,6 @@ class OsTrackerService(BaseUtil):
             return None
         base = Path(mother) if mother is not None else None
         return ProjectStructureUtil.resolve_path(base, rel)
-
-    @classmethod
-    def zm_folder(
-        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
-    ) -> str:
-        """Caminho da pasta LIMITE ZM da SubOS (``""`` sem pasta cadastrada)."""
-        folder = cls.sub_os_folder(mother, entry)
-        if folder is None:
-            return ""
-        for relative in cls.ZM_CANDIDATES:
-            candidate = folder / relative
-            if candidate.is_dir():
-                return str(candidate)
-        return str(folder / cls.ZM_CANDIDATES[0])
 
     @classmethod
     def changelog_path(

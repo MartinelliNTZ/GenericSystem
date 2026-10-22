@@ -1136,6 +1136,20 @@ class LimitesService(BaseUtil):
         removed = cls._write_target(str(target), group, settings["fields"], replace)
         return target, removed
 
+    @staticmethod
+    def _stored_file_path(mother: Path, file_path: Path) -> str:
+        """Caminho do arquivo gravado no banco: relativo à pasta-mãe (ou absoluto).
+
+        ``to_relative_path`` devolve apenas o NOME quando o arquivo está FORA da
+        pasta-mãe — nesse caso grava o caminho ABSOLUTO para o registro continuar
+        abrindo no Explorer.
+        """
+        target = Path(file_path)
+        relative = ProjectStructureUtil.to_relative_path(mother, target)
+        if relative == target.name:
+            return str(target)
+        return relative
+
     @classmethod
     def _register_limits(
         cls,
@@ -1166,7 +1180,7 @@ class LimitesService(BaseUtil):
 
         entry[db_key] = {
             "inserted_at": datetime.now().isoformat(timespec="seconds"),
-            "file": ProjectStructureUtil.to_relative_path(mother, file_path),
+            "file": cls._stored_file_path(mother, file_path),
             "source": os.path.basename(config.vector_path),
             "features": int(len(group)),
             "area_ha": round(float(group[FIELD_AREA_CALC].sum()), 4),

@@ -108,7 +108,10 @@ guarda apenas o número + a lista de SubOS:
   ```
 
   - `file` é **RELATIVO à pasta-mãe** (portável) e aponta para a cópia do limite
-    dentro do projeto (`08_LIMITES/TALHOES`).
+    dentro do projeto (`08_LIMITES/TALHOES`). Quando o arquivo está **fora** da
+    pasta-mãe (ex.: projeto em outro drive), o caminho **ABSOLUTO** é gravado
+    (`LimitesService._stored_file_path`) para o registro continuar abrindo no
+    Explorer.
   - Ao **ATUALIZAR** pela Base de Limites, o mesmo objeto é reescrito na SubOS
     (`inserted_at`, `file`, `source`, `features` e `area_ha` do novo vetor) — as
     feições antigas das OS/SubOS do vetor são substituídas no completão, no
@@ -130,10 +133,12 @@ guarda apenas o número + a lista de SubOS:
 > registro para exibir os dados da OS selecionada, o painel **Base de Limites e
 > Zonas** — chaves `limites`/`zonas_manejo` da SubOS: quantidade de feições, área
 > em hectares, arquivo de origem e data de registro (`OsTrackerService.asset_info`),
-> com o caminho do arquivo resolvido pela pasta-mãe (`asset_file_path`) abrindo no
-> Explorer com um clique — e, no painel **Últimas alterações no banco**, o
-> changelog da estrutura (`CloudStructureDatabase.load_changes`, ordenado por
-> `detected_at`).
+> com o caminho do arquivo resolvido por `asset_file_path` (absoluto → relativo à
+> pasta-mãe → relativo à pasta da SubOS) abrindo no Explorer com um clique, e o
+> painel **Atalhos**, que exibe **um botão por link registrado** (`LIMITES` /
+> `ZONAS DE MANEJO`) abrindo a pasta do arquivo — e, no painel **Últimas alterações
+> no banco**, o changelog da estrutura (`CloudStructureDatabase.load_changes`,
+> ordenado por `detected_at`).
 
 ## Autenticação
 
