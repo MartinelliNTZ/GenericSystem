@@ -130,15 +130,14 @@ guarda apenas o número + a lista de SubOS:
   modal de resumo. Plugins têm **zero contato** com o JSON (Contrato 28).
 
 > A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse
-> registro para exibir os dados da OS selecionada, o painel **Base de Limites e
-> Zonas** — chaves `limites`/`zonas_manejo` da SubOS: quantidade de feições, área
-> em hectares, arquivo de origem e data de registro (`OsTrackerService.asset_info`),
-> com o caminho do arquivo resolvido por `asset_file_path` (absoluto → relativo à
-> pasta-mãe → relativo à pasta da SubOS) abrindo no Explorer com um clique, e o
-> painel **Atalhos**, que exibe **um botão por link registrado** (`LIMITES` /
-> `ZONAS DE MANEJO`) abrindo a pasta do arquivo — e, no painel **Últimas alterações
-> no banco**, o changelog da estrutura (`CloudStructureDatabase.load_changes`,
-> ordenado por `detected_at`).
+> registro para exibir os dados da OS selecionada no painel **Dados Gerais** —
+> OS/SubOS, pastas/anos criados e as infos de cada base (`limites`/`zonas_manejo`:
+> feições e área em hectares — `OsTrackerService.asset_info`) — e o painel
+> **Atalhos**, que exibe **um botão por link registrado** (`LIMITES`/`ZONAS DE
+> MANEJO`) abrindo a pasta do arquivo, cujo caminho é resolvido por
+> `asset_file_path` (absoluto → relativo à pasta-mãe → relativo à pasta da SubOS).
+> No painel **Últimas alterações no banco** fica o changelog da estrutura
+> (`CloudStructureDatabase.load_changes`, ordenado por `detected_at`).
 
 ## Autenticação
 

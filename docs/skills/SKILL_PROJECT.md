@@ -444,20 +444,20 @@ alteradas.
   alterações da OS"**, apenas as entradas da **OS selecionada**
   (`CloudStructureDatabase.load_changes(limit, os_number=...)` — igualdade em
   `os`, sem índice composto, ordenada em memória por `detected_at`).
-- O mesmo plugin mostra, no painel **"Base de Limites e Zonas"**, se a SubOS tem
-  `limites`/`zonas_manejo` no banco (feições, hectares, arquivo de origem e data —
-  `OsTrackerService.asset_info`/`format_when`) e o caminho do arquivo, resolvido
-  pela pasta-mãe (`asset_file_path`), abre no Explorer com um clique (o caminho da
-  SubOS em "Dados Gerais" também).
+- Os painéis do **Acompanhamento de OS** são: **Origem**, **Seleção**, **Dados
+  Gerais**, **Atalhos** e **Últimas alterações da OS**.
 - O painel **"Dados Gerais"** exibe TODOS os dados em um único `GridLabel` de
-  **2 colunas**, na mesma formatação: OS, SubOS, pastas criadas, anos criados,
-  **feições** e **área em ha** (soma de `limites` + `zonas_manejo`). O painel
-  **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da SubOS**
-  (`OsTrackerService.sub_os_folder`), a **pasta do arquivo de cada base obtida**
-  (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido quando a
-  SubOS não tem o registro) e o **changelog Word** da OS
+  **2 colunas**, na mesma formatação: OS, SubOS, pastas criadas, anos criados e as
+  infos de cada base do banco — **Feições/Área de Limites** e **Feições/Área de
+  Zonas de manejo** (`OsTrackerService.asset_info`; o tooltip traz a origem e a
+  data de registro).
+- O painel **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da
+  SubOS** (`OsTrackerService.sub_os_folder`), a **pasta do arquivo de cada base
+  obtida** (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido
+  quando a SubOS não tem o registro) e o **changelog Word** da OS
   (`OsTrackerService.changelog_path` → `ProjectStructureChangelog.document_path`),
-  aberto no aplicativo padrão. O caminho do arquivo de limites/zonas
+  aberto no aplicativo padrão. **Não** há link para o shapefile — a abertura da
+  pasta é feita pelos botões de atalho. O caminho do arquivo de limites/zonas
   (`asset_file_path`) é resolvido em cascata — **absoluto → relativo à pasta-mãe →
   relativo à pasta da SubOS** — cobrindo registros antigos ou gravados fora da
   pasta-mãe. O painel **"Últimas alterações da OS"** continua vindo do **banco**
