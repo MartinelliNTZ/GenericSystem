@@ -1,3 +1,14 @@
+[1.16.2][2026.10.22][16:55] - Seed da base: OS que existiam só em disco agora têm registro (069, 127, 144, 302, 315, 393)
+  - add_data/seed_os.py: RAW_ROWS passa a listar TAMBÉM as OS que existiam apenas em disco (069_RoyalFic, 127_Aprosoja, 144_Amaggi, 302_EUGENIO, 315_EMBRAPA, 393_ELDORADO) — criadas SEM cliente/nome comercial/CNPJ (podem ser preenchidos depois no Acompanhamento de OS: CRIAR OS com a MESMA chave mescla os dados)
+  - Banco de dados (Firestore + backups JSON): base completa — 52 pastas em disco × 52 registros (069, 127, 144 e 315 foram criados; nenhum registro sem pasta)
+
+
+[1.16.1][2026.10.22][16:50] - Migração do banco: renumeração de OS (--rename) e OS 377 → 393
+  - add_data/migrate_os_keys.py: NOVA opção `--rename ANTIGA=NOVA` (repetível) — força a chave de uma OS renumerada, localiza a pasta nova no disco pela chave NOVA, regrava o registro e remove o documento antigo do Firestore; o plano mostra `Renomeado : ANTIGA -> NOVA` (com aviso quando não há pasta em disco)
+  - Banco de dados (Firestore + backups JSON): OS `377` renumerada para `393` (pasta `OS_393_ELDORADO`) — o documento `377` foi removido, `393.json` passou a apontar para a pasta atual e o backup do `.BancoDados` foi gerado antes da gravação
+  - add_data/README.md: uso do `--rename` documentado
+
+
 [1.16.0][2026.10.22][15:50] - Fim do sistema de SubOS: a OS é TEXTO com LETRA (169A, 181C) e cada pasta é UMA OS
   - utils/ProjectStructureUtil.py: NOVO extract_os (chave da OS = primeiro campo após OS_, em MAIÚSCULAS, com zeros à esquerda e LETRA preservados) e project_folder (localiza a pasta OS_<chave>... na pasta-mãe); normalize_os deixa de remover zeros à esquerda (039 continua 039); REMOVIDOS extract_os_number, extract_sub_os, assign_sub_os_letters, group_projects_by_os e aggregate_record
   - core/model/SubOSModel.py: REMOVIDO; core/model/WorkOrderModel.py: sem a lista sub_os (a OS é texto com letra e guarda cliente/nome comercial/CNPJ)

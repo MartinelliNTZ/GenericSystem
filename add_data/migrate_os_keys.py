@@ -99,12 +99,16 @@ def _resolve_key(
     letter: str,
     rel_path: str,
     folders: Dict[str, Path],
+    forced: str = "",
 ) -> str:
     """Decide a chave NOVA de uma OS (o disco manda; o banco é o fallback).
 
-    Ordem: chave da pasta gravada no banco → ``<os antiga><letra>`` (ex.: ``169``
-    + ``A`` → ``169A``) → a própria ``os`` antiga → o que veio do banco.
+    Ordem: chave forçada por ``--rename`` → chave da pasta gravada no banco →
+    ``<os antiga><letra>`` (ex.: ``169`` + ``A`` → ``169A``) → a própria ``os``
+    antiga → o que veio do banco.
     """
+    if forced:
+        return forced
     stored = ProjectStructureUtil.extract_os(Path(rel_path).name) if rel_path else ""
     if stored and stored in folders:
         return stored
@@ -196,21 +200,30 @@ def _dedupe(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _plan(
-    orders: List[Dict[str, Any]], mother: Path, folders: Dict[str, Path]
+    orders: List[Dict[str, Any]],
+    mother: Path,
+    folders: Dict[str, Path],
+    aliases: Dict[str, str] | None = None,
 ) -> Tuple[List[Dict[str, Any]], List[Tuple[str, str]]]:
-    """Converte os registros antigos: ``(registros_novos, [(antiga, nova)])``."""
+    """Converte os registros antigos: ``(registros_novos, [(antiga, nova)])``.
+
+    ``aliases`` força a chave de uma OS (``--rename`` — ex.: ``377`` → ``393``
+    quando a OS foi renumerada e a pasta mudou de nome).
+    """
+    aliases = aliases or {}
     records: List[Dict[str, Any]] = []
     mapping: List[Tuple[str, str]] = []
 
     for source in orders:
         old_key = ProjectStructureUtil.normalize_os(str(source.get("os", "")))
+        forced = aliases.get(old_key, "")
         entries = [
             entry for entry in source.get("sub_os", []) or []
             if isinstance(entry, dict)
         ]
         if not entries:
             rel = str(source.get("path", "") or "")
-            key = _resolve_key(old_key, "", rel, folders)
+            key = _resolve_key(old_key, "", rel, folders, forced)
             records.append(_build_record(source, source, key, rel, mother))
             mapping.append((old_key, key))
             continue
@@ -218,7 +231,7 @@ def _plan(
         for entry in entries:
             letter = ProjectStructureUtil.normalize_os(str(entry.get("sub_os", "")))
             rel = str(entry.get("path", "") or "")
-            key = _resolve_key(old_key, letter, rel, folders)
+            key = _resolve_key(old_key, letter, rel, folders, forced)
             records.append(_build_record(source, entry, key, rel, mother))
             mapping.append((old_key, key))
 
@@ -238,11 +251,27 @@ def _backup_database(mother: Path) -> str:
     return str(target)
 
 
-def _apply(mother: Path, dry_run: bool) -> None:
+def _parse_aliases(items: List[str]) -> Dict[str, str]:
+    """Converte ``["377=393"]`` em ``{"377": "393"}`` (chaves normalizadas)."""
+    aliases: Dict[str, str] = {}
+    for item in items:
+        old, _, new = str(item).partition("=")
+        old = ProjectStructureUtil.normalize_os(old)
+        new = ProjectStructureUtil.normalize_os(new)
+        if not old or not new:
+            raise SystemExit(f"--rename inválido: '{item}' (use ANTIGA=NOVA).")
+        aliases[old] = new
+    return aliases
+
+
+def _apply(
+    mother: Path, dry_run: bool, aliases: Dict[str, str] | None = None
+) -> None:
     """Migra a base de OS (Firestore + backups JSON) para o esquema sem SubOS."""
+    aliases = aliases or {}
     orders = CloudProjectDatabase.load_orders(tool_key=_TOOL_KEY)
     folders = _scan_keys(mother)
-    records, mapping = _plan(orders, mother, folders)
+    records, mapping = _plan(orders, mother, folders, aliases)
 
     new_keys = {str(record.get("os", "")) for record in records}
     obsolete = sorted({
@@ -256,6 +285,9 @@ def _apply(mother: Path, dry_run: bool) -> None:
     for old_key, new_key in mapping:
         if old_key != new_key:
             print(f"  {old_key} -> {new_key}")
+    for old_key, new_key in sorted(aliases.items()):
+        mark = "" if new_key in folders else "  [sem pasta em disco]"
+        print(f"Renomeado : {old_key} -> {new_key}{mark}")
     if obsolete:
         print(f"Obsoletos : {', '.join(obsolete)}")
 
@@ -288,6 +320,13 @@ def main() -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="Não grava nada (só mostra o plano).",
     )
+    parser.add_argument(
+        "--rename",
+        action="append",
+        default=[],
+        metavar="ANTIGA=NOVA",
+        help="Renumera a chave de uma OS (ex.: --rename 377=393). Repetível.",
+    )
     args = parser.parse_args()
 
     mother = _resolve_mother(args.mother)
@@ -298,7 +337,7 @@ def main() -> None:
             "Sem credenciais Firebase (conta de serviço ou login). "
             "A migração lê e grava direto no Firestore."
         )
-    _apply(mother, args.dry_run)
+    _apply(mother, args.dry_run, _parse_aliases(args.rename))
 
 
 if __name__ == "__main__":

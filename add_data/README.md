@@ -70,8 +70,15 @@ python add_data/migrate_os_keys.py --dry-run
 
 # Migra (Firestore + backups JSON) — faz backup do .BancoDados antes
 python add_data/migrate_os_keys.py
+
+# Renumera/renomeia a chave de uma OS (pasta renomeada) — repetível
+python add_data/migrate_os_keys.py --rename 377=393
 ```
 
 > Antes de gravar, o script copia `<pasta-mãe>/.BancoDados` para
 > `<pasta-mãe>/.BancoDados_backup_<AAAAMMDDHHMMSS>` e, ao final, remove do
 > Firestore os documentos das chaves antigas.
+
+> `--rename ANTIGA=NOVA` força a chave de uma OS que foi **renumerada** (a pasta
+> nova é localizada no disco pela chave NOVA — ex.: `377` → `OS_393_ELDORADO`);
+> o documento antigo é removido e o novo passa a apontar para a pasta atual.

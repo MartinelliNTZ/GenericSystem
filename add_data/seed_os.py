@@ -118,6 +118,15 @@ RAW_ROWS: List[Tuple[str, str, str, str]] = [
     ("230", "Agrícola Wehrmann Ltda", "Agrícola Wehrmann Ltda", "35.563.152/0001-87"),
     ("231", "Adriano Kitagawa; Alexandre Kitagawa; Marcelo Kitagawa", "Adriano Kitagawa; Alexandre Kitagawa; Marcelo Kitagawa", ""),
     ("232", "Santa Vitória Açúcar e Álcool Ltda. / Jalles", "USINA SANTA VITÓRIA", ""),
+
+    # OS que existem em disco mas ainda NÃO têm cliente cadastrado — preencha
+    # depois no Acompanhamento de OS (CRIAR OS com a MESMA chave mescla os dados).
+    ("069", "", "", ""),
+    ("127", "", "", ""),
+    ("144", "", "", ""),
+    ("302", "", "", ""),
+    ("315", "", "", ""),
+    ("393", "", "", ""),
 ]
 
 
