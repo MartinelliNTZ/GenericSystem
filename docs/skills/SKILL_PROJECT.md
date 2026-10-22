@@ -444,5 +444,10 @@ alteradas.
   alterações da OS"**, apenas as entradas da **OS selecionada**
   (`CloudStructureDatabase.load_changes(limit, os_number=...)` — igualdade em
   `os`, sem índice composto, ordenada em memória por `detected_at`).
+- O mesmo plugin mostra, no painel **"Base de Limites e Zonas"**, se a SubOS tem
+  `limites`/`zonas_manejo` no banco (feições, hectares, arquivo de origem e data —
+  `OsTrackerService.asset_info`/`format_when`) e o caminho do arquivo, resolvido
+  pela pasta-mãe (`asset_file_path`), abre no Explorer com um clique (o caminho da
+  SubOS em "Dados Gerais" também).
 - `python-docx` é dependência declarada em `requirements.txt`.
 

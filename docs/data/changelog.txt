@@ -1,3 +1,20 @@
+[1.14.0][2026.10.22][12:11] - Zonas de Manejo: campo de manejo (CAMPO) opcional presente em todos os shapes
+  - plugins/limites_db/LimitesService.py: nova constante `FIELD_CAMPO = "CAMPO"` e o modo zonas ganhou a chave semântica `campo` (`ZONAS_FIELDS` = ZONA, **CAMPO**, FAZENDA, OS, SUB_OS, TALHAO, CLIENTE, AREA_HA, AREA_INF) — OPCIONAL, vem de campo mapeado OU valor manual e é normalizado como os demais textos (maiúsculas, sem acento, espaços → `_`)
+  - Quando indicado, o CAMPO consta em TODOS os shapes gravados (completão `zonas_manejo.shp`, arquivo por OS `<OS>_zonas_manejo.shp` e cópia em `13_ZONAS_DE_MANEJO`); sem indicação a coluna existe, porém vazia — anexando num arquivo antigo (sem CAMPO) a coluna é criada e as feições antigas ficam nulas
+  - plugins/limites_db/LimitesService.py: `guess_field` passa a sugerir campos com o token `CAMPO` (ex.: `CAMPO_MANEJO`) para o combo "Campo de manejo"
+  - plugins/limites_db/LimitesPlugin.py: combo "Campo de manejo" no mapeamento das zonas e campo "Campo de manejo" nos Valores Manuais — visível apenas no modo Zonas de Manejo
+  - resources/widgets/grid/GridLineEdit.py: novo `set_visible(key, visible)` — mostra/oculta a LINHA inteira (label + campo); usado para exibir o campo de manejo só no modo zonas
+  - docs/skills/SKILL_WIDGETS.md (GridLineEdit.set_visible) e CatalogoClasses.md: campo de manejo e o novo método do widget documentados
+
+
+[1.13.0][2026.10.22][12:02] - Acompanhamento de OS: painel com limites/zonas do banco e abertura do arquivo no Explorer
+  - plugins/os_tracker/OsTrackerService.py: novos `asset_info` — resume as chaves `limites`/`zonas_manejo` da SubOS (`has`, `features`, `area_ha`, `file`, `source`, `inserted_at`, com coerção tolerante de tipo) — e `asset_file_path` (caminho ABSOLUTO resolvido pela pasta-mãe, já que o banco guarda o caminho relativo); novo `format_when` (ISO → `dd/mm/aaaa hh:mm`), agora reusado por `change_when`
+  - plugins/os_tracker/OsTrackerPlugin.py: novo painel **Base de Limites e Zonas** (GridLabel 2 colunas) — "Limites" e "Zonas de manejo" mostram `Sim — 12 feições · 1.234,57 ha` ou `Não`; "Arquivo de limites"/"Arquivo de zonas" mostram o nome do arquivo e o tooltip de cada status traz a origem (`source`) e a data de registro
+  - plugins/os_tracker/OsTrackerPlugin.py: o arquivo é um LINK clicável que abre a PASTA do arquivo no gerenciador do sistema (`QDesktopServices`), com aviso quando a SubOS não tem registro ou a pasta não existe; o mesmo passou a valer para o campo "Caminho" em Dados Gerais (o link existia, mas não estava conectado)
+  - plugins/os_tracker/OsTrackerPlugin.py: layout reorganizado — "Dados Gerais" + "Base de Limites e Zonas" na mesma linha e "Últimas alterações da OS" ocupando a linha inteira (stretch)
+  - docs/skills/CatalogoClasses.md, SKILL_DATABASE.md e SKILL_PROJECT.md: painel, helpers do service e abertura de caminho documentados
+
+
 [1.12.0][2026.10.22][09:54] - Base de Limites: bloqueio de vetor fora do padrão (EPSG 4326, polígonos e geometria válida)
   - plugins/limites_db/LimitesService.py: novos `validate_vector`/`vector_problems` + constantes `DEFAULT_EPSG = 4326`, `POLYGON_TYPES` e `SHP_SIDECARS` — a validação roda ANTES de qualquer gravação (VALIDAR, IMPORTAR e ATUALIZAR) e bloqueia com a lista de problemas
   - Regras: shapefile completo (`.shp`/`.shx`/`.dbf`); CRS obrigatoriamente `EPSG:4326` (sem `.prj` ou outro EPSG → bloqueado com orientação para reprojetar); somente `Polygon`/`MultiPolygon` (ponto, linha e tipos mistos bloqueados); geometrias sem nulas/vazias e com `is_valid` (anel fechado, sem auto-interseção); vetor com pelo menos 1 feição

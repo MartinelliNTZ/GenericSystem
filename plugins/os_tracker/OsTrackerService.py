@@ -92,24 +92,33 @@ class OsTrackerService(BaseUtil):
         return " · ".join(parts[:3] + (["…"] if len(parts) > 3 else []))
 
     @staticmethod
+    def format_when(
+        value: str,
+        tool_key: str = ToolKey.OS_TRACKER.value,
+    ) -> str:
+        """Formata um timestamp ISO em ``dd/mm/aaaa hh:mm`` (ou devolve o original)."""
+        text = str(value or "")
+        if not text:
+            return ""
+        try:
+            return datetime.fromisoformat(text).strftime("%d/%m/%Y %H:%M")
+        except ValueError as e:
+            BaseUtil._get_logger(tool_key, "OsTrackerService").warning(
+                "Data inválida",
+                code="OST_DATE_ERR",
+                error=str(e),
+                value=text,
+            )
+            return text
+
+    @classmethod
     def change_when(
+        cls,
         change: Dict[str, Any],
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> str:
         """Data/hora da alteração (``dd/mm/aaaa hh:mm``) ou o texto original."""
-        value = str(change.get("detected_at", "") or "")
-        if not value:
-            return ""
-        try:
-            return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M")
-        except ValueError as e:
-            BaseUtil._get_logger(tool_key, "OsTrackerService").warning(
-                "Data de alteração inválida",
-                code="OST_CHANGE_DATE_ERR",
-                error=str(e),
-                value=value,
-            )
-            return value
+        return cls.format_when(str(change.get("detected_at", "") or ""), tool_key)
 
     @classmethod
     def build_sub_os(cls, record: Dict[str, Any]) -> List[SubOS]:
@@ -167,6 +176,69 @@ class OsTrackerService(BaseUtil):
             if letter not in used:
                 return letter
         return ""
+
+    # ── Base de Limites/Zonas gravada na SubOS ──────────────────────
+
+    @classmethod
+    def asset_info(
+        cls, entry: Optional[Dict[str, Any]], key: str
+    ) -> Dict[str, Any]:
+        """
+        Resumo do asset ``limites``/``zonas_manejo`` gravado na SubOS pelo banco.
+
+        Chaves: ``has``, ``features``, ``area_ha``, ``file``, ``source`` e
+        ``inserted_at``.
+        """
+        data = (entry or {}).get(key)
+        if not isinstance(data, dict) or not data:
+            return {
+                "has": False,
+                "features": 0,
+                "area_ha": 0.0,
+                "file": "",
+                "source": "",
+                "inserted_at": "",
+            }
+
+        return {
+            "has": True,
+            "features": cls._as_int(data.get("features")),
+            "area_ha": cls._as_float(data.get("area_ha")),
+            "file": str(data.get("file", "") or ""),
+            "source": str(data.get("source", "") or ""),
+            "inserted_at": str(data.get("inserted_at", "") or ""),
+        }
+
+    @classmethod
+    def asset_file_path(
+        cls,
+        mother: Optional[Path],
+        entry: Optional[Dict[str, Any]],
+        key: str,
+    ) -> str:
+        """Caminho ABSOLUTO do arquivo do asset (o banco guarda o caminho relativo)."""
+        rel = cls.asset_info(entry, key)["file"]
+        if not rel:
+            return ""
+        if mother is None:
+            return rel
+        return str(ProjectStructureUtil.resolve_path(Path(mother), rel))
+
+    @staticmethod
+    def _as_int(value: Any) -> int:
+        """Converte um valor do banco em inteiro (fallback ``0``)."""
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _as_float(value: Any) -> float:
+        """Converte um valor do banco em float (fallback ``0.0``)."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
 
     # ── Escrita (grava no Firebase via classe de banco) ──────────────
 

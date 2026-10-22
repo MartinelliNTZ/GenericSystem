@@ -29,6 +29,9 @@ Regras de negócio (limites):
 Regras de negócio (zonas de manejo):
 - ZONA é obrigatória; FAZENDA e OS também (campo mapeado ou valor manual).
 - TALHÃO é OPCIONAL e NÃO há regra de duplicidade.
+- CAMPO (campo de manejo) é OPCIONAL: quando indicado — campo mapeado ou valor
+  manual — ele CONSTA em todos os shapes gerados (completão, arquivo da OS na
+  base e cópia no projeto); sem indicação a coluna existe, porém vazia.
 - AREA_HA continua sendo CALCULADA em hectares.
 - O registro vai para a chave ``zonas_manejo`` da SubOS.
 
@@ -101,6 +104,7 @@ ZONAS_FOLDER = "13_ZONAS_DE_MANEJO"
 
 FIELD_TALHAO = "TALHAO"
 FIELD_ZONA = "ZONA"
+FIELD_CAMPO = "CAMPO"
 FIELD_FAZENDA = "FAZENDA"
 FIELD_OS = "OS"
 FIELD_SUB_OS = "SUB_OS"
@@ -122,6 +126,7 @@ LIMITES_FIELDS = [
 
 ZONAS_FIELDS = [
     FIELD_ZONA,
+    FIELD_CAMPO,
     FIELD_FAZENDA,
     FIELD_OS,
     FIELD_SUB_OS,
@@ -151,7 +156,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "project_subfolder": "",
         "db_key": "zonas_manejo",
         "fields": ZONAS_FIELDS,
-        "semantic": ("zona", "fazenda", "os", "subos", "talhao", "cliente", "area"),
+        "semantic": ("zona", "campo", "fazenda", "os", "subos", "talhao", "cliente", "area"),
         "unique": False,
     },
 }
@@ -159,6 +164,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
 GUESS_TOKENS = {
     "talhao": ("TALHAO", "TALH"),
     "zona": ("ZONA", "ZONE"),
+    "campo": ("CAMPO",),
     "fazenda": ("FAZENDA", "PROPRIEDADE"),
     "os": ("OS", "ORDEM"),
     "subos": ("SUBOS", "SUB_OS", "SUB"),
@@ -688,6 +694,7 @@ class LimitesService(BaseUtil):
 
         talhoes: List[str] = []
         zonas: List[str] = []
+        campos: List[str] = []
         fazendas: List[str] = []
         os_numbers: List[int] = []
         sub_os_list: List[str] = []
@@ -706,6 +713,9 @@ class LimitesService(BaseUtil):
             zona = cls.normalize_text(columns.get("zona", empty)[index])
             if is_zonas and not zona:
                 problems.append(f"{label}: ZONA vazia (obrigatória).")
+
+            # CAMPO de manejo é OPCIONAL — quando informado vai para todos os shapes
+            campo = cls.normalize_text(columns.get("campo", empty)[index])
 
             fazenda = cls.normalize_text(columns["fazenda"][index])
             if not fazenda:
@@ -727,6 +737,7 @@ class LimitesService(BaseUtil):
             areas.append(area)
             talhoes.append(talhao)
             zonas.append(zona)
+            campos.append(campo)
             fazendas.append(fazenda)
             sub_os_list.append(sub_os)
             clientes.append(cls.normalize_text(columns["cliente"][index]))
@@ -757,6 +768,7 @@ class LimitesService(BaseUtil):
         prepared = gdf.copy()
         if is_zonas:
             prepared[FIELD_ZONA] = zonas
+            prepared[FIELD_CAMPO] = campos
         prepared[FIELD_TALHAO] = talhoes
         prepared[FIELD_FAZENDA] = fazendas
         prepared[FIELD_OS] = os_numbers

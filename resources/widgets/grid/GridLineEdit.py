@@ -21,6 +21,7 @@ Uso:
     grid.get("valor")    # "texto"
     grid.set("valor", "novo texto")
     grid.set_values({"valor": "outro"})
+    grid.set_visible("valor", False)   # oculta a linha (label + campo)
     grid.changed.connect(self._on_value_changed)
 """
 
@@ -54,6 +55,7 @@ class GridLineEdit(QWidget):
         super().__init__(parent)
         self._config = config
         self._line_edits: Dict[str, QLineEdit] = {}
+        self._labels: Dict[str, QLabel] = {}
         self.setObjectName("grid_lineedit")
 
         self._grid = QGridLayout(self)
@@ -77,6 +79,7 @@ class GridLineEdit(QWidget):
             lbl.setObjectName("grid_le_label")
             if description:
                 lbl.setToolTip(description)
+            self._labels[key] = lbl
             self._grid.addWidget(lbl, row, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
             # Line edit
@@ -119,6 +122,28 @@ class GridLineEdit(QWidget):
         if le is None:
             raise KeyError(f"Campo '{key}' não encontrado no GridLineEdit")
         return le
+
+    def set_visible(self, key: str, visible: bool) -> None:
+        """
+        Mostra/oculta a linha inteira (label + campo) de uma chave.
+
+        Usado quando um campo só faz sentido em determinado modo da ferramenta.
+
+        Args:
+            key: Chave do campo configurado no construtor
+            visible: True para exibir a linha, False para ocultá-la
+
+        Raises:
+            KeyError: se a chave não existir
+        """
+        le = self._line_edits.get(key)
+        if le is None:
+            raise KeyError(f"Campo '{key}' não encontrado no GridLineEdit")
+
+        le.setVisible(visible)
+        label = self._labels.get(key)
+        if label is not None:
+            label.setVisible(visible)
 
     # ── Propriedades públicas ────────────────────────────────────────
 

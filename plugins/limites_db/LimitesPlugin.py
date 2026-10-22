@@ -25,6 +25,10 @@ O ATUALIZAR procura os shapes que já existem nas pastas (completão, arquivo da
 na base e cópia no projeto), pergunta se devem ser substituídos e troca as feições
 das OS/SubOS do vetor nesses arquivos — as demais OS/SubOS ficam intactas.
 
+No modo **Zonas de Manejo** existe o **Campo de manejo** (``CAMPO``): opcional,
+pode ser mapeado do vetor ou informado nos valores manuais e, quando indicado,
+consta em TODOS os shapes gerados (completão, arquivo da OS e cópia no projeto).
+
 Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
 SubOS, cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o
 vetor, o auto-preenchimento da OS pelo caminho passa a mandar — só um valor
@@ -84,6 +88,11 @@ class LimitesPlugin(BasePlugin):
         ),
         MODE_ZONAS: (
             ("zona", "Zona *", "Campo obrigatório da zona de manejo (Zone/Zona)."),
+            (
+                "campo",
+                "Campo de manejo",
+                "Campo OPCIONAL do campo de manejo — quando indicado consta em todos os shapes.",
+            ),
             ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
             ("os", "OS", "Se não mapeado, informe a OS no valor manual."),
             ("subos", "SubOS", "Campo da SubOS (letra única). Padrão: A."),
@@ -259,6 +268,14 @@ class LimitesPlugin(BasePlugin):
             "fazenda": {"label": "Fazenda", "placeholder": "Obrigatória se não mapeada"},
             "os": {"label": "OS", "placeholder": "Obrigatória se não mapeada"},
             "subos": {"label": "SubOS", "default": DEFAULT_SUB_OS, "placeholder": "A"},
+            "campo": {
+                "label": "Campo de manejo",
+                "placeholder": "Opcional (zonas)",
+                "description": (
+                    "Campo de manejo opcional das zonas de manejo — quando informado "
+                    "(ou mapeado) consta em todos os shapes."
+                ),
+            },
             "cliente": {"label": "Cliente", "placeholder": "Opcional"},
             "area": {"label": "Área informada (ha)", "placeholder": "Opcional"},
             "tolerancia": {
@@ -307,9 +324,11 @@ class LimitesPlugin(BasePlugin):
         self._persist_prefs()
 
     def _apply_mode_visibility(self) -> None:
-        """Mostra apenas o mapeamento do modo ativo."""
+        """Mostra apenas o mapeamento do modo ativo (e o campo de manejo nas zonas)."""
         for mode, section in self._sections.items():
             section.setVisible(mode == self._mode)
+
+        self._manual.set_visible("campo", self._mode == MODE_ZONAS)
 
     # ── Inspeção do vetor ───────────────────────────────────────────
 
@@ -518,7 +537,7 @@ class LimitesPlugin(BasePlugin):
             field_map=field_map,
             manual={
                 key: manual.get(key, "")
-                for key in ("fazenda", "os", "subos", "cliente", "area")
+                for key in ("fazenda", "os", "subos", "campo", "cliente", "area")
             },
             tolerance_pct=tolerance,
             mode=self._mode,

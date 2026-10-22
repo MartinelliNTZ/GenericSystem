@@ -15,14 +15,21 @@ estrutura, filtrado pelo número da OS). Permite também:
 
 A ferramenta tem ZERO contato com o JSON de dados — a persistência (Firebase +
 backup JSON) é da classe ``CloudProjectDatabase`` (Contrato 28).
+
+O painel **Base de Limites e Zonas** exibe os dados que o banco guarda na SubOS
+(``limites`` e ``zonas_manejo``: quantidade de feições, área em hectares, arquivo
+de origem e data de registro) e o arquivo de cada um abre no Explorer com um
+clique.
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtGui import QDesktopServices
 
 from core.enum.ToolKey import ToolKey
 from core.firebase.FirebaseWorker import FirebaseWorker
@@ -47,6 +54,12 @@ from utils.ProjectStructureUtil import (
 class OsTrackerPlugin(BasePlugin):
     """Ferramenta CENTRAL: escolhe OS/SubOS, cria OS/SubOS e adiciona pastas."""
 
+    # Assets gravados na SubOS pelo banco: (chave, label, label do arquivo)
+    _ASSETS = (
+        ("limites", "Limites", "Arquivo de limites"),
+        ("zonas_manejo", "Zonas de manejo", "Arquivo de zonas"),
+    )
+
     def __init__(self, parent=None) -> None:
         self._mother_folder: Optional[Path] = None
         self._orders: List[Dict[str, Any]] = []
@@ -54,6 +67,8 @@ class OsTrackerPlugin(BasePlugin):
         self._changes_generation = 0
         self._load_worker: Optional[FirebaseWorker] = None
         self._changes_worker: Optional[FirebaseWorker] = None
+        self._asset_paths: Dict[str, str] = {}
+        self._sub_folder = ""
         super().__init__(
             tool_key=ToolKey.OS_TRACKER.value,
             parent=parent,
@@ -154,24 +169,52 @@ class OsTrackerPlugin(BasePlugin):
         self.main_layout.addWidget(self._cards)
 
     def _build_panels(self) -> None:
-        """Cria os painéis de dados gerais e de últimas alterações do banco."""
+        """Cria os painéis de dados gerais, base de limites/zonas e alterações."""
         grupo_geral = GroupPainel("Dados Gerais")
         self._general = GridLabel({
             "os": {"label": "OS", "value": "—"},
             "subos": {"label": "SubOS", "value": "—"},
             "folders": {"label": "Pastas criadas", "value": "—"},
             "years": {"label": "Anos criados", "value": "—"},
-            "path": {"label": "Caminho", "value": "—", "link": True},
+            "path": {
+                "label": "Caminho",
+                "value": "—",
+                "link": True,
+                "description": "Clique para abrir a pasta da SubOS",
+            },
         }, columns=2)
+        self._general.link_clicked.connect(self._on_general_link)
         grupo_geral.group_layout.addWidget(self._general)
+
+        grupo_base = GroupPainel("Base de Limites e Zonas")
+        self._assets = GridLabel(self._asset_config(), columns=2)
+        self._assets.link_clicked.connect(self._on_asset_link)
+        grupo_base.group_layout.addWidget(self._assets)
 
         grupo_alteracoes = GroupPainel("Últimas alterações da OS")
         self._change_cards = GridCardView({"items_per_row": 2, "cards": []})
         grupo_alteracoes.group_layout.addWidget(self._change_cards)
 
-        self.main_layout.addWidget(
-            GridGroupPainel(grupo_geral, grupo_alteracoes), 1
-        )
+        self.main_layout.addWidget(GridGroupPainel(grupo_geral, grupo_base))
+        self.main_layout.addWidget(GridGroupPainel(grupo_alteracoes), 1)
+
+    @classmethod
+    def _asset_config(cls) -> Dict[str, Dict[str, Any]]:
+        """Config do GridLabel dos assets do banco (limites e zonas de manejo)."""
+        config: Dict[str, Dict[str, Any]] = {}
+        for key, label, file_label in cls._ASSETS:
+            config[key] = {
+                "label": label,
+                "value": "—",
+                "description": f"Registro '{key}' da SubOS no banco",
+            }
+            config[f"{key}_file"] = {
+                "label": file_label,
+                "value": "—",
+                "link": True,
+                "description": "Clique para abrir a pasta do arquivo",
+            }
+        return config
 
     def _build_legend(self) -> None:
         """Cria a legenda/estado vazio abaixo dos painéis."""
@@ -329,11 +372,12 @@ class OsTrackerPlugin(BasePlugin):
     # ── Render ───────────────────────────────────────────────────────
 
     def _render(self) -> None:
-        """Atualiza cards, dados gerais e alterações do banco para a seleção."""
+        """Atualiza cards, dados gerais, base de limites/zonas e alterações do banco."""
         record = self._current_record()
         entry = self._current_sub_entry(record)
         self._render_cards(record, entry)
         self._render_general(record, entry)
+        self._render_assets(entry)
         self._render_changes()
         self._render_legend(record)
 
@@ -362,11 +406,60 @@ class OsTrackerPlugin(BasePlugin):
         folders = list((entry or {}).get("folders", []) or [])
         years = list((entry or {}).get("years", []) or [])
         resolved = self._resolve_path(str((entry or {}).get("path", "") or ""))
+        self._sub_folder = resolved
         self._general.set("os", os_number or "—")
         self._general.set("subos", code)
         self._general.set("folders", str(len(folders)))
         self._general.set("years", str(len(years)))
         self._general.set("path", resolved or "—", url=resolved or None)
+
+    def _render_assets(self, entry: Optional[Dict[str, Any]]) -> None:
+        """Exibe se a SubOS tem limites/zonas no banco e o arquivo de cada um."""
+        for key, _label, _file_label in self._ASSETS:
+            info = OsTrackerService.asset_info(entry, key)
+            path = OsTrackerService.asset_file_path(self._mother_folder, entry, key)
+            file_key = f"{key}_file"
+
+            self._asset_paths[key] = path
+            self._asset_paths[file_key] = path
+            self._assets.set(key, self._asset_text(info), url=path or None)
+            self._assets.set(file_key, self._asset_file_text(path), url=path or None)
+            self._assets.widget(key).setToolTip(self._asset_tooltip(info))
+            self._assets.widget(file_key).setToolTip(
+                path or "Sem arquivo registrado para esta SubOS."
+            )
+
+    @classmethod
+    def _asset_text(cls, info: Dict[str, Any]) -> str:
+        """Status do asset no banco: ``Sim — 12 feições · 1.234,57 ha`` ou ``Não``."""
+        if not info.get("has"):
+            return "Não"
+
+        parts = [f"{cls._format_int(info.get('features', 0))} feição(ões)"]
+        if info.get("area_ha"):
+            parts.append(f"{cls._format_number(info.get('area_ha', 0.0))} ha")
+        return "Sim — " + " · ".join(parts)
+
+    @staticmethod
+    def _asset_file_text(path: str) -> str:
+        """Nome do arquivo do asset (``—`` quando a SubOS não tem registro)."""
+        if not path:
+            return "—"
+        return os.path.basename(path) or path
+
+    @staticmethod
+    def _asset_tooltip(info: Dict[str, Any]) -> str:
+        """Detalhes do registro do banco (arquivo de origem e data de registro)."""
+        if not info.get("has"):
+            return "Sem registro na SubOS."
+
+        lines = []
+        if info.get("source"):
+            lines.append(f"Origem: {info['source']}")
+        when = OsTrackerService.format_when(str(info.get("inserted_at", "")))
+        if when:
+            lines.append(f"Registrado em: {when}")
+        return "\n".join(lines) or "Registro presente na SubOS."
 
     def _resolve_path(self, rel_path: str) -> str:
         """Resolve um caminho relativo para exibição (absoluto local)."""
@@ -424,6 +517,45 @@ class OsTrackerPlugin(BasePlugin):
         else:
             text = "Sem OS na base. Clique em CRIAR OS."
         self._legend.widget("hint").setText(text)
+
+    # ── Abrir caminhos ──────────────────────────────────────────────
+
+    def _on_asset_link(self, key: str, url: str) -> None:
+        """Abre no Explorer a pasta do arquivo de limites/zonas clicado."""
+        path = self._asset_paths.get(key, "")
+        if not path:
+            MessageBox.show_warning(
+                "Sem arquivo registrado para esta SubOS.",
+                title="Acompanhamento de OS",
+                parent=self,
+            )
+            return
+        self._open_path(path)
+
+    def _on_general_link(self, key: str, url: str) -> None:
+        """Abre no Explorer a pasta da SubOS exibida em Dados Gerais."""
+        if key != "path" or not self._sub_folder:
+            return
+        self._open_path(self._sub_folder)
+
+    def _open_path(self, path: str) -> None:
+        """Abre no gerenciador de arquivos a pasta de ``path`` (arquivo ou pasta)."""
+        target = Path(path)
+        folder = target if target.is_dir() else target.parent
+        if not folder.exists():
+            MessageBox.show_warning(
+                f"Pasta não encontrada:\n{folder}",
+                title="Acompanhamento de OS",
+                parent=self,
+            )
+            return
+
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+        self.logger.info(
+            "Pasta aberta no gerenciador de arquivos",
+            code="OST_OPEN_PATH",
+            path=str(folder),
+        )
 
     # ── Ações ────────────────────────────────────────────────────────
 
@@ -567,3 +699,20 @@ class OsTrackerPlugin(BasePlugin):
         self.preferences["selected_os"] = os_key
         self.preferences["selected_subos"] = sub_key
         self._load_from_disk()
+
+    # ── Formatação ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _format_int(value: Any) -> str:
+        """Formata inteiro com separador de milhar brasileiro."""
+        if not isinstance(value, (int, float)):
+            return "0"
+        return f"{int(value):,}".replace(",", ".")
+
+    @staticmethod
+    def _format_number(value: Any, decimals: int = 2) -> str:
+        """Formata número decimal no padrão brasileiro."""
+        if not isinstance(value, (int, float)):
+            value = 0.0
+        text = f"{float(value):,.{decimals}f}"
+        return text.replace(",", "X").replace(".", ",").replace("X", ".")

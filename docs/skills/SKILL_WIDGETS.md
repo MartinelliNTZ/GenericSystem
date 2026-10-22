@@ -592,8 +592,11 @@ grid.values          # {"valor": "texto"}
 grid.get("valor")    # "texto"
 grid.set("valor", "novo texto")
 grid.set_values({"valor": "outro"})
+grid.set_visible("valor", False)   # oculta a LINHA inteira (label + campo)
 grid.changed.connect(self._on_value_changed)
 ```
+
+**Métodos públicos:** `values`, `get(key)`, `set(key, value, block_signals=False)`, `set_values(values, block_signals=True)`, `set_visible(key, visible)` (linha completa), `widget(key)`.
 
 ---
 

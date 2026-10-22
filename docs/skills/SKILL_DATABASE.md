@@ -127,9 +127,13 @@ guarda apenas o número + a lista de SubOS:
   modal de resumo. Plugins têm **zero contato** com o JSON (Contrato 28).
 
 > A ferramenta **Acompanhamento de OS** (`plugins/os_tracker/`) consome esse
-> registro para exibir os dados da OS selecionada e, no painel **Últimas
-> alterações no banco**, o changelog da estrutura
-> (`CloudStructureDatabase.load_changes`, ordenado por `detected_at`).
+> registro para exibir os dados da OS selecionada, o painel **Base de Limites e
+> Zonas** — chaves `limites`/`zonas_manejo` da SubOS: quantidade de feições, área
+> em hectares, arquivo de origem e data de registro (`OsTrackerService.asset_info`),
+> com o caminho do arquivo resolvido pela pasta-mãe (`asset_file_path`) abrindo no
+> Explorer com um clique — e, no painel **Últimas alterações no banco**, o
+> changelog da estrutura (`CloudStructureDatabase.load_changes`, ordenado por
+> `detected_at`).
 
 ## Autenticação
 
