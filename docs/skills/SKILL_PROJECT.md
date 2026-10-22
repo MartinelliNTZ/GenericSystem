@@ -449,14 +449,15 @@ alteradas.
   `OsTrackerService.asset_info`/`format_when`) e o caminho do arquivo, resolvido
   pela pasta-mãe (`asset_file_path`), abre no Explorer com um clique (o caminho da
   SubOS em "Dados Gerais" também).
-- O painel **"Dados Gerais"** reúne os cards de resumo (OS, SubOS, pastas criadas,
-  anos criados, **feições** e **área em ha** — soma de `limites` + `zonas_manejo`)
-  e o `GridLabel` de detalhes (caminho da SubOS clicável). O painel **"Atalhos"**
-  (`GridButtonPanel`) abre, com um clique, a pasta **LIMITE ZM** da SubOS
-  (`OsTrackerService.zm_folder`; candidatos `00_ARCGIS/01_SHP/ZM` → `00_ARCGIS/ZM`
-  → `ZM`) e o **changelog Word** da OS (`OsTrackerService.changelog_path` →
-  `ProjectStructureChangelog.document_path`), aberto no aplicativo padrão. O painel
-  **"Últimas alterações da OS"** continua vindo do **banco** (`estrutura_changelog`),
-  nunca do Word.
+- O painel **"Dados Gerais"** exibe TODOS os dados em um único `GridLabel` de
+  **2 colunas**, na mesma formatação: OS, SubOS, pastas criadas, anos criados,
+  **feições** e **área em ha** (soma de `limites` + `zonas_manejo`) e o caminho da
+  SubOS (link clicável). O painel **"Atalhos"** (`GridButtonPanel`) abre, com um
+  clique, a **pasta da SubOS** (`OsTrackerService.sub_os_folder`), a pasta
+  **LIMITE ZM** (`OsTrackerService.zm_folder`; candidatos `00_ARCGIS/01_SHP/ZM` →
+  `00_ARCGIS/ZM` → `ZM`) e o **changelog Word** da OS
+  (`OsTrackerService.changelog_path` → `ProjectStructureChangelog.document_path`),
+  aberto no aplicativo padrão. O painel **"Últimas alterações da OS"** continua
+  vindo do **banco** (`estrutura_changelog`), nunca do Word.
 - `python-docx` é dependência declarada em `requirements.txt`.
 
