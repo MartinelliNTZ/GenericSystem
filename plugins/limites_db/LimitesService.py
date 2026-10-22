@@ -39,6 +39,16 @@ Atualização (``ATUALIZAR``):
   destino e trocadas pelo lote novo — as demais OS/SubOS do arquivo ficam
   intactas — e a checagem de duplicidade é ignorada.
 
+Validações do vetor (bloqueiam a operação — nada é gravado):
+- **Shapefile completo**: exige ``.shp``, ``.shx`` e ``.dbf`` no mesmo diretório;
+- **EPSG**: o padrão é ``EPSG:4326`` — qualquer outro CRS (ou sem ``.prj``) é
+  bloqueado com orientação para reprojetar;
+- **Somente polígonos**: geometrias ``Polygon``/``MultiPolygon`` — ponto, linha
+  ou tipos mistos são bloqueados;
+- **Geometria válida**: sem geometrias vazias/nulas, com anel fechado e sem
+  auto-interseção (``is_valid``);
+- **Feições**: o vetor não pode estar vazio.
+
 A leitura/escrita vetorial é delegada para ``utils.vector`` (Contrato 25).
 """
 
@@ -73,6 +83,11 @@ CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
 DEFAULT_SUB_OS = "A"
 DEFAULT_TOLERANCE_PCT = 1.0
+
+# Padrões de entrada aceitos (validados antes de qualquer gravação)
+DEFAULT_EPSG = 4326
+POLYGON_TYPES = ("Polygon", "MultiPolygon")
+SHP_SIDECARS = (".shp", ".shx", ".dbf")
 
 MODE_LIMITES = "limites"
 MODE_ZONAS = "zonas"
@@ -180,7 +195,7 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def inspect(cls, path: str) -> Dict[str, Any]:
-        """Lê o vetor e devolve campos, CRS, contagem e tipos de geometria."""
+        """Lê o vetor e devolve campos, CRS, contagem, geometrias e problemas."""
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
 
         gdf = VectorLayerSource.read_geodataframe(path, tool_key=_TOOL_KEY)
@@ -192,6 +207,7 @@ class LimitesService(BaseUtil):
             "crs": str(gdf.crs) if gdf.crs is not None else "",
             "geometry": ", ".join(geom_types),
             "fields": VectorLayerSource.list_fields(gdf),
+            "problems": cls.vector_problems(path, gdf),
         }
 
         logger.info(
@@ -199,8 +215,106 @@ class LimitesService(BaseUtil):
             code="LIM_INSPECT",
             path=path,
             n_features=payload["count"],
+            n_problems=len(payload["problems"]),
         )
         return payload
+
+    # ── Validação do vetor ──────────────────────────────────────────
+
+    @classmethod
+    def vector_problems(cls, path: str, gdf: Any) -> List[str]:
+        """Problemas do vetor que impedem a operação (shape, CRS e geometria)."""
+        return cls._sidecar_problems(path) + cls._geometry_problems(gdf)
+
+    @classmethod
+    def validate_vector(cls, path: str, gdf: Any) -> None:
+        """
+        Bloqueia vetores fora do padrão antes de qualquer gravação.
+
+        Regras: shapefile completo (``.shp``/``.shx``/``.dbf``), CRS
+        ``EPSG:4326`` (padrão), apenas polígonos, geometrias válidas e vetor
+        com pelo menos uma feição.
+
+        Raises:
+            LimitesValidationError: Vetor fora do padrão.
+        """
+        problems = cls.vector_problems(path, gdf)
+        if problems:
+            raise LimitesValidationError(cls._limit_problems(problems))
+
+        cls._get_logger(_TOOL_KEY, "LimitesService").info(
+            "Vetor validado (EPSG + polígonos + geometrias)",
+            code="LIM_VECTOR_OK",
+            path=path,
+            n_features=int(len(gdf)),
+            crs=str(gdf.crs),
+        )
+
+    @staticmethod
+    def _sidecar_problems(path: str) -> List[str]:
+        """Confere os arquivos obrigatórios do conjunto shapefile."""
+        candidate = Path(path)
+        if candidate.suffix.lower() != ".shp":
+            return []
+
+        stem = candidate.with_suffix("")
+        missing = [
+            ext for ext in SHP_SIDECARS if not Path(f"{stem}{ext}").is_file()
+        ]
+        if not missing:
+            return []
+
+        return [
+            "Shapefile incompleto — faltando: "
+            + ", ".join(missing)
+            + ". Copie o conjunto inteiro (.shp, .shx, .dbf e .prj)."
+        ]
+
+    @staticmethod
+    def _geometry_problems(gdf: Any) -> List[str]:
+        """Confere CRS (padrão EPSG:4326), tipo de geometria e validade das feições."""
+        problems: List[str] = []
+
+        if len(gdf) == 0:
+            return ["O vetor não possui feições (0 registros)."]
+
+        crs = gdf.crs
+        if crs is None:
+            problems.append(
+                f"Vetor sem CRS definido (sem .prj) — o padrão é EPSG:{DEFAULT_EPSG}."
+            )
+        elif crs.to_epsg() != DEFAULT_EPSG:
+            name = getattr(crs, "name", "") or str(crs)
+            problems.append(
+                f"CRS atual: EPSG:{crs.to_epsg() or '?'} ({name}) — o padrão é "
+                f"EPSG:{DEFAULT_EPSG}. Reprojete o vetor antes de importar."
+            )
+
+        for index, geometry in enumerate(gdf.geometry):
+            label = f"Feição {index + 1}"
+
+            if geometry is None or not hasattr(geometry, "geom_type"):
+                problems.append(f"{label}: geometria ausente (vazia ou nula).")
+                continue
+
+            if geometry.is_empty:
+                problems.append(f"{label}: geometria vazia.")
+                continue
+
+            if geometry.geom_type not in POLYGON_TYPES:
+                problems.append(
+                    f"{label}: geometria {geometry.geom_type} — só polígonos "
+                    "(Polygon/MultiPolygon) podem ser importados."
+                )
+                continue
+
+            if not geometry.is_valid:
+                problems.append(
+                    f"{label}: geometria inválida (auto-interseção ou anel não "
+                    "fechado) — corrija no SIG antes de importar."
+                )
+
+        return problems
 
     # ── Normalização ────────────────────────────────────────────────
 
@@ -349,10 +463,7 @@ class LimitesService(BaseUtil):
         cls._notify(progress_cb, 5, "Lendo vetor...")
 
         gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
-        if gdf.crs is None:
-            raise LimitesValidationError(
-                ["O vetor não possui CRS definido. Defina a projeção do arquivo antes de importar."]
-            )
+        cls.validate_vector(config.vector_path, gdf)
 
         cls._notify(progress_cb, 25, "Validando atributos...")
         prepared = cls._prepare(gdf, config)
@@ -494,13 +605,7 @@ class LimitesService(BaseUtil):
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
 
         gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
-        if gdf.crs is None:
-            raise LimitesValidationError(
-                [
-                    "O vetor não possui CRS definido. Defina a projeção do arquivo "
-                    "antes de atualizar."
-                ]
-            )
+        cls.validate_vector(config.vector_path, gdf)
 
         prepared = cls._prepare(gdf, config)
         os_numbers = sorted({int(value) for value in prepared[FIELD_OS]})

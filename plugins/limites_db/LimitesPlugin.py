@@ -275,6 +275,7 @@ class LimitesPlugin(BasePlugin):
             "feicoes": {"label": "Feições", "value": "—"},
             "crs": {"label": "CRS", "value": "—"},
             "geometria": {"label": "Geometria", "value": "—"},
+            "validacao": {"label": "Validação", "value": "—"},
             "campos": {"label": "Campos", "value": "—"},
             "os_caminho": {"label": "OS no caminho", "value": "—"},
             "base": {"label": "Base", "value": BASE_ROOT},
@@ -385,7 +386,7 @@ class LimitesPlugin(BasePlugin):
         self._pool.start(worker)
 
     def _on_inspect_done(self, generation: int, payload: dict) -> None:
-        """Aplica campos, CRS e contagem lidos do vetor."""
+        """Aplica campos, CRS e contagem lidos do vetor e sinaliza vetores fora do padrão."""
         if generation != self._generation:
             return
 
@@ -393,7 +394,22 @@ class LimitesPlugin(BasePlugin):
         self._fields = payload.get("fields", [])
         self._apply_fields()
         self._update_summary()
-        self.page.set_badge(self.page.PRONTA)
+
+        problems = payload.get("problems", []) or []
+        if not problems:
+            self.page.set_badge(self.page.PRONTA)
+            return
+
+        self.page.set_badge(self.page.ERROR)
+        SignalManager.instance().console_message.emit(
+            f"⚠ Vetor fora do padrão ({len(problems)} problema(s)): {problems[0]}"
+        )
+        self.logger.warning(
+            "Vetor fora do padrão de importação",
+            code="LIM_VECTOR_WARN",
+            path=payload.get("path", ""),
+            n_problems=len(problems),
+        )
 
     def _on_inspect_failed(self, generation: int, message: str) -> None:
         """Informa a falha de leitura do vetor."""
@@ -431,6 +447,7 @@ class LimitesPlugin(BasePlugin):
             "feicoes": self._format_int(self._meta.get("count", 0)),
             "crs": self._meta.get("crs") or "—",
             "geometria": self._meta.get("geometry") or "—",
+            "validacao": self._validation_summary(self._meta.get("problems", []) or []),
             "campos": self._fields_summary(self._meta.get("fields", [])),
             "os_caminho": (
                 LimitesService.guess_os_from_path(self._meta.get("path", "")) or "—"
@@ -452,6 +469,7 @@ class LimitesPlugin(BasePlugin):
             "feicoes": "—",
             "crs": "—",
             "geometria": "—",
+            "validacao": "—",
             "campos": "—",
             "os_caminho": "—",
         })
@@ -796,6 +814,13 @@ class LimitesPlugin(BasePlugin):
         SignalManager.instance().progress_update.emit(0.0)
 
     # ── Formatação ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _validation_summary(problems: list) -> str:
+        """Resumo da validação do vetor (EPSG, polígonos e geometrias)."""
+        if not problems:
+            return "OK (EPSG:4326, polígonos válidos)"
+        return f"{len(problems)} problema(s) — clique em VALIDAR"
 
     @staticmethod
     def _fields_summary(fields: list) -> str:

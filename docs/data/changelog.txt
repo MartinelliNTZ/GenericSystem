@@ -1,3 +1,11 @@
+[1.12.0][2026.10.22][09:54] - Base de Limites: bloqueio de vetor fora do padrão (EPSG 4326, polígonos e geometria válida)
+  - plugins/limites_db/LimitesService.py: novos `validate_vector`/`vector_problems` + constantes `DEFAULT_EPSG = 4326`, `POLYGON_TYPES` e `SHP_SIDECARS` — a validação roda ANTES de qualquer gravação (VALIDAR, IMPORTAR e ATUALIZAR) e bloqueia com a lista de problemas
+  - Regras: shapefile completo (`.shp`/`.shx`/`.dbf`); CRS obrigatoriamente `EPSG:4326` (sem `.prj` ou outro EPSG → bloqueado com orientação para reprojetar); somente `Polygon`/`MultiPolygon` (ponto, linha e tipos mistos bloqueados); geometrias sem nulas/vazias e com `is_valid` (anel fechado, sem auto-interseção); vetor com pelo menos 1 feição
+  - plugins/limites_db/LimitesService.py: `import_file` e `find_existing` passam a chamar `validate_vector` (o check antigo de "CRS ausente" foi substituído pela validação completa) e `inspect` devolve `problems`
+  - plugins/limites_db/LimitesPlugin.py: painel "Resumo da Origem" ganhou o campo **Validação** ("OK (EPSG:4326, polígonos válidos)" ou "N problema(s) — clique em VALIDAR"); ao selecionar um vetor fora do padrão o badge fica em erro, o console mostra o primeiro problema e o log grava `LIM_VECTOR_WARN`
+  - docs/skills/CatalogoClasses.md: regras de validação do `LimitesService` documentadas
+
+
 [1.11.1][2026.10.22][09:23] - Base de Limites: preferências completas e mapeamento de campos fora das prefs
   - plugins/limites_db/LimitesPlugin.py: o **mapeamento de campos deixou de ser persistido** — `save_prefs` grava apenas `mode`, `vector_path` e `manual`; `load_prefs`/`_apply_fields` recalculam a sugestão de campos a partir do vetor carregado (antes o mapeamento salvo voltava a ser aplicado, ou era substituído pela sugestão, conforme o vetor)
   - plugins/limites_db/LimitesPlugin.py: limpeza automática do `field_map` antigo (via `Preferences.remove_tool_prefs`), tanto no cache local quanto no JSON
