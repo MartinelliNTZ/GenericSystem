@@ -1,3 +1,12 @@
+[1.15.0][2026.10.22][14:16] - Acompanhamento de OS: painel de Atalhos (grid de botões) + dados gerais com feições e área
+  - resources/widgets/grid/GridButtonPanel.py: NOVO — grade genérica de botões de ação configurada por dicionário (`columns` + `buttons` com `key`/`text`/`type`/`description`), sinal `clicked(key)` e API `button`/`keys`/`set_enabled`/`set_visible`/`set_text` (usa `SimplePrimaryButton` sem glow — `shadow_enabled=False`)
+  - plugins/os_tracker/OsTrackerService.py: novos `sub_os_folder` (pasta física da SubOS resolvida pela pasta-mãe), `zm_folder` (pasta **LIMITE ZM** — candidatos `00_ARCGIS/01_SHP/ZM` → `00_ARCGIS/ZM` → `ZM`) e `changelog_path` (caminho do `.DOCX` da OS via `ProjectStructureChangelog.document_path`)
+  - plugins/os_tracker/OsTrackerPlugin.py: novo painel **Atalhos** (`GridButtonPanel`) — o botão "LIMITE ZM" abre a pasta no Explorer e o "CHANGELOG (WORD)" abre o documento no aplicativo padrão (novo `_open_file`; `_open_path` continua abrindo a pasta do caminho)
+  - plugins/os_tracker/OsTrackerPlugin.py: os cards de resumo foram para DENTRO do painel **Dados Gerais** e ganharam 2 quadrados novos — **Feições** e **Área (ha)** (soma de `limites` + `zonas_manejo` da SubOS, via `_asset_totals`); layout reorganizado em 2 linhas (Dados Gerais | Atalhos e Base de Limites e Zonas | Últimas alterações), com os cards de alteração em 1 coluna
+  - plugins/os_tracker/OsTrackerPlugin.py: o painel "Últimas alterações da OS" continua vindo do BANCO (`estrutura_changelog`) — o atalho do Word não altera essa fonte
+  - docs/skills/SKILL_WIDGETS.md, CatalogoClasses.md e SKILL_PROJECT.md: widget, painéis e atalhos documentados
+
+
 [1.14.0][2026.10.22][12:11] - Zonas de Manejo: campo de manejo (CAMPO) opcional presente em todos os shapes
   - plugins/limites_db/LimitesService.py: nova constante `FIELD_CAMPO = "CAMPO"` e o modo zonas ganhou a chave semântica `campo` (`ZONAS_FIELDS` = ZONA, **CAMPO**, FAZENDA, OS, SUB_OS, TALHAO, CLIENTE, AREA_HA, AREA_INF) — OPCIONAL, vem de campo mapeado OU valor manual e é normalizado como os demais textos (maiúsculas, sem acento, espaços → `_`)
   - Quando indicado, o CAMPO consta em TODOS os shapes gravados (completão `zonas_manejo.shp`, arquivo por OS `<OS>_zonas_manejo.shp` e cópia em `13_ZONAS_DE_MANEJO`); sem indicação a coluna existe, porém vazia — anexando num arquivo antigo (sem CAMPO) a coluna é criada e as feições antigas ficam nulas

@@ -20,6 +20,9 @@ O painel **Base de Limites e Zonas** exibe os dados que o banco guarda na SubOS
 (``limites`` e ``zonas_manejo``: quantidade de feições, área em hectares, arquivo
 de origem e data de registro) e o arquivo de cada um abre no Explorer com um
 clique.
+
+O painel **Atalhos** abre, com um clique, a pasta ``LIMITE ZM`` da SubOS e o
+changelog Word da OS (``11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX``).
 """
 
 from __future__ import annotations
@@ -37,6 +40,7 @@ from plugins.BasePlugin import BasePlugin
 from plugins.os_tracker.OsTrackerService import OsTrackerService
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
 from resources.widgets.dialogs.FormLineEditDialog import FormLineEditDialog
+from resources.widgets.grid.GridButtonPanel import GridButtonPanel
 from resources.widgets.grid.GridCardView import GridCardView
 from resources.widgets.grid.GridGroupPainel import GridGroupPainel
 from resources.widgets.grid.GridLabel import GridLabel
@@ -60,6 +64,12 @@ class OsTrackerPlugin(BasePlugin):
         ("zonas_manejo", "Zonas de manejo", "Arquivo de zonas"),
     )
 
+    # Atalhos do painel "Atalhos": (chave, texto, descrição)
+    _SHORTCUTS = (
+        ("zm", "LIMITE ZM", "Abre a pasta LIMITE ZM da SubOS no Explorer"),
+        ("changelog", "CHANGELOG (WORD)", "Abre o changelog Word da OS"),
+    )
+
     def __init__(self, parent=None) -> None:
         self._mother_folder: Optional[Path] = None
         self._orders: List[Dict[str, Any]] = []
@@ -68,6 +78,7 @@ class OsTrackerPlugin(BasePlugin):
         self._load_worker: Optional[FirebaseWorker] = None
         self._changes_worker: Optional[FirebaseWorker] = None
         self._asset_paths: Dict[str, str] = {}
+        self._shortcut_paths: Dict[str, str] = {}
         self._sub_folder = ""
         super().__init__(
             tool_key=ToolKey.OS_TRACKER.value,
@@ -151,26 +162,34 @@ class OsTrackerPlugin(BasePlugin):
 
     def _build_cards(self) -> None:
         """Cria os cards de resumo da OS/SubOS selecionada."""
-        def card(text: str) -> Dict[str, Any]:
+        def card(text: str, tooltip: str = "") -> Dict[str, Any]:
             return {"labels": [
                 {"type": "great_accent", "text": "—"},
-                {"type": "simple", "text": text},
+                {"type": "simple", "text": text, "tooltip": tooltip or text},
             ]}
 
         self._cards = GridCardView({
-            "items_per_row": 4,
+            "items_per_row": 3,
             "cards": [
                 card("OS"),
                 card("SubOS"),
                 card("Pastas criadas"),
                 card("Anos criados"),
+                card(
+                    "Feições",
+                    "Soma das feições de limites e zonas de manejo da SubOS",
+                ),
+                card(
+                    "Área (ha)",
+                    "Soma da área (hectares) de limites e zonas de manejo da SubOS",
+                ),
             ],
         })
-        self.main_layout.addWidget(self._cards)
 
     def _build_panels(self) -> None:
-        """Cria os painéis de dados gerais, base de limites/zonas e alterações."""
+        """Cria os painéis de dados gerais, atalhos, limites/zonas e alterações."""
         grupo_geral = GroupPainel("Dados Gerais")
+        grupo_geral.group_layout.addWidget(self._cards)
         self._general = GridLabel({
             "os": {"label": "OS", "value": "—"},
             "subos": {"label": "SubOS", "value": "—"},
@@ -186,17 +205,35 @@ class OsTrackerPlugin(BasePlugin):
         self._general.link_clicked.connect(self._on_general_link)
         grupo_geral.group_layout.addWidget(self._general)
 
+        grupo_atalhos = GroupPainel("Atalhos")
+        self._shortcuts = GridButtonPanel({
+            "columns": 2,
+            "buttons": [
+                {
+                    "key": key,
+                    "text": text,
+                    "description": description,
+                    "type": "secondary",
+                }
+                for key, text, description in self._SHORTCUTS
+            ],
+        })
+        self._shortcuts.clicked.connect(self._on_shortcut)
+        grupo_atalhos.group_layout.addWidget(self._shortcuts)
+
         grupo_base = GroupPainel("Base de Limites e Zonas")
         self._assets = GridLabel(self._asset_config(), columns=2)
         self._assets.link_clicked.connect(self._on_asset_link)
         grupo_base.group_layout.addWidget(self._assets)
 
         grupo_alteracoes = GroupPainel("Últimas alterações da OS")
-        self._change_cards = GridCardView({"items_per_row": 2, "cards": []})
+        self._change_cards = GridCardView({"items_per_row": 1, "cards": []})
         grupo_alteracoes.group_layout.addWidget(self._change_cards)
 
-        self.main_layout.addWidget(GridGroupPainel(grupo_geral, grupo_base))
-        self.main_layout.addWidget(GridGroupPainel(grupo_alteracoes), 1)
+        self.main_layout.addWidget(GridGroupPainel(grupo_geral, grupo_atalhos))
+        self.main_layout.addWidget(
+            GridGroupPainel(grupo_base, grupo_alteracoes), 1
+        )
 
     @classmethod
     def _asset_config(cls) -> Dict[str, Dict[str, Any]]:
@@ -372,12 +409,13 @@ class OsTrackerPlugin(BasePlugin):
     # ── Render ───────────────────────────────────────────────────────
 
     def _render(self) -> None:
-        """Atualiza cards, dados gerais, base de limites/zonas e alterações do banco."""
+        """Atualiza cards, dados gerais, atalhos, limites/zonas e alterações."""
         record = self._current_record()
         entry = self._current_sub_entry(record)
         self._render_cards(record, entry)
         self._render_general(record, entry)
         self._render_assets(entry)
+        self._render_shortcuts(entry)
         self._render_changes()
         self._render_legend(record)
 
@@ -386,14 +424,28 @@ class OsTrackerPlugin(BasePlugin):
         record: Optional[Dict[str, Any]],
         entry: Optional[Dict[str, Any]],
     ) -> None:
-        """Atualiza os cards de resumo (OS, nº de SubOS, pastas e anos)."""
+        """Atualiza os cards de resumo (OS, SubOS, pastas, anos, feições e área)."""
         codes = OsTrackerService.sub_os_codes(record) if record else []
         folders = list((entry or {}).get("folders", []) or [])
         years = list((entry or {}).get("years", []) or [])
+        features, area_ha = self._asset_totals(entry)
         self._cards.set_card_value(0, 0, str(record.get("os", "")) if record else "—")
         self._cards.set_card_value(1, 0, str(len(codes)))
         self._cards.set_card_value(2, 0, str(len(folders)))
         self._cards.set_card_value(3, 0, str(len(years)))
+        self._cards.set_card_value(4, 0, self._format_int(features))
+        self._cards.set_card_value(5, 0, self._format_number(area_ha))
+
+    @classmethod
+    def _asset_totals(cls, entry: Optional[Dict[str, Any]]) -> tuple:
+        """Soma feições e hectares dos assets (limites + zonas) da SubOS."""
+        features = 0
+        area_ha = 0.0
+        for key, _label, _file_label in cls._ASSETS:
+            info = OsTrackerService.asset_info(entry, key)
+            features += int(info.get("features", 0) or 0)
+            area_ha += float(info.get("area_ha", 0.0) or 0.0)
+        return features, area_ha
 
     def _render_general(
         self,
@@ -428,6 +480,13 @@ class OsTrackerPlugin(BasePlugin):
             self._assets.widget(file_key).setToolTip(
                 path or "Sem arquivo registrado para esta SubOS."
             )
+
+    def _render_shortcuts(self, entry: Optional[Dict[str, Any]]) -> None:
+        """Resolve os caminhos dos atalhos (pasta LIMITE ZM e changelog Word)."""
+        self._shortcut_paths = {
+            "zm": OsTrackerService.zm_folder(self._mother_folder, entry),
+            "changelog": OsTrackerService.changelog_path(self._mother_folder, entry),
+        }
 
     @classmethod
     def _asset_text(cls, info: Dict[str, Any]) -> str:
@@ -470,7 +529,7 @@ class OsTrackerPlugin(BasePlugin):
     def _render_changes(self) -> None:
         """Reconstrói os cards das últimas alterações registradas no banco."""
         cards = [self._change_card(change) for change in self._changes]
-        self._change_cards.build({"items_per_row": 2, "cards": cards})
+        self._change_cards.build({"items_per_row": 1, "cards": cards})
 
     @classmethod
     def _change_card(cls, change: Dict[str, Any]) -> Dict[str, Any]:
@@ -538,6 +597,21 @@ class OsTrackerPlugin(BasePlugin):
             return
         self._open_path(self._sub_folder)
 
+    def _on_shortcut(self, key: str) -> None:
+        """Abre o alvo do atalho clicado (pasta LIMITE ZM ou changelog Word)."""
+        path = self._shortcut_paths.get(key, "")
+        if not path:
+            MessageBox.show_warning(
+                "Nada para abrir: selecione uma OS/SubOS com pasta em disco.",
+                title="Acompanhamento de OS",
+                parent=self,
+            )
+            return
+        if key == "changelog":
+            self._open_file(path)
+            return
+        self._open_path(path)
+
     def _open_path(self, path: str) -> None:
         """Abre no gerenciador de arquivos a pasta de ``path`` (arquivo ou pasta)."""
         target = Path(path)
@@ -556,6 +630,20 @@ class OsTrackerPlugin(BasePlugin):
             code="OST_OPEN_PATH",
             path=str(folder),
         )
+
+    def _open_file(self, path: str) -> None:
+        """Abre um arquivo no aplicativo padrão do sistema."""
+        target = Path(path)
+        if not target.exists():
+            MessageBox.show_warning(
+                f"Arquivo não encontrado:\n{target}",
+                title="Acompanhamento de OS",
+                parent=self,
+            )
+            return
+
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
+        self.logger.info("Arquivo aberto", code="OST_OPEN_FILE", path=str(target))
 
     # ── Ações ────────────────────────────────────────────────────────
 

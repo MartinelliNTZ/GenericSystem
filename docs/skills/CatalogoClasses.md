@@ -101,8 +101,8 @@
 ### plugins/os_tracker/
 | Classe | Descrição |
 |---|---|
-| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS, exibe os dados gerais, o painel **Base de Limites e Zonas** (mostra se a SubOS tem `limites`/`zonas_manejo` no banco — feições, hectares, origem e data — e abre a pasta do arquivo no Explorer, junto com o caminho da SubOS em "Dados Gerais", via links do `GridLabel`) e o painel **Últimas alterações da OS** (changelog da estrutura filtrado pelo número da OS); cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase`/`CloudStructureDatabase` |
-| `OsTrackerService` (módulo) | Lê a base (Firebase) e as alterações de UMA OS (`load_changes(os_number)`, com `change_summary`/`change_when`); monta os modelos `SubOS`; lê os dados de **`limites`/`zonas_manejo`** da SubOS (`asset_info` e `asset_file_path` — caminho absoluto resolvido pela pasta-mãe) e formata timestamps ISO (`format_when`, reusado por `change_when`); cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
+| `OsTrackerPlugin` | Ferramenta CENTRAL de Acompanhamento de OS: seleciona OS/SubOS; o painel **Dados Gerais** reúne os cards de resumo (OS, SubOS, pastas criadas, anos criados, **feições** e **área em hectares** — soma de `limites` + `zonas_manejo`) e os labels de detalhe (com o caminho da SubOS clicável); o painel **Atalhos** (`GridButtonPanel`) abre a pasta **LIMITE ZM** da SubOS e o **changelog Word** da OS (`11_AGROROBOTICA/OS_<numero>_CHANGELOG.DOCX`); o painel **Base de Limites e Zonas** (mostra se a SubOS tem `limites`/`zonas_manejo` no banco — feições, hectares, origem e data — e abre a pasta do arquivo no Explorer, via links do `GridLabel`) e o painel **Últimas alterações da OS** (changelog da estrutura filtrado pelo número da OS, vindo do BANCO — não do Word); cria OS (número obrigatório → SubOS A), cria SubOS e adiciona pastas (checklist) — tudo via `CloudProjectDatabase`/`CloudStructureDatabase` |
+| `OsTrackerService` (módulo) | Lê a base (Firebase) e as alterações de UMA OS (`load_changes(os_number)`, com `change_summary`/`change_when`); monta os modelos `SubOS`; lê os dados de **`limites`/`zonas_manejo`** da SubOS (`asset_info` e `asset_file_path` — caminho absoluto resolvido pela pasta-mãe) e formata timestamps ISO (`format_when`, reusado por `change_when`); resolve os atalhos da SubOS (`sub_os_folder`, `zm_folder` — pasta `LIMITE ZM`, `ZM_CANDIDATES` — e `changelog_path` — `.DOCX` via `ProjectStructureChangelog.document_path`); cria OS/SubOS (`create_order`, `add_sub_os`) e adiciona pastas (`add_folders`, `ensure_sub_os_folder`) |
 
 ### plugins/limites_db/
 | Classe | Descrição |
@@ -137,6 +137,7 @@
 | `ToolSeparator` | Separador decorativo slim com fade dourado entre ToolGroups |
 | `GridTree` | Árvore multicoluna genérica (indexada por chave) com cores por célula e widgets de ação por linha |
 | `GridActionCell` | Container horizontal genérico para widgets de ação em uma célula de tabela/árvore |
+| `GridButtonPanel` | Grade genérica de botões de ação configurados por dicionário (texto, estilo e tooltip) com sinal `clicked(key)` |
 | `SimpleMenuButton` | Botão com popup de menu (dropdown) configurável por Dict |
 | `CheckBoxSelectDialog` | Diálogo genérico de seleção múltipla por checkboxes (usa GridCheckBox), com `selected_keys` |
 | `WorkspaceTab` | Aba customizada com fundo preto, canto superior direito arredondado e texto dourado centralizado |

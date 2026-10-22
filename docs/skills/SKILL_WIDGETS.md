@@ -1864,6 +1864,42 @@ tree.set_cell_widget(key, 5, cell)
 
 ---
 
+### `GridButtonPanel` — `grid/GridButtonPanel.py`
+Grade genérica de botões de ação configurados por dicionário. Cada botão tem texto, tipo de estilo e tooltip; o clique é repassado pelo sinal `clicked(key)`. Usa `SimplePrimaryButton` internamente (sem glow — `shadow_enabled=False`), o que mantém o widget leve para grades com vários botões.
+
+```python
+from resources.widgets.grid.GridButtonPanel import GridButtonPanel
+
+panel = GridButtonPanel({
+    "columns": 2,
+    "buttons": [
+        {"key": "zm", "text": "LIMITE ZM", "description": "Abre a pasta LIMITE ZM"},
+        {"key": "docx", "text": "CHANGELOG (WORD)", "type": "primary"},
+    ],
+})
+panel.clicked.connect(self._on_shortcut)
+
+panel.button("zm")            # SimplePrimaryButton | None
+panel.keys()                  # ["zm", "docx"]
+panel.set_enabled("zm", False)
+panel.set_visible("docx", False)
+panel.set_text("zm", "NOVO TEXTO")
+```
+
+**Sinais:** `clicked(key: str)` — emitido com a chave do botão clicado
+
+**Parâmetros do config:**
+- `columns: int` (padrão 2) — número de botões por linha
+- `buttons: list[dict]` — cada botão pode ter:
+  - `key: str` — identificador estável (chave do sinal `clicked`)
+  - `text: str` — texto exibido
+  - `type: str` (opcional) — `"primary"`, `"secondary"`, `"danger"`, `"ghost"`
+  - `description: str` (opcional) — tooltip
+
+**API pública:** `build(config)`, `button(key)`, `keys()`, `set_enabled(key, enabled)`, `set_visible(key, visible)`, `set_text(key, text)`
+
+---
+
 ### `SimpleMenuButton` — `simple/SimpleMenuButton.py`
 Botão com popup de menu (dropdown) configurável via `Dict {valor_interno: texto_exibido}`, encapsulando `QToolButton` + `QMenu`.
 

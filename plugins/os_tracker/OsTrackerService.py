@@ -31,6 +31,7 @@ from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
 from core.model.SubOSModel import SubOS
 from utils.BaseUtil import BaseUtil
+from utils.ProjectStructureChangelog import ProjectStructureChangelog
 from utils.ProjectStructureCreator import ProjectStructureCreator
 from utils.ProjectStructureUtil import ProjectStructureUtil
 
@@ -39,6 +40,8 @@ class OsTrackerService(BaseUtil):
     """Lê e mantém os registros de OS/SubOS e as pastas associadas."""
 
     RECENT_CHANGES_LIMIT = 6
+    # Pastas candidatas do "LIMITE ZM" dentro da pasta da SubOS (ordem de prioridade).
+    ZM_CANDIDATES = ("00_ARCGIS/01_SHP/ZM", "00_ARCGIS/ZM", "ZM")
     _CHANGE_SUMMARY_LABELS = (
         ("pasta(s) criada(s)", "added_folders"),
         ("pasta(s) removida(s)", "removed_folders"),
@@ -223,6 +226,43 @@ class OsTrackerService(BaseUtil):
         if mother is None:
             return rel
         return str(ProjectStructureUtil.resolve_path(Path(mother), rel))
+
+    # ── Atalhos (pastas/arquivos da SubOS) ──────────────────────────
+
+    @classmethod
+    def sub_os_folder(
+        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
+    ) -> Optional[Path]:
+        """Pasta física da SubOS (resolvida pela pasta-mãe), ou ``None``."""
+        rel = str((entry or {}).get("path", "") or "")
+        if not rel:
+            return None
+        base = Path(mother) if mother is not None else None
+        return ProjectStructureUtil.resolve_path(base, rel)
+
+    @classmethod
+    def zm_folder(
+        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
+    ) -> str:
+        """Caminho da pasta LIMITE ZM da SubOS (``""`` sem pasta cadastrada)."""
+        folder = cls.sub_os_folder(mother, entry)
+        if folder is None:
+            return ""
+        for relative in cls.ZM_CANDIDATES:
+            candidate = folder / relative
+            if candidate.is_dir():
+                return str(candidate)
+        return str(folder / cls.ZM_CANDIDATES[0])
+
+    @classmethod
+    def changelog_path(
+        cls, mother: Optional[Path], entry: Optional[Dict[str, Any]]
+    ) -> str:
+        """Caminho do changelog Word da OS (``""`` sem pasta cadastrada)."""
+        folder = cls.sub_os_folder(mother, entry)
+        if folder is None:
+            return ""
+        return str(ProjectStructureChangelog.document_path(folder))
 
     @staticmethod
     def _as_int(value: Any) -> int:
