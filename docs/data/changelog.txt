@@ -1,3 +1,10 @@
+[1.10.2][2026.10.21][18:02] - Layout 50/50 garantido entre "Mapeamento de Campos" e "Valores Manuais"
+  - resources/widgets/grid/GridGroupPainel.py: cada painel recebe QSizePolicy horizontal `Ignored` — a divisão fica SEMPRE igual (50/50), independentemente do texto dos combos/campos; antes, conteúdo com nomes longos esticava a coluna e empurrava o painel vizinho para fora da tela
+  - resources/widgets/simple/SimpleComboBox.py: `setSizeAdjustPolicy(AdjustToMinimumContentsLengthWithIcon)` + `setMinimumContentsLength(8)` e largura mínima 160 — o texto dos itens não dita mais a largura do layout (o popup continua mostrando os nomes completos)
+  - plugins/limites_db/LimitesPlugin.py: resumo de campos encurtado (6 nomes + `(+N)` e corte em 80 caracteres) para não inflar o painel "Resumo da Origem"
+  - docs/skills/SKILL_WIDGETS.md: notas de largura no GridGroupPainel e no SimpleComboBox
+
+
 [1.10.1][2026.10.21][17:54] - Correção de layout na Base de Limites (painéis ocupando meia largura)
   - resources/widgets/grid/GridGroupPainel.py: o stretch de coluna agora é aplicado APENAS às colunas que têm painel — com 1 painel ele ocupa a largura inteira (antes ficava com metade e deixava um buraco à direita); com 2+ painéis o rateio igual continua
   - plugins/limites_db/LimitesPlugin.py: o seletor de modo foi movido para dentro do painel "Mapeamento de Campos" (acima de um SeparatorWidget), eliminando a linha "O que importar" que ficava sozinha e desalinhava a tela; o painel "Resumo da Origem" voltou a ocupar a largura total

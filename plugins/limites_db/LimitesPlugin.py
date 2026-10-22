@@ -411,7 +411,7 @@ class LimitesPlugin(BasePlugin):
             "feicoes": self._format_int(self._meta.get("count", 0)),
             "crs": self._meta.get("crs") or "—",
             "geometria": self._meta.get("geometry") or "—",
-            "campos": ", ".join(self._meta.get("fields", [])[:8]) or "—",
+            "campos": self._fields_summary(self._meta.get("fields", [])),
             "os_caminho": (
                 LimitesService.guess_os_from_path(self._meta.get("path", "")) or "—"
             ),
@@ -678,6 +678,19 @@ class LimitesPlugin(BasePlugin):
         SignalManager.instance().progress_update.emit(0.0)
 
     # ── Formatação ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _fields_summary(fields: list) -> str:
+        """Resumo curto dos campos do vetor (evita texto gigante no painel)."""
+        if not fields:
+            return "—"
+
+        shown = ", ".join(str(field) for field in fields[:6])
+        extra = len(fields) - 6
+        if extra > 0:
+            shown += f" (+{extra})"
+
+        return shown if len(shown) <= 80 else f"{shown[:77]}…"
 
     @staticmethod
     def _format_sub_os(sub_counts: dict) -> str:

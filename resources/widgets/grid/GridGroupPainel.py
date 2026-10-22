@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import List
 
-from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QGridLayout, QSizePolicy, QVBoxLayout
 
 from resources.widgets.GroupPainel import GroupPainel
 
@@ -48,6 +48,13 @@ class GridGroupPainel(QWidget):
         self._painels: List[GroupPainel] = list(painels)
 
         for col, painel in enumerate(self._painels):
+            # Largura sempre igual entre as colunas: a política horizontal
+            # Ignored impede que o conteúdo (combos/labels longos) estique a
+            # coluna e empurre os outros painéis para fora da tela.
+            painel.setSizePolicy(
+                QSizePolicy.Policy.Ignored,
+                painel.sizePolicy().verticalPolicy(),
+            )
             self._grid.addWidget(painel, 0, col)
             self._grid.setColumnStretch(col, 1)
 

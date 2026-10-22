@@ -82,7 +82,13 @@ class SimpleComboBox(QWidget):
             layout.addWidget(lbl)
 
         self._combo = QComboBox()
-        self._combo.setMinimumWidth(200)
+        # O texto dos itens NÃO deve ditar a largura do layout: nomes de campos
+        # longos empurravam os painéis vizinhos para fora da tela.
+        self._combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self._combo.setMinimumContentsLength(8)
+        self._combo.setMinimumWidth(160)
 
         # Encaminha sinais do combo interno para compatibilidade com controllers
         self._combo.currentIndexChanged.connect(self._on_index_changed)

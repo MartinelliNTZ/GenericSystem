@@ -977,7 +977,7 @@ main_layout.addWidget(grid)
 **Propriedades:**
 - `painels` → lista de GroupPainel
 
-> **Largura:** o stretch é aplicado somente às colunas que têm painel — com **1 painel** ele ocupa a **largura inteira**; com 2+ o rateio é igual entre eles.
+> **Largura:** o stretch é aplicado somente às colunas que têm painel e cada painel usa `QSizePolicy.Ignored` no eixo horizontal — a divisão é **sempre igual** (1 painel = largura inteira; 2 = 50/50; 3 = 33/33/33), mesmo que o conteúdo tenha textos longos.
 
 ---
 
@@ -1122,6 +1122,8 @@ combo.set_items({"novo": "Novo"})
 # List (menos recomendado) — texto = valor
 combo = SimpleComboBox(items=["Opção A", "Opção B"])
 ```
+
+> **Largura:** internamente usa `AdjustToMinimumContentsLengthWithIcon` (`minimumContentsLength=8`) e largura mínima de 160 px — o texto dos itens **não** aumenta o tamanho mínimo do layout (o popup mostra os nomes completos). Ideal para listas com nomes de campo longos.
 
 ---
 
