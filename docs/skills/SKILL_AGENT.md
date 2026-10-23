@@ -25,6 +25,7 @@ Agir como engenheiro de software especializado no ecossistema **Aetheris ToolBox
 | Contratos | `docs/skills/SKILL_PLUGIN_CONTRACT.md` | Regras imutáveis do sistema |
 | Projetos | `docs/skills/SKILL_PROJECT.md` | Sistema de projetos .mtl, SaveProjectPlugin, menu Arquivo, AppBar status |
 | Banco de Dados | `docs/skills/SKILL_DATABASE.md` | Firebase (Firestore) oficial + espelho JSON offline (.BancoDados) + log desacoplado |
+| Relatório de OS (HTML) | `docs/skills/SKILL_OS_REPORT.md` | Gerar/alterar o relatório HTML do Acompanhamento de OS (painéis, mapas, rodapé e versão do relatório) |
 | Catálogo de Classes | `docs/skills/CatalogoClasses.md` | Referência de classes do projeto |
 
 ## ⛔ REGRA DE OURO: PARE E PERGUNTE

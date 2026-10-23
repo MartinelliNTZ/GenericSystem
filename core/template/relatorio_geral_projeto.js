@@ -42,7 +42,10 @@
     atividades: [],
     pastas_criadas: null,
     lista_pastas: [],
-    anos_criados: []
+    anos_criados: [],
+    /* Rodapé: a versão do relatório e o tempo de processamento (quando houver) */
+    versao_relatorio: '',
+    processamento: ''
   };
 
   /* Paleta das fazendas/zonas (a mesma família de cores dos mapas). */
@@ -123,13 +126,24 @@
       '</div>';
   }
 
-  /* ---------- Cabeçalho ---------- */
+  /* ---------- Cabeçalho e rodapé ---------- */
 
   function pintarCabecalho() {
-    texto($('verData'), D.versao_data);
-    texto($('gerado'), D.gerado_em);
     if (D.os) texto($('titulo'), 'Relatório geral — OS ' + D.os);
     if (D.nome_comercial) texto($('subtitulo'), D.nome_comercial);
+  }
+
+  // O RODAPÉ fecha a página: a data de geração, o tempo de processamento
+  // (quando o dado existe — senão a linha sai de cena) e a VERSÃO do relatório.
+  // A versão e a data NÃO aparecem no menu lateral nem no cabeçalho.
+  function pintarRodape() {
+    texto($('rodapeGerado'), D.gerado_em);
+    texto($('versaoRelatorio'), D.versao_relatorio);
+    var linha = $('rodapeProcessamento');
+    if (!linha) return;
+    var duracao = vazio(D.processamento) ? '' : String(D.processamento).trim();
+    linha.hidden = !duracao;
+    linha.textContent = duracao ? 'Tempo de processamento: ' + duracao : '';
   }
 
   /* ---------- Painel 1 · Visão geral ---------- */
@@ -335,7 +349,7 @@
   // Se a imagem da logo não carregar (sem internet, por exemplo), a caixa
   // mostra a sigla — o relatório nunca fica com um quadro vazio.
   function ligarLogos() {
-    ['logoLateral', 'logoCabecalho'].forEach(function (id) {
+    ['logoLateral', 'logoCabecalho', 'logoRodape'].forEach(function (id) {
       var box = $(id);
       if (!box) return;
       var img = box.querySelector('img');
@@ -472,6 +486,7 @@
 
   function iniciar() {
     pintarCabecalho();
+    pintarRodape();
     pintarVisaoGeral();
     pintarFazendas();
     pintarLimites();

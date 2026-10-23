@@ -518,12 +518,24 @@ alteradas.
   `DADOS_PROJETO` (campos vazios) fica no topo do `.js` — abrir o template direto
   mostra o layout com os campos vazios.
 - O layout segue o **padrão visual do sistema** (tema escuro azul): menu lateral
-  com a marca da Agrorobótica, cabeçalho fixo com a marca e a data de geração,
+  com a marca da Agrorobótica (sem versão nem data), cabeçalho fixo com a marca,
   painéis numerados (`01`, `02`, `2.1` …) tingidos pela cor do módulo, cartões,
   chips/pills, tabelas, **descrição em tooltip** (o "i" do cabeçalho do painel,
   movido para a área de ações pelo próprio JS) e o botão de **expandir/recolher**
   de cada painel. No celular o menu vira gaveta, a legenda dos mapas encolhe e
   aparece o botão "voltar ao topo".
+- O **rodapé** fecha a página em QUATRO colunas (marca + Links + Contato + Redes
+  sociais) e duas faixas: `.rodape-info` (fonte pequena — 11px — com o aviso de
+  geração automática, o **tempo de processamento** quando o dado existe e a
+  **data de geração**) e `.rodape-fim` (© e a **versão do relatório**,
+  `Desenvolvido por Matheus Martinelli · V1.0.0 · 23/10/2026`). A data de geração
+  **NÃO** aparece no cabeçalho e a versão/data **NÃO** aparecem no menu lateral —
+  quem mostra é só o rodapé. A versão do relatório vive no CÓDIGO
+  (`ReportDataBuilder.REPORT_VERSION`/`REPORT_VERSION_DATE` → `versao_relatorio`)
+  e tem regra de numeração própria: ver `docs/skills/SKILL_OS_REPORT.md` §11.
+- O **passo a passo** do submódulo (classes, contrato de entrada/saída, painéis,
+  regras intocáveis, onde mexer, armadilhas e a versão do relatório) está na skill
+  dedicada `docs/skills/SKILL_OS_REPORT.md`.
 - Os **shapes** entram nos subpainéis **2.2** (`limites`) e **2.3**
   (`zonas_manejo`) como `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo
   gravado na OS pelo `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` →

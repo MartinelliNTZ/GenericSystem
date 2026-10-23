@@ -175,8 +175,6 @@ input:focus-visible {
 }
 .menu a.ativo svg { color: var(--acento-2); }
 
-.side-info { margin-top: auto; padding: 0 10px; font-size: 12px; color: var(--texto-suave); }
-
 .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 900; }
 
 /* ---------- Conteúdo ---------- */
@@ -244,18 +242,6 @@ input:focus-visible {
   line-height: 1.25;
 }
 .cabecalho p { margin: 2px 0 0; font-size: 13px; color: var(--texto-suave); }
-
-.gerado {
-  margin: 0;
-  flex: none;
-  padding: 6px 14px;
-  border: 1px solid var(--borda);
-  border-radius: 999px;
-  background: var(--surface);
-  font-size: 12px;
-  color: var(--texto-suave);
-}
-.gerado strong { color: var(--texto); font-weight: 700; }
 
 main { padding: 10px 32px 40px; flex: 1; }
 
@@ -802,20 +788,127 @@ summary small { color: var(--texto-suave); font-weight: 400; font-size: 12px; }
 }
 
 /* ---------- Rodapé ---------- */
+/* Fecha a página em QUATRO colunas (marca + links + contato + redes sociais) e
+   duas faixas de fechamento: `.rodape-info` (aviso de geração automática, tempo
+   de processamento e data de geração — FONTE PEQUENA) e `.rodape-fim` (© e a
+   VERSÃO do relatório). A versão e a data NÃO aparecem no menu lateral. */
 .rodape {
   position: relative;
   margin-top: 30px;
-  padding: 20px 32px calc(20px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid rgba(122, 142, 255, .10);
-  background: linear-gradient(180deg, rgba(20, 27, 64, .72), rgba(20, 27, 64, .92));
+  padding: 34px 32px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--borda);
+  background: linear-gradient(180deg, rgba(18, 24, 60, .96), #080b26);
+}
+.rodape-grade {
+  display: grid;
+  grid-template-columns: minmax(250px, 1.5fr) minmax(150px, .8fr) minmax(250px, 1.25fr) minmax(220px, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.rodape h4 {
+  margin: 0 0 13px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--acento);
+}
+.rodape p,
+.rodape li { margin: 0 0 7px; font-size: 13px; color: var(--texto-suave); }
+.rodape ul { list-style: none; margin: 0; padding: 0; }
+.rodape a { color: var(--texto-suave); text-decoration: none; transition: color .15s ease, border-color .15s ease, background .15s ease, transform .15s ease; }
+.rodape a:hover { color: var(--texto); }
+
+.rodape-marca { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rodape-logo {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+}
+.rodape-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.rodape-logo span { display: none; font-weight: 800; color: #0a0e28; font-size: 16px; }
+.rodape-logo.sem-img img { display: none; }
+.rodape-logo.sem-img span { display: block; }
+
+.rodape-tagline {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--acento);
+}
+.rodape-texto { max-width: 390px; line-height: 1.6; }
+.rodape-links a { display: inline-flex; align-items: center; gap: 7px; padding: 4px 0; }
+.rodape-links a::after { content: "↗"; font-size: 11px; opacity: .55; }
+
+.contato { display: grid; gap: 7px; }
+.contato li { display: flex; align-items: flex-start; gap: 9px; padding: 2px 0; }
+.contato li svg { width: 16px; height: 16px; flex: none; margin-top: 3px; color: var(--acento); }
+.contato a { padding: 0; }
+.contato .whatsapp-link { color: var(--texto); font-weight: 700; }
+.contato .whatsapp-link small { display: block; margin-top: 2px; color: var(--texto-suave); font-weight: 500; }
+
+.redes-sociais { display: grid; grid-template-columns: repeat(2, minmax(92px, 1fr)); gap: 9px; }
+.icone-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--borda);
+  border-radius: 11px;
+  background: rgba(24, 32, 74, .82);
   color: var(--texto-suave);
   font-size: 12px;
+  font-weight: 700;
+}
+.icone-social svg { width: 18px; height: 18px; flex: none; }
+.icone-social:hover {
+  color: var(--texto);
+  border-color: rgba(91, 108, 255, .6);
+  background: var(--surface-2);
+  transform: translateY(-2px);
+}
+
+/* Aviso + tempo de processamento + data de geração (fonte pequena) */
+.rodape-info {
+  margin-top: 28px;
+  padding-top: 17px;
+  border-top: 1px solid var(--borda);
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px 18px;
+  gap: 6px 22px;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--texto-suave);
 }
-.rodape strong { color: var(--texto); }
+.rodape-info p { margin: 0; font-size: 11px; color: var(--texto-suave); }
+.rodape-info p[hidden] { display: none; }
+.rodape-aviso { color: var(--texto); font-weight: 700; }
+.rodape-processamento { color: var(--acento); font-weight: 700; }
+.rodape-gerado { font-size: 11px; }
+
+.rodape-fim {
+  margin-top: 28px;
+  padding-top: 17px;
+  border-top: 1px solid var(--borda);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--texto-suave);
+}
+.rodape-fim strong { color: var(--texto); }
 
 /* Botão "voltar ao topo" (aparece no celular ao rolar) */
 .btn-topo {
@@ -873,11 +966,12 @@ summary small { color: var(--texto-suave); font-weight: 400; font-size: 12px; }
   .mapa { min-height: 380px; }
   .legenda { width: min(220px, 72%); }
   .rodape { padding-left: 16px; padding-right: 16px; }
+  .rodape-grade { grid-template-columns: 1fr; gap: 22px; }
 }
 
 @media (max-width: 560px) {
   .btn-topo { display: inline-flex; }
-  .gerado { display: none; }
+  .redes-sociais { grid-template-columns: 1fr 1fr; }
   .painel-acoes .info-tooltip-btn,
   .painel-toggle { width: 40px; height: 40px; min-width: 40px; }
   .info-tooltip-box {
