@@ -1,0 +1,5781 @@
+
+    :root {
+
+
+
+      --bg: #0a0e28;
+
+
+
+      --surface: #101538;
+
+
+
+      --surface-2: #182050;
+
+
+
+      --borda: #2c3568;
+
+
+
+      --texto: #e7ecff;
+
+
+
+      --texto-suave: #8d99c8;
+
+
+
+      --acento: #5b6cff;
+
+
+
+      --acento-2: #7d8cff;
+
+
+
+      --verde: #4ade80;
+
+
+
+      --amarelo: #fbbf24;
+
+
+
+      --vermelho: #f87171;
+
+
+
+      --azul: var(--acento-2);
+
+
+
+      --azul-escuro: var(--texto);
+
+
+
+      --cinza-fundo: var(--bg);
+
+
+
+      --side-w: 264px;
+
+
+
+      --raio: 14px;
+
+
+
+    }
+
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 84px;
+    }
+
+
+
+    body {
+
+
+
+      margin: 0;
+
+
+
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+
+
+      background: var(--bg);
+
+
+
+      color: var(--texto);
+
+
+
+      line-height: 1.5;
+
+
+
+      -webkit-text-size-adjust: 100%;
+
+
+
+    }
+
+
+
+    #fundo {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+
+
+    a:focus-visible,
+    button:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid var(--acento);
+      outline-offset: 2px;
+    }
+
+
+
+
+
+
+
+    /* ---------- Menu lateral ---------- */
+
+
+
+    .sidebar {
+
+
+
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: var(--side-w);
+
+
+
+      background: rgba(22, 29, 68, .92);
+
+
+
+      backdrop-filter: blur(10px);
+
+
+
+      border-right: 1px solid var(--borda);
+
+
+
+      padding: 20px 14px calc(20px + env(safe-area-inset-bottom, 0px));
+
+
+
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+
+
+
+      z-index: 30;
+      transition: transform .25s ease;
+
+
+
+    }
+
+
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 8px 16px;
+      border-bottom: 1px solid var(--borda);
+    }
+
+
+
+    .logo {
+
+
+
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      flex: none;
+
+
+
+      background: #fff;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+
+
+
+      border: 1px solid var(--borda);
+
+
+
+    }
+
+
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+
+
+    .logo span {
+      display: none;
+      font-weight: 800;
+      color: #0a0e28;
+      font-size: 18px;
+    }
+
+
+
+    .logo.sem-img img {
+      display: none;
+    }
+
+
+
+    .logo.sem-img span {
+      display: block;
+    }
+
+
+
+    .marca-nome {
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+
+
+    .marca-sub {
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+
+
+    .menu {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+
+
+    .menu-titulo {
+      font-size: 12px;
+      color: var(--texto-suave);
+      padding: 0 10px 6px;
+    }
+
+
+
+    .menu a {
+
+
+
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+
+
+      min-height: 46px;
+      padding: 0 12px;
+      border-radius: 10px;
+
+
+
+      color: var(--texto-suave);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+
+
+
+      border-left: 3px solid transparent;
+
+
+
+      transition: background .15s, color .15s;
+
+
+
+    }
+
+
+
+    .menu a svg {
+      width: 20px;
+      height: 20px;
+      flex: none;
+    }
+
+
+
+    .menu a:hover {
+      background: var(--surface-2);
+      color: var(--texto);
+    }
+
+
+
+    .menu a.ativo {
+      background: var(--surface-2);
+      color: var(--acento);
+      border-left-color: var(--acento);
+    }
+
+
+
+    .scrim {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      z-index: 25;
+    }
+
+
+
+
+
+
+
+    /* ---------- Conteúdo ---------- */
+
+
+
+    .conteudo {
+      position: relative;
+      z-index: 1;
+      margin-left: var(--side-w);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+
+
+    .cabecalho {
+
+
+
+      position: sticky;
+      top: 0;
+      z-index: 20;
+
+
+
+      display: flex;
+      align-items: center;
+      gap: 14px;
+
+
+
+      padding: calc(14px + env(safe-area-inset-top, 0px)) 32px 14px;
+
+
+
+      background: rgba(18, 24, 60, .85);
+      backdrop-filter: blur(10px);
+
+
+
+      border-bottom: 1px solid var(--borda);
+
+
+
+    }
+
+
+
+    .btn-menu {
+
+
+
+      display: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      flex: none;
+
+
+
+      border: 1px solid var(--borda);
+      background: var(--surface);
+      color: var(--texto);
+      cursor: pointer;
+
+
+
+      align-items: center;
+      justify-content: center;
+
+
+
+    }
+
+
+
+    .btn-menu svg {
+      width: 22px;
+      height: 22px;
+    }
+
+
+
+    .cab-logo {
+      display: none;
+    }
+
+
+
+    .btn-filtros {
+
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 999px;
+      flex: none;
+
+      border: 1px solid var(--borda);
+      background: var(--surface);
+      color: var(--texto);
+
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+
+      transition: border-color .15s, background .15s, color .15s;
+
+    }
+
+    .btn-filtros svg {
+      width: 19px;
+      height: 19px;
+      color: var(--acento);
+    }
+
+    .btn-filtros:hover {
+      border-color: var(--acento);
+      background: var(--surface-2);
+    }
+
+    .filtros-badge {
+
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 19px;
+      height: 19px;
+
+      border-radius: 999px;
+      background: var(--acento);
+      color: #080b26;
+
+      font-size: 11px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+
+      padding: 0 5px;
+
+    }
+
+    .filtros-badge[hidden] {
+      display: none;
+    }
+
+
+
+    .cab-texto {
+      min-width: 0;
+      flex: 1;
+    }
+
+
+
+    .cabecalho h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+
+
+    .cabecalho .descricao {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--texto-suave);
+    }
+
+
+
+
+
+
+
+    main {
+      padding: 8px 32px 32px;
+      flex: 1;
+    }
+
+
+
+
+
+
+
+    /* ---------- Painéis ---------- */
+
+
+
+    .painel {
+
+
+
+      margin-top: 24px;
+      background: linear-gradient(180deg, var(--surface), rgba(24, 32, 74, .9));
+
+
+
+      border: 1px solid var(--borda);
+      border-radius: 18px;
+      overflow: hidden;
+
+
+
+    }
+
+
+
+    .painel-topo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--borda);
+      background: rgba(32, 41, 92, .7);
+    }
+
+
+
+    .painel-icone {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: rgba(91, 108, 255, .12);
+      color: var(--acento);
+      flex: none;
+    }
+
+
+
+    .painel-icone svg {
+      width: 20px;
+      height: 20px;
+    }
+
+
+
+    .painel-topo h2 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+
+
+    .painel-topo p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+
+
+    #alertas .painel-icone {
+      background: rgba(251, 191, 36, .12);
+      color: var(--amarelo);
+    }
+
+
+
+    #area .painel-icone {
+      background: rgba(56, 189, 248, .12);
+      color: var(--acento-2);
+    }
+
+    #pecuaria .painel-icone {
+      background: rgba(229, 151, 94, .14);
+      color: #e5975e;
+    }
+
+
+
+    .painel-corpo {
+      padding: 20px 22px 24px;
+    }
+
+
+
+
+
+
+
+    /* Blocos gerados pelo pipeline */
+
+
+
+    .secao {
+      margin-top: 20px;
+    }
+
+
+
+    .secao:first-child {
+      margin-top: 0;
+    }
+
+
+
+    .secao h2,
+    .painel-corpo h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: var(--texto);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--borda);
+    }
+
+
+
+    .cartoes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+
+
+    .cartao {
+      background: var(--surface-2);
+      border: 1px solid var(--borda);
+      border-left: 4px solid var(--acento);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+
+
+    .cartao-valor {
+      display: block;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--texto);
+    }
+
+
+
+    .cartao-rotulo {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+
+
+    .anos {
+      margin: 14px 0 0;
+      font-size: 13px;
+      color: var(--texto-suave);
+    }
+
+
+
+    .pill {
+      display: inline-block;
+      background: rgba(91, 108, 255, .14);
+      color: var(--acento);
+      border-radius: 999px;
+      padding: 2px 10px;
+      margin: 0 4px 4px 0;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+
+
+    .tabela-wrap,
+    .secao,
+    .painel-consolidado {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+
+
+    th,
+    td {
+      padding: 9px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+
+
+
+    th {
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      font-weight: 600;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .03);
+    }
+
+
+
+    tr.linha-verde td {
+      background: rgba(74, 222, 128, .12);
+    }
+
+
+
+    tr.linha-amarelo td {
+      background: rgba(251, 191, 36, .13);
+    }
+
+
+
+    tr.linha-vermelho td {
+      background: rgba(248, 113, 113, .14);
+    }
+
+
+
+    /* Ano faltante sem variação: dado incompleto (fila cinza). */
+    tr.linha-cinza td {
+      background: rgba(148, 163, 184, .16);
+    }
+
+
+
+    tr.linha-verde:hover td {
+      background: rgba(74, 222, 128, .2);
+    }
+
+
+
+    tr.linha-amarelo:hover td {
+      background: rgba(251, 191, 36, .22);
+    }
+
+
+
+    tr.linha-vermelho:hover td {
+      background: rgba(248, 113, 113, .23);
+    }
+
+
+
+    tr.linha-cinza:hover td {
+      background: rgba(148, 163, 184, .24);
+    }
+
+
+
+    tr.total td {
+      font-weight: 700;
+      border-top: 2px solid var(--acento);
+      background: rgba(91, 108, 255, .1);
+    }
+
+
+
+    .talhoes-blocos {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+
+
+    details.talhoes {
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+
+
+    details.talhoes summary {
+      cursor: pointer;
+      padding: 10px 12px;
+      font-weight: 600;
+      list-style: none;
+      min-height: 44px;
+    }
+
+
+
+    details.talhoes summary::-webkit-details-marker {
+      display: none;
+    }
+
+
+
+    details.talhoes summary::before {
+      content: "▶ ";
+      font-size: 10px;
+      color: var(--acento);
+    }
+
+
+
+    details.talhoes[open] summary {
+      border-bottom: 1px solid var(--borda);
+    }
+
+
+
+    details.talhoes[open] summary::before {
+      content: "▼ ";
+    }
+
+
+
+    details.talhoes table {
+      font-size: 12px;
+    }
+
+
+
+    details.talhoes th,
+    details.talhoes td {
+      padding: 6px 8px;
+    }
+
+
+
+
+
+
+
+    .panel-legend {
+      font-size: 12px;
+      color: var(--texto-suave);
+      margin: 0 0 10px;
+    }
+
+
+
+    .panel-legend .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--borda);
+      border-radius: 3px;
+      vertical-align: -1px;
+      margin-right: 4px;
+    }
+
+
+
+    .dot-verde {
+      background: rgba(74, 222, 128, .4);
+    }
+
+
+
+    .dot-amarelo {
+      background: rgba(251, 191, 36, .45);
+    }
+
+
+
+    .dot-vermelho {
+      background: rgba(248, 113, 113, .45);
+    }
+
+
+
+    .dot-cinza {
+      background: rgba(148, 163, 184, .5);
+    }
+
+
+
+    .painel-consolidado .det-row {
+      display: grid;
+      grid-template-columns: var(--cols);
+      gap: 0 10px;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--borda);
+      min-width: 640px;
+    }
+
+
+
+    .painel-consolidado .det-row>span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+
+
+    .painel-consolidado .det-head {
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+
+
+    .painel-consolidado .det-total {
+      font-weight: 700;
+      border-top: 2px solid var(--acento);
+      background: rgba(91, 108, 255, .1);
+      margin-top: 6px;
+    }
+
+
+
+    .painel-consolidado .det-row.linha-verde {
+      background: rgba(74, 222, 128, .12);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-amarelo {
+      background: rgba(251, 191, 36, .13);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-vermelho {
+      background: rgba(248, 113, 113, .14);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-verde:hover {
+      background: rgba(74, 222, 128, .2);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-amarelo:hover {
+      background: rgba(251, 191, 36, .22);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-vermelho:hover {
+      background: rgba(248, 113, 113, .23);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-cinza {
+      background: rgba(148, 163, 184, .16);
+    }
+
+
+
+    .painel-consolidado .det-row.linha-cinza:hover {
+      background: rgba(148, 163, 184, .24);
+    }
+
+    /* ---------- Painel 3.5 — parecer por cultura ---------- */
+    /*
+       Um subpainel (`<details class="prod-crop">`) por cultura: o cartão, o
+       chevron e a animação vêm do bloco "painel por cultura"
+       (`.prod-paineles-cultura`, criado para o antigo painel por cultura).
+       Dentro de cada subpainel vai o widget do painel 4.1 — Métrica | Geral |
+       Variação % | uma coluna por ano — com as métricas Área (ha), Total
+       produzido, Média e Variedade. A Média sai SEMPRE na unidade da cultura
+       (sc/ha, t/ha, @/ha, ...), sem conversão: no talhão é o valor da planilha
+       e, na OS/fazenda/geral, é a média ponderada pela área — Σ(área ×
+       produtividade) ÷ Σ(área dos registros COM produtividade informada); a
+       produção 0 (zero) conta na média e o talhão não colhido (sem
+       produtividade) não entra na conta. As linhas de um mesmo nó (OS ·
+       Fazenda · Talhão) formam um grupo marcado com `data-g`.
+    */
+    #prodAreaCulturaWrap .pac-nome {
+      font-weight: 700;
+      vertical-align: top;
+      min-width: 180px;
+      color: var(--texto);
+    }
+
+    /* ALINHAMENTO: só a COLUNA DO NOME (os expansíveis OS · Fazenda · Talhão e
+       o seu cabeçalho) fica à ESQUERDA — é o pedido do painel e é o que não
+       vence sozinho, porque o painel centraliza as células das tabelas com
+       `!important` (.painel-corpo table th/td). As métricas (Métrica · Geral ·
+       Variação % · anos) seguem centralizadas, na MESMA régua do cabeçalho. */
+    #prodAreaCulturaWrap thead th:first-child,
+    #prodAreaCulturaWrap td.pac-nome {
+      text-align: left !important;
+    }
+
+    #prodAreaCulturaWrap .pac-nivel-faz { font-weight: 600; }
+    #prodAreaCulturaWrap .pac-nivel-tal {
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #prodAreaCulturaWrap .pac-clicavel {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #prodAreaCulturaWrap .pac-clicavel:hover { color: var(--acento); }
+
+    #prodAreaCulturaWrap .pac-seta {
+      display: inline-block;
+      width: 1em;
+      color: var(--texto-suave);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #prodAreaCulturaWrap .pac-seta.aberto { transform: rotate(90deg); }
+
+    #prodAreaCulturaWrap .pac-metrica {
+      color: var(--texto-suave);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #prodAreaCulturaWrap .pac-geral {
+      font-weight: 700;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    #prodAreaCulturaWrap .pac-var {
+      color: var(--texto-suave);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #prodAreaCulturaWrap .pac-sem-valor { color: var(--texto-suave); }
+    #prodAreaCulturaWrap .pac-texto { font-weight: 600; }
+
+    /* Cada grupo (nó) começa com uma régua no topo da primeira linha. */
+    #prodAreaCulturaWrap tbody tr.pac-inicio-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    #prodAreaCulturaWrap .pac-recado { margin: 4px 0 10px; }
+    .cel-var { font-variant-numeric: tabular-nums; }
+
+    /* Célula de CALOR do 3.5: a linha da Média sai com a paleta vermelho →
+       amarelo → verde da PRÓPRIA linha — o melhor ano da linha fica verde e o
+       pior vermelho (`--pac-calor` carrega o rgba calculado no JS). A coluna
+       Geral recebe a mesma régua da linha (sem entrar na faixa), então a
+       leitura horizontal e a vertical contam a mesma história. */
+    #prodAreaCulturaWrap td.pac-cel-heat {
+      background: var(--pac-calor);
+      font-weight: 700;
+    }
+
+    /* ---------- Painel 3.6 — atividades por talhão · ano ---------- */
+    /*
+       Cada nó (OS · Fazenda · Talhão) é UMA linha: OS e fazenda são
+       agrupadores expansíveis, SEM dados nas colunas do ano; o talhão lista,
+       ano a ano, os NOMES das atividades registradas (culturas + Pecuária),
+       cada um num CHIP com a COR da atividade (paleta atribuída em JS pelo
+       nome — não existe mapa fixo cultura → cor; ano com mais de uma atividade
+       leva uma régua azul à esquerda). O widget é o mesmo dos pivôs 4.1/3.5
+       (hierarquia sob demanda), mas sem métrica, sem coluna Geral e sem
+       Variação %.
+    */
+    #ativTabla {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #ativTabla table.ativ-pivot {
+      min-width: 720px;
+    }
+
+    #ativTabla .ativ-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+      text-align: left;
+    }
+
+    /* A coluna do nome segue a MESMA régua de indentação dos outros pivôs
+       (5.5 e 7.4–7.8: 2rem na fazenda e 4rem no talhão). */
+    #ativTabla .ativ-nivel-faz {
+      padding-left: 2rem;
+      font-weight: 600;
+    }
+
+    #ativTabla .ativ-nivel-tal {
+      padding-left: 4rem;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #ativTabla .ativ-clicavel {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #ativTabla .ativ-clicavel:hover { color: var(--acento); }
+
+    #ativTabla .ativ-seta {
+      display: inline-block;
+      width: 1em;
+      color: var(--texto-suave);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #ativTabla .ativ-seta.aberto { transform: rotate(90deg); }
+
+    #ativTabla .ativ-cel {
+      text-align: left;
+      vertical-align: top;
+      white-space: normal;
+      color: var(--texto);
+    }
+
+    /* ALINHAMENTO: só a COLUNA DO NOME (os expansíveis OS · Fazenda · Talhão e
+       o seu cabeçalho) fica à ESQUERDA — é o pedido do painel e é o que não
+       vence sozinho, porque o painel centraliza as células das tabelas com
+       `!important` (.painel-corpo table th/td). As células do ANO seguem esse
+       eixo centralizado, o MESMO do cabeçalho do ano, para dado e cabeçalho
+       ficarem na mesma régua. */
+    #ativTabla thead th:first-child,
+    #ativTabla td.ativ-nome {
+      text-align: left !important;
+    }
+
+    #ativTabla .ativ-tem { font-weight: 600; }
+    #ativTabla .ativ-recado { margin: 4px 0 10px; }
+
+    /* Uma atividade = um chip com a cor DELA (a paleta é atribuída em JS, pelo
+       nome da atividade: não existe mapa fixo cultura → cor). */
+    #ativTabla .ativ-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 2px 5px 2px 0;
+      padding: 2px 9px;
+      border: 1px solid rgba(255, 255, 255, .10);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .05);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    #ativTabla .ativ-chip::before {
+      content: "";
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--ativ-cor, var(--acento));
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, .06);
+    }
+
+    /* Ano com MAIS DE UMA atividade: os chips saem DENTRO de um conjunto azul
+       (`.ativ-combo`). É a marca do "combinado" (ex.: soja + milho) e, ao
+       contrário de uma régua/borda na célula, ela acompanha o conteúdo em vez de
+       atravessar a linha — o visual não "quebra" entre linhas. */
+    #ativTabla .ativ-combo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 10px 2px 6px;
+      border: 1px solid rgba(122, 142, 255, .42);
+      border-radius: 999px;
+      background: rgba(91, 108, 255, .12);
+    }
+
+    /* Dentro do conjunto o chip perde a moldura: quem delimita é a pílula azul
+       (as cores das atividades continuam nos pontos de cada chip). */
+    #ativTabla .ativ-combo .ativ-chip {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+    }
+
+    /* Legenda das cores: montada com as atividades do filtro atual (mesma cor
+       dos chips das células). */
+    #ativTabla .ativ-leyenda {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 10px;
+    }
+
+    #ativTabla .ativ-leyenda-titulo {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+    }
+
+    #ativTabla .ativ-leyenda .ativ-chip { margin: 0; }
+
+    /* Régua no topo de cada bloco de OS. */
+    #ativTabla tbody tr.ativ-nivel-os > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    /* ---------- Painel 3.7 — matriz de produtividade por cultura ---------- */
+    /*
+       Um subpainel (`<details class="prod-crop">`, o mesmo cartão do 3.5) por
+       cultura com uma MATRIZ talhão × (Média + ano): a linha é o talhão (OS ·
+       Fazenda na sub-linha) e cada coluna de ano traz a produtividade daquela
+       cultura no ano, na unidade da cultura (sem conversão). A paleta é ÚNICA
+       para o subpainel INTEIRO (vermelho escuro → vermelho claro →
+       marrom-laranja → amarelo → verde claro → verde escuro): o pior resultado
+       da cultura fica no vermelho escuro e o melhor no verde escuro — a leitura
+       é "em quais talhões estão os piores resultados". No 3.5, ao contrário, a
+       paleta é por LINHA. `--pmz-cor` carrega o rgba calculado no JS.
+    */
+    #prodMatrizCulturaWrap table {
+      min-width: 560px;
+    }
+
+    #prodMatrizCulturaWrap .pmz-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+    }
+
+    #prodMatrizCulturaWrap .pmz-sub {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #prodMatrizCulturaWrap td.pmz-cel {
+      font-variant-numeric: tabular-nums;
+    }
+
+    #prodMatrizCulturaWrap td.pmz-heat {
+      background: var(--pmz-cor);
+      font-weight: 700;
+    }
+
+    #prodMatrizCulturaWrap .pmz-sem-valor { color: var(--texto-suave); }
+
+    /* A coluna do talhão fica à ESQUERDA (o painel centraliza as células com
+       `!important`; a sub-linha com OS · Fazenda acompanha). */
+    #prodMatrizCulturaWrap thead th:first-child,
+    #prodMatrizCulturaWrap th[scope="row"] {
+      text-align: left !important;
+    }
+
+    #prodMatrizCulturaWrap .pmz-leyenda {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      margin: 0 0 8px;
+    }
+
+    #prodMatrizCulturaWrap .pmz-leyenda-titulo {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+    }
+
+    #prodMatrizCulturaWrap .pmz-leyenda-cor {
+      width: 26px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--pmz-cor);
+    }
+
+    #prodMatrizCulturaWrap .pmz-leyenda-faixa {
+      margin-left: 6px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: var(--texto-suave);
+    }
+
+    #prodMatrizCulturaWrap .pmz-recado { margin: 4px 0 10px; }
+
+
+
+    .painel-consolidado .toggle {
+      display: inline-block;
+      width: 16px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--acento);
+    }
+
+
+
+    .painel-consolidado details.cons-os,
+    .painel-consolidado details.cons-faz {
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      /* `clip` (não `hidden`): mantém os cantos arredondados sem criar um
+         contêiner de rolagem, que anularia o `position: sticky` da coluna
+         do nome quando a grade rola na horizontal (muitos anos). */
+      overflow: clip;
+    }
+
+
+
+    .painel-consolidado details.cons-os {
+      background: var(--surface);
+      margin: 6px 0 8px;
+    }
+
+
+
+    .painel-consolidado details.cons-faz {
+      background: var(--surface-2);
+      margin: 2px 0 6px;
+    }
+
+
+
+    .painel-consolidado details.cons-os summary,
+    .painel-consolidado details.cons-faz summary {
+      cursor: pointer;
+      font-weight: 600;
+      list-style: none;
+    }
+
+
+
+    .painel-consolidado .cons-body {
+      padding: 6px 8px;
+    }
+
+
+
+    .painel-consolidado details[open] .toggle {
+      transform: rotate(90deg);
+    }
+
+    /* Coluna fixa nas grades OS · Fazenda · Talhão (2/2.1 e 3.4/3.5): com
+       muitos anos a grade rola na horizontal; o selo + o nome acompanham a
+       rolagem (`position: sticky`) para não perder de vista a linha. Cada
+       nível tem a sua cor de base (`--cons-base`) e a linha a sua tinta
+       (`--linha-tinta`), então a célula fixa calca o fundo da própria fila. */
+    .painel-consolidado,
+    .prod-hierarquia {
+      /* Cor OPACA: o `--surface` do V2 é translúcido (90%) e deixaria o
+         conteúdo que rola por baixo aparecer através da célula fixa. */
+      --cons-base: #171e48;
+    }
+
+    .painel-consolidado .cons-body,
+    .prod-hierarquia .cons-body {
+      --cons-base: #212a61;
+    }
+
+    /* Só a coluna do nome fica fixa (a partir da borda): ao rolar na
+       horizontal a linha continua identificável e o conteúdo que passa por
+       baixo desaparece por trás do fundo opaco da célula. O selo do chevron
+       rola junto com a grade (não é fixado, para não perder o próprio selo). */
+    .painel-consolidado .det-row > .cel-nome,
+    .prod-hierarquia .det-row > .cel-nome {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background-color: var(--cons-base);
+      background-image: linear-gradient(var(--linha-tinta, transparent), var(--linha-tinta, transparent));
+    }
+
+    .painel-consolidado .det-row.linha-verde,
+    .prod-hierarquia .det-row.linha-verde {
+      --linha-tinta: rgba(74, 222, 128, .12);
+    }
+
+    .painel-consolidado .det-row.linha-amarelo,
+    .prod-hierarquia .det-row.linha-amarelo {
+      --linha-tinta: rgba(251, 191, 36, .13);
+    }
+
+    .painel-consolidado .det-row.linha-vermelho,
+    .prod-hierarquia .det-row.linha-vermelho {
+      --linha-tinta: rgba(248, 113, 113, .14);
+    }
+
+    .painel-consolidado .det-row.linha-cinza,
+    .prod-hierarquia .det-row.linha-cinza {
+      --linha-tinta: rgba(148, 163, 184, .16);
+    }
+
+    .painel-consolidado .det-row.det-total,
+    .prod-hierarquia .det-row.det-total {
+      --linha-tinta: rgba(91, 108, 255, .1);
+    }
+
+    /* Cabeçalho da grade: fundo opaco próprio (`--surface-2`). */
+    .painel-consolidado .det-row.det-head > .toggle,
+    .painel-consolidado .det-row.det-head > .cel-nome,
+    .prod-hierarquia .det-row.det-head > .toggle,
+    .prod-hierarquia .det-row.det-head > .cel-nome {
+      background-color: #212a61;
+      background-image: none;
+    }
+
+    /* Painel hierárquico de produtividade (OS → Fazenda → Talhão) */
+
+    .prod-hierarquia .det-row {
+      display: grid;
+      grid-template-columns: var(--cols);
+      gap: 0 10px;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--borda);
+      min-width: 640px;
+    }
+
+    .prod-hierarquia .det-row>span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .prod-hierarquia .det-head {
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .prod-hierarquia .det-total {
+      font-weight: 700;
+      border-top: 2px solid var(--acento);
+      background: rgba(91, 108, 255, .1);
+      margin-top: 6px;
+    }
+
+    .prod-hierarquia details.cons-os,
+    .prod-hierarquia details.cons-faz {
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      overflow: clip;
+    }
+
+    .prod-hierarquia details.cons-os {
+      background: var(--surface);
+      margin: 6px 0 8px;
+    }
+
+    .prod-hierarquia details.cons-faz {
+      background: var(--surface-2);
+      margin: 2px 0 6px;
+    }
+
+    .prod-hierarquia details.cons-os summary,
+    .prod-hierarquia details.cons-faz summary {
+      cursor: pointer;
+      font-weight: 600;
+      list-style: none;
+    }
+
+    .prod-hierarquia .cons-body {
+      padding: 6px 8px;
+    }
+
+    /* 8.3 (Preparo do solo por OS · Fazenda · Talhão e por ano): a grade de
+       TODAS as linhas começa na MESMA coluna do cabeçalho. O `padding`
+       horizontal do `.cons-body` (8px) + a borda do `<details>` (1px)
+       deslocavam a grade 9px por nível — com vários anos, a coluna do ano no
+       talhão caía fora da coluna do ano no cabeçalho e os valores pareciam
+       encavalados (ao rolar, sobrava só o fim do texto, ex.: “cional”). O
+       recuo da hierarquia fica SÓ no texto do nome; a grade não anda. */
+    #pratTabelaWrap .cons-body {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    #pratTabelaWrap .cons-body .det-row>.cel-nome {
+      padding-left: 12px;
+    }
+
+    #pratTabelaWrap .cons-body .cons-body .det-row>.cel-nome {
+      padding-left: 24px;
+    }
+
+    .prod-hierarquia details[open] .toggle {
+      transform: rotate(90deg);
+    }
+
+    .prod-hierarquia .toggle {
+      display: inline-block;
+      width: 16px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--acento);
+    }
+
+    .prod-hierarquia .cel-cultura {
+      font-weight: 700;
+    }
+
+    .prod-hierarquia .prod-unidade {
+      color: var(--texto-suave);
+      font-weight: 400;
+      font-size: 11px;
+    }
+
+    .prod-hierarquia .prod-cel-cultura {
+      text-align: right;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    .prod-hierarquia .prod-cel-cultura .prod-media-valor {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .prod-hierarquia .prod-cel-cultura .prod-minmax {
+      display: block;
+      font-size: 10px;
+      color: var(--texto-suave);
+      font-weight: 400;
+    }
+
+    .prod-hierarquia .prod-cel-cultura.sem-valor {
+      color: var(--texto-suave);
+      text-align: center;
+    }
+
+    .prod-hierarquia .cel-regs {
+      text-align: right;
+      color: var(--texto-suave);
+      font-size: 12px;
+    }
+
+    .prod-hierarquia .cel-ano {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .prod-hierarquia .pec-sem-valor {
+      color: var(--texto-suave);
+      text-align: center;
+    }
+
+    .prod-media-card .prod-minmax-cartao {
+      display: block;
+      font-size: 11px;
+      color: var(--texto-suave);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+
+
+    /* Painéis 8.2 (hectares por prática e por ano) e 3.8 (área por combinação de
+       atividades e por ano): os DOIS gráficos de linhas usam de propósito este
+       mesmo casco — o 3.8 reusa as classes `.prat-*` para sair idêntico ao 8.2
+       (cartão, legenda clicável, linhas suaves, dica por ano e a linha de
+       referência tracejada). */
+    .prat-linhas-wrap {
+      margin: 8px 0 6px;
+      padding: 14px 16px 18px;
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03);
+    }
+    .prat-leyenda {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px 10px;
+      margin-bottom: 14px;
+    }
+    .prat-leyenda-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 11px;
+      border: 1px solid var(--borda);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--texto);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity .15s ease, border-color .15s ease;
+    }
+    .prat-leyenda-item:hover { border-color: var(--acento); }
+    .prat-leyenda-item.oculta { opacity: .4; text-decoration: line-through; }
+    .prat-leyenda-cor {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      flex: none;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .06);
+    }
+    .prat-linhas { position: relative; width: 100%; }
+    .prat-linhas svg { width: 100%; height: auto; display: block; }
+    .prat-linhas .prat-fundo { fill: rgba(255, 255, 255, .015); }
+    .prat-linhas .prat-grid { stroke: var(--borda); stroke-width: 1; }
+    .prat-linhas .prat-grid-vert { stroke: var(--borda); stroke-width: 1; stroke-dasharray: 3 6; opacity: .45; }
+    .prat-linhas .prat-eixo { stroke: var(--texto-suave); stroke-width: 1.2; opacity: .65; }
+    .prat-linhas .prat-eixo-txt { fill: var(--texto-suave); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .prat-linhas .prat-unit { fill: var(--texto-suave); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .prat-linhas .prat-line { fill: none; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+    .prat-linhas .prat-dot { stroke: var(--surface); stroke-width: 1.6; }
+    .prat-linhas .prat-guia { stroke: var(--acento); stroke-width: 1.4; pointer-events: none; }
+    .prat-tip {
+      position: absolute;
+      top: 8px;
+      transform: translateX(-50%);
+      min-width: 140px;
+      max-width: 250px;
+      padding: 9px 11px;
+      background: rgba(22, 29, 68, .97);
+      border: 1px solid var(--borda);
+      border-radius: 11px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+      color: var(--texto);
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .prat-tip-tit { font-weight: 800; color: var(--acento); margin-bottom: 6px; letter-spacing: .02em; }
+    .prat-tip-row { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
+    .prat-tip-cor { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .prat-tip-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prat-tip-val { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .prat-tip-vazio { color: var(--texto-suave); }
+
+    /* Painéis 3.2 (área das culturas por ano) e 3.3 (produtividade unificada
+       em t/ha por ano): gráficos de linhas no estilo do painel 8.2. */
+    .prod-linhas-wrap {
+      margin: 8px 0 6px;
+      padding: 14px 16px 18px;
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03);
+    }
+    .prod-linhas-leyenda {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px 10px;
+      margin-bottom: 14px;
+    }
+    .prod-linhas-leyenda-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 11px;
+      border: 1px solid var(--borda);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--texto);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity .15s ease, border-color .15s ease;
+    }
+    .prod-linhas-leyenda-item:hover { border-color: var(--acento); }
+    .prod-linhas-leyenda-item.oculta { opacity: .4; text-decoration: line-through; }
+    .prod-linhas-leyenda-cor {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      flex: none;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .06);
+    }
+    .prod-linhas { position: relative; width: 100%; }
+    .prod-linhas svg { width: 100%; height: auto; display: block; }
+    .prod-linhas .pl-fundo { fill: rgba(255, 255, 255, .015); }
+    .prod-linhas .pl-grid { stroke: var(--borda); stroke-width: 1; }
+    .prod-linhas .pl-grid-vert { stroke: var(--borda); stroke-width: 1; stroke-dasharray: 3 6; opacity: .45; }
+    .prod-linhas .pl-eixo { stroke: var(--texto-suave); stroke-width: 1.2; opacity: .65; }
+    .prod-linhas .pl-eixo-txt { fill: var(--texto-suave); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .prod-linhas .pl-unit { fill: var(--texto-suave); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .prod-linhas .pl-line { fill: none; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+    .prod-linhas .pl-dot { stroke: var(--surface); stroke-width: 1.6; }
+    .prod-linhas .pl-guia { stroke: var(--acento); stroke-width: 1.4; pointer-events: none; }
+    /* Painel 4.2 (evolução anual da pecuária): gráfico de linhas com TRÊS
+       escalas verticais — Área (esquerda), UA · GMD · Rend. (centro) e
+       Nº animais (direita). Cada eixo, os seus rótulos e o seu título saem na
+       cor das séries que o usam; por isso estas classes NÃO fixam `fill` nem
+       `stroke` (a cor chega pelos atributos `fill`/`stroke` do SVG). */
+    .prod-linhas .pl-eixo-sec { stroke-width: 1.1; opacity: .55; }
+    .prod-linhas .pl-tick { stroke-width: 1.3; opacity: .7; }
+    .prod-linhas .pl-eixo-txt-sec { font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .prod-linhas .pl-unit-sec { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .prod-linhas-tip {
+      position: absolute;
+      top: 8px;
+      transform: translateX(-50%);
+      min-width: 140px;
+      max-width: 250px;
+      padding: 9px 11px;
+      background: rgba(22, 29, 68, .97);
+      border: 1px solid var(--borda);
+      border-radius: 11px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+      color: var(--texto);
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .prod-linhas-tip .pl-tip-tit { font-weight: 800; color: var(--acento); margin-bottom: 6px; letter-spacing: .02em; }
+    .prod-linhas-tip .pl-tip-row { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
+    .prod-linhas-tip .pl-tip-cor { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .prod-linhas-tip .pl-tip-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prod-linhas-tip .pl-tip-val { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .prod-linhas-tip .pl-tip-vazio { color: var(--texto-suave); }
+
+    /* Card de CONTROLE (3.1): culturas presentes mas "zeradas" (não
+       colhidas) — exibidas apenas como referência, fora da média real. */
+    .prod-media-card.prod-media-card-controle {
+      opacity: .72;
+      border-style: dashed;
+    }
+    .prod-media-card.prod-media-card-controle .cartao-valor {
+      color: var(--texto-suave);
+    }
+
+    .muted {
+      color: var(--texto-suave);
+      font-size: 12px;
+    }
+
+
+
+    .validacoes {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+
+
+    .validacoes li {
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      background: var(--surface-2);
+      border: 1px solid var(--borda);
+    }
+
+
+
+    .ok {
+      color: var(--verde);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+
+
+    .aviso-lista {
+      color: var(--vermelho);
+    }
+
+
+
+
+
+
+
+    /* Painel 09 · Qualidade dos dados — 9.1 (classes), 9.2 (alertas agrupados)
+       e 9.3 (conformidades): o 9.1/9.3 são chips (um por classe, com contagem e
+       tooltip) e o 9.2/9.3 são grupos recolhíveis (um `<details>` por
+       classe/planilha/motivo). */
+
+
+
+    .alertas-classes {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+
+
+    .alertas-classes .info-tooltip {
+      /* Sem `position: relative` a caixa da tooltip passa a ser posicionada pela
+         FAIXA de chips (o `.alertas-classes`), não pelo chip — ver abaixo. */
+      position: static;
+      margin-left: 0;
+    }
+
+
+
+    .classe-chip {
+      border: 1px solid var(--borda);
+      background: var(--surface-2);
+      color: var(--texto);
+      border-radius: 999px;
+      padding: 0 14px;
+      min-height: 40px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+
+
+
+    /* A COR do chip é o NÍVEL do alerta (mesma régua do card do 9.2: crítico,
+       aviso). Estas regras vêm ANTES do `.active`: com a mesma especificidade,
+       a última vence — o chip escolhido continua destacado no acento. */
+    .classe-chip.nivel-critico {
+      border-color: rgba(248, 113, 113, .70);
+      background: rgba(248, 113, 113, .14);
+      color: #ffd7d7;
+    }
+    .classe-chip.nivel-aviso {
+      border-color: rgba(251, 191, 36, .60);
+      background: rgba(251, 191, 36, .12);
+      color: #ffe9b0;
+    }
+    .classe-chip.nivel-info {
+      border-color: rgba(122, 142, 255, .40);
+      background: rgba(122, 142, 255, .12);
+      color: #cdd7ff;
+    }
+
+    /* 9.3 · Conformidades: são alertas JUSTIFICADOS (o valor está correto),
+       então o chip não usa a régua crítico/aviso/info — tem a cor própria. */
+    .classe-chip.nivel-conformidade {
+      border-color: rgba(52, 211, 153, .60);
+      background: rgba(52, 211, 153, .12);
+      color: #c9f7e3;
+    }
+
+
+
+    .classe-chip:hover {
+      border-color: var(--acento);
+    }
+
+
+
+    .classe-chip.active {
+      background: var(--acento);
+      color: #080b26;
+      border-color: var(--acento);
+    }
+
+
+
+    .classe-chip .tab-count {
+      display: inline-block;
+      min-width: 18px;
+      background: rgba(255, 255, 255, .1);
+      border-radius: 999px;
+      padding: 0 6px;
+      margin-left: 6px;
+      font-size: 11px;
+      text-align: center;
+    }
+
+
+
+    .classe-chip.active .tab-count {
+      background: rgba(0, 0, 0, .2);
+    }
+
+
+
+    .classe-dica {
+      margin: 8px 0 0;
+    }
+
+
+
+    .alertas-grupos {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+
+
+    .alerta-grupo {
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+
+
+    .alerta-grupo[hidden] { display: none !important; }
+
+    .alerta-grupo.nivel-critico { border-left: 3px solid var(--vermelho); }
+    .alerta-grupo.nivel-aviso { border-left: 3px solid var(--amarelo); }
+    .alerta-grupo.nivel-info { border-left: 3px solid var(--verde); }
+    .alerta-grupo.nivel-conformidade { border-left: 3px solid var(--verde); }
+
+
+
+    .alerta-grupo > summary {
+      cursor: pointer;
+      list-style: none;
+      min-height: 44px;
+      padding: 10px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      text-align: left;
+    }
+
+
+
+    .alerta-grupo > summary::-webkit-details-marker { display: none; }
+
+
+
+    .alerta-grupo > summary::before {
+      content: "▶";
+      font-size: 10px;
+      color: var(--acento);
+    }
+
+
+
+    .alerta-grupo[open] > summary::before { content: "▼"; }
+    .alerta-grupo[open] > summary { border-bottom: 1px solid var(--borda); }
+
+
+
+    .alerta-grupo .alerta-arquivo { font-weight: 600; }
+
+    .alerta-grupo .alerta-classe {
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    /* O único card do topo do grupo é o da CLASSE e a COR dele é o NÍVEL do
+       alerta — o nível não repete em texto (fica no `title` do card). */
+    .alerta-grupo .alerta-classe.nivel-critico {
+      background: rgba(248, 113, 113, .20);
+      border-color: rgba(248, 113, 113, .70);
+      color: #ffd7d7;
+    }
+
+    .alerta-grupo .alerta-classe.nivel-aviso {
+      background: rgba(251, 191, 36, .18);
+      border-color: rgba(251, 191, 36, .60);
+      color: #ffe9b0;
+    }
+
+    .alerta-grupo .alerta-classe.nivel-info {
+      background: rgba(122, 142, 255, .16);
+      border-color: rgba(122, 142, 255, .40);
+      color: #cdd7ff;
+    }
+
+    /* 9.3 · Conformidades: o card do topo é da CLASSE e a cor é a da
+       conformidade (verde), não um nível de alerta. */
+    .alerta-grupo .alerta-classe.nivel-conformidade {
+      background: rgba(52, 211, 153, .18);
+      border-color: rgba(52, 211, 153, .60);
+      color: #c9f7e3;
+    }
+
+    /* Detalhe do 9.3: título da conformidade, conclusão e evidência empilhados
+       na mesma célula (a tabela é a mesma do 9.2). */
+    .alerta-grupo .conformidade-titulo { font-weight: 700; }
+
+    .alerta-grupo .conformidade-texto,
+    .alerta-grupo .conformidade-evidencia { display: block; }
+
+    .alerta-grupo .conformidade-evidencia { margin-top: 2px; font-size: 12px; }
+
+    .alerta-grupo .alerta-linhas { flex: none; }
+
+    .alerta-grupo .alerta-motivo { flex: 1 1 320px; min-width: 200px; }
+
+
+
+    .alerta-detalhe {
+      padding: 4px 12px 12px;
+      /* A tabela do detalhe rola dentro do próprio bloco: a `.secao` do painel 09
+         não pode ser o contêiner de rolagem (ela recortaria a tooltip do 8.1). */
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+
+
+    .alerta-detalhe table { font-size: 12px; }
+
+    .alerta-detalhe th,
+    .alerta-detalhe td { padding: 6px 8px; }
+
+
+
+    /* O `overflow-x: auto` genérico do `.tabela-wrap/.secao/.painel-consolidado`
+       deixa o eixo Y em `auto` (quando um eixo não é `visible`, o outro computa
+       para `auto`) — a `.secao` passa a RECORTAR o que sai da caixa. No painel 09
+       isso cortava a tooltip do chip (ela abria para cima, para fora da seção):
+       as seções do painel ficam sem recorte e quem rola (se precisar) é a tabela
+       do detalhe (`.alerta-detalhe`, acima). */
+    #alertas .secao {
+      overflow: visible;
+    }
+
+
+
+    /* A tooltip do chip (9.1) sai ABAIXO da faixa de chips e ancorada nela, em
+       qualquer largura. Motivos: (1) o 9.1 fica no topo do corpo do painel e,
+       abrindo para cima, a caixa saía da `.secao` (que o template deixa como
+       contêiner de rolagem e recorta) — daí a tooltip ilegível; (2) centralizada
+       no chip, vazava a borda do painel no primeiro/último chip; (3) no celular
+       a caixa "fixa" do template cai no fim do `.painel-corpo` (que tem
+       `transform`), fora da tela. Ancorada na faixa, a caixa nunca sai do painel
+       e o mesmo mecanismo vale para o mouse (`:hover`), o teclado
+       (`:focus-within`) e o toque (`.aberto`, marcado pelo script do painel). */
+    .alertas-classes .info-tooltip-box {
+      position: absolute;
+      left: 0;
+      right: auto;
+      top: calc(100% + 8px);
+      bottom: auto;
+      width: max-content;
+      max-width: min(640px, 100%);
+      transform: translateY(-6px) scale(.99);
+    }
+
+    /* Sem seta: a caixa é da FAIXA (não dá para apontar para um chip em CSS). */
+    .alertas-classes .info-tooltip-box::after { display: none; }
+
+    .alertas-classes .info-tooltip:hover .info-tooltip-box,
+    .alertas-classes .info-tooltip:focus-within .info-tooltip-box,
+    .alertas-classes .info-tooltip.aberto .info-tooltip-box {
+      transform: translateY(0) scale(1);
+    }
+
+
+
+    a.arquivo-link {
+      color: var(--acento-2);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+
+
+    a.arquivo-link:hover {
+      text-decoration: underline;
+    }
+
+
+
+
+
+
+
+    /* ---------- Painel de produtividade ---------- */
+
+    #produtividade .painel-icone {
+      background: rgba(74, 222, 128, .12);
+      color: var(--verde);
+    }
+
+    .prod-toolbar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .prod-filtro {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .prod-filtro label {
+      font-size: 11px;
+      color: var(--texto-suave);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .prod-filtro select,
+    .prod-filtro input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: var(--surface-2);
+      color: var(--texto);
+      padding: 0 11px;
+      font: inherit;
+      outline: none;
+    }
+
+    .prod-filtro select:focus,
+    .prod-filtro input:focus {
+      border-color: var(--acento);
+      box-shadow: 0 0 0 3px rgba(91, 108, 255, .09);
+    }
+
+    /* ---------- Filtros em GRADE de checkboxes (OS e Fazenda) ----------
+       Cada valor vira uma caixa clicável dentro de `.filtro-checks` e o botão
+       do cabeçalho marca/desmarca todas de uma vez. O container é o mesmo
+       `id="filtroOS"`/`id="filtroFazenda"` de antes; quem o preenche é o
+       `template_02.js` (a lista de valores sai dos dados carregados). */
+    .prod-filtro-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .btn-todos-checks {
+      border: 1px solid var(--borda);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--texto-suave);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      line-height: 1.6;
+      padding: 2px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-todos-checks:hover {
+      color: var(--texto);
+      border-color: var(--acento);
+      background: rgba(91, 108, 255, .08);
+    }
+
+    .filtro-checks {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      gap: 6px;
+      align-content: start;
+      max-height: 124px;
+      overflow: auto;
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: var(--surface-2);
+      padding: 8px 9px;
+    }
+
+    .filtro-checks .filtro-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      font-size: 12px;
+      color: var(--texto);
+      cursor: pointer;
+    }
+
+    .filtro-checks .filtro-check span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* A caixa herda o `width: 100%`/`min-height` de `.prod-filtro input` — aqui
+       ela volta a ser quadrada e do tamanho de um checkbox. */
+    .filtro-checks input[type="checkbox"] {
+      flex: none;
+      width: 15px;
+      height: 15px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 4px;
+      accent-color: var(--acento);
+      cursor: pointer;
+    }
+
+    .filtro-checks .muted {
+      grid-column: 1 / -1;
+      font-size: 12px;
+    }
+
+    .prod-acoes {
+      display: flex;
+      align-items: end;
+    }
+
+    .btn-limpar {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--texto-suave);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-limpar:hover {
+      color: var(--texto);
+      border-color: var(--acento);
+      background: rgba(91, 108, 255, .08);
+    }
+
+    .prod-resumo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+
+    .prod-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--borda);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      font-size: 12px;
+    }
+
+    .prod-chip strong {
+      color: var(--texto);
+    }
+
+    #prodTabelaWrap {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #prodTabelaWrap table {
+      min-width: 860px;
+    }
+
+    #prodTabelaWrap tbody tr[hidden] {
+      display: none;
+    }
+
+    #fertTabla,
+    #nutriTabla {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #fertTabla table,
+    #nutriTabla table {
+      min-width: 680px;
+    }
+
+    #pecTabla {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #pecTabla table {
+      min-width: 720px;
+    }
+
+    .comb-barra {
+      display: inline-block;
+      height: 14px;
+      min-width: 3px;
+      background: linear-gradient(90deg, var(--mod-combustivel), var(--acento-2));
+      border-radius: 7px;
+      vertical-align: middle;
+    }
+
+    .comb-evo-celda {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    #combPainel,
+    #combTablaAno,
+    #combTabla,
+    #enerPainel,
+    #enerTablaAno,
+    #enerTabla {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #combPainel table,
+    #enerPainel table {
+      min-width: 620px;
+    }
+
+    #combTablaAno table,
+    #enerTablaAno table {
+      min-width: 620px;
+    }
+
+    #combTabla table,
+    #enerTabla table {
+      min-width: 680px;
+    }
+
+    .prod-vazio {
+      display: none;
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--texto-suave);
+      border: 1px dashed var(--borda);
+      border-radius: 12px;
+      background: rgba(32, 41, 92, .45);
+    }
+
+    .prod-vazio.visivel {
+      display: block;
+    }
+
+    .prod-culturas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 16px;
+    }
+
+    .prod-cultura {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(74, 222, 128, .28);
+      background: rgba(74, 222, 128, .08);
+      color: var(--verde);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+
+
+    /* Painel de filtros global — sobreposto, sem alterar a posição da página */
+
+    body.filtros-abertos {
+      overflow: hidden;
+    }
+
+    .filtros-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(0, 0, 0, .58);
+      backdrop-filter: blur(3px);
+      animation: filtrosFade .16s ease-out;
+    }
+
+    .filtros-overlay[hidden] {
+      display: none;
+    }
+
+    .painel.filtros-painel {
+      position: fixed;
+      top: 86px;
+      right: 32px;
+      z-index: 70;
+      width: min(920px, calc(100vw - 64px));
+      max-height: calc(100vh - 112px);
+      margin: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+      animation: filtrosEntrar .18s ease-out;
+    }
+
+    .painel.filtros-painel[hidden] {
+      display: none;
+    }
+
+    .filtros-painel .painel-topo {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      flex-wrap: wrap;
+      background: rgba(32, 41, 92, .96);
+      backdrop-filter: blur(10px);
+    }
+
+    .filtros-painel .painel-icone {
+      background: rgba(56, 189, 248, .12);
+      color: var(--acento-2);
+    }
+
+    .filtros-contagem {
+      margin-left: auto;
+      flex: none;
+    }
+
+    .btn-recolher-filtros {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 10px;
+      flex: none;
+      border: 1px solid var(--borda);
+      background: var(--surface);
+      color: var(--texto-suave);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn-recolher-filtros:hover {
+      color: var(--texto);
+      border-color: var(--acento);
+      background: var(--surface-2);
+    }
+
+    .btn-recolher-filtros svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    @keyframes filtrosFade {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes filtrosEntrar {
+      from {
+        opacity: 0;
+        transform: translateY(-10px) scale(.985);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* Média de produtividade por cultura */
+
+    .prod-bloco-titulo {
+      margin: 18px 0 10px;
+    }
+
+    .prod-bloco-titulo h3 {
+      margin: 0 0 3px;
+      font-size: 15px;
+      color: var(--texto);
+    }
+
+    .prod-bloco-titulo p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+    .prod-media {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .prod-media-card .cartao-valor {
+      font-size: 22px;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    .prod-media-card .cartao-valor small {
+      font-size: 12px;
+      color: var(--texto-suave);
+      font-weight: 600;
+    }
+
+    /* Painel por cultura: área (ha) e produtividade por ano (por fazenda + consolidado) */
+
+    .prod-paineles-cultura .prod-crop {
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      background: rgba(24, 32, 74, .72);
+      margin: 4px 0 10px;
+    }
+
+    .prod-paineles-cultura .prod-crop summary {
+      cursor: pointer;
+      padding: 9px 12px;
+      font-weight: 700;
+      color: var(--texto);
+      font-size: 14px;
+    }
+
+    .prod-paineles-cultura .prod-crop summary .prod-unidade {
+      color: var(--texto-suave);
+      font-weight: 400;
+      font-size: 12px;
+    }
+
+    .prod-paineles-cultura .prod-crop .prod-crop-cuerpo {
+      padding: 8px 12px 12px;
+    }
+
+    .prod-paineles-cultura .prod-crop .prod-crop-cuerpo h5 {
+      margin: 6px 0 4px;
+      font-size: 13px;
+      color: var(--texto);
+    }
+
+    .prod-paineles-cultura .prod-crop-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 8px;
+    }
+
+    .prod-paineles-cultura .prod-crop-chip {
+      appearance: none;
+      border: 1px solid var(--borda);
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      font-size: 11px;
+      line-height: 1;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .prod-paineles-cultura .prod-crop-chip.active {
+      border-color: var(--acento);
+      color: var(--texto);
+      background: rgba(91, 108, 255, .14);
+    }
+
+    .prod-paineles-cultura .prod-crop-grafico {
+      margin: 2px 0 10px;
+    }
+
+    .prod-paineles-cultura .prod-crop-grafico svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .prod-paineles-cultura .prod-crop-vacio {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+    .prod-paineles-cultura .prod-crop-tabla {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .prod-paineles-cultura table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 480px;
+    }
+
+    .prod-paineles-cultura th,
+    .prod-paineles-cultura td {
+      padding: 6px 10px;
+      text-align: right;
+      border-bottom: 1px solid var(--borda);
+    }
+
+    .prod-paineles-cultura th[scope="col"] {
+      background: var(--surface-2);
+      color: var(--texto-suave);
+      white-space: nowrap;
+    }
+
+    .prod-paineles-cultura th[scope="row"] {
+      background: transparent;
+      color: var(--texto);
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .prod-paineles-cultura td.crop-sem-valor {
+      color: var(--texto-suave);
+      text-align: center;
+    }
+
+    .prod-paineles-cultura tr.total td,
+    .prod-paineles-cultura tr.total th {
+      background: rgba(56, 189, 248, .10);
+      font-weight: 700;
+      border-top: 2px solid var(--acento-2);
+    }
+
+    .prod-paineles-cultura .prod-crop-nota {
+      margin: 8px 0 2px;
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+
+
+    /* ---------- UX: orientação e separação entre módulos ---------- */
+    :root {
+      --mod-geral: #60a5fa;
+      --mod-area: #00e5ff;
+      --mod-produtividade: #FFFF00;
+      --mod-pecuaria: #f4b56a;
+      --mod-fertilizantes: #c084fc;
+      --mod-nutrientes: #fbbf24;
+
+      --mod-combustivel: #f472b6;
+      --mod-energia: #22d3ee;
+      --mod-praticas: #22c55e;
+      --mod-alertas: #ff2f2f;
+    }
+
+    /* A barra fixa "Você está em …" (com os atalhos Geral/Área/…) foi
+       removida: ocupava espaço no topo e competia com o menu lateral, que
+       continua sendo a navegação entre módulos. */
+
+    main > .painel:not(.filtros-painel) {
+      margin-top: 44px;
+      scroll-margin-top: 96px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.14);
+    }
+
+    #geral { --modulo-cor: var(--mod-geral); }
+    #area { --modulo-cor: var(--mod-area); }
+    #produtividade { --modulo-cor: var(--mod-produtividade); }
+    #pecuaria { --modulo-cor: var(--mod-pecuaria); }
+    #fertilizantes { --modulo-cor: var(--mod-fertilizantes); }
+    #nutrientes { --modulo-cor: var(--mod-nutrientes); }
+    #combustivel { --modulo-cor: var(--mod-combustivel); }
+    #energia { --modulo-cor: var(--mod-energia); }
+    #alertas { --modulo-cor: var(--mod-alertas); }
+
+    #geral .painel-icone,
+    #area .painel-icone,
+    #produtividade .painel-icone,
+    #pecuaria .painel-icone,
+    #fertilizantes .painel-icone,
+    #nutrientes .painel-icone,
+    #combustivel .painel-icone,
+    #energia .painel-icone,
+    #alertas .painel-icone {
+      color: var(--modulo-cor);
+      background: rgba(255,255,255,.04);
+      border: 1px solid currentColor;
+    }
+
+    .painel-topo {
+      position: relative;
+      min-height: 78px;
+    }
+
+    .painel-topo::after {
+      content: '';
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--modulo-cor, var(--acento)), transparent 48%);
+      opacity: .55;
+    }
+
+    .painel-identidade {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .painel-etiqueta {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--modulo-cor, var(--acento));
+    }
+
+    .menu-grupo {
+      margin: 12px 10px 4px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.05);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #6f7bb0;
+    }
+
+    .menu a.ativo {
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 6px 18px rgba(0,0,0,.12);
+    }
+
+    .menu a[href="#geral"].ativo { color: var(--mod-geral); border-left-color: var(--mod-geral); }
+    .menu a[href="#area"].ativo { color: var(--mod-area); border-left-color: var(--mod-area); }
+    .menu a[href="#produtividade"].ativo { color: var(--mod-produtividade); border-left-color: var(--mod-produtividade); }
+    .menu a[href="#pecuaria"].ativo { color: var(--mod-pecuaria); border-left-color: var(--mod-pecuaria); }
+    .menu a[href="#fertilizantes"].ativo { color: var(--mod-fertilizantes); border-left-color: var(--mod-fertilizantes); }
+    .menu a[href="#nutrientes"].ativo { color: var(--mod-nutrientes); border-left-color: var(--mod-nutrientes); }
+    .menu a[href="#combustivel"].ativo { color: var(--mod-combustivel); border-left-color: var(--mod-combustivel); }
+    .menu a[href="#praticas"].ativo { color: var(--mod-praticas); border-left-color: var(--mod-praticas); }
+    .menu a[href="#alertas"].ativo { color: var(--mod-alertas); border-left-color: var(--mod-alertas); }
+
+    @media (max-width: 900px) {
+      main > .painel:not(.filtros-painel) { scroll-margin-top: 96px; }
+    }
+
+    @media (max-width: 560px) {
+      main > .painel:not(.filtros-painel) { margin-top: 30px; scroll-margin-top: 88px; }
+      .painel-topo { min-height: 70px; }
+      .painel-topo::after { left: 14px; right: 14px; }
+    }
+
+    /* ---------- Rodapé ---------- */
+
+    .rodape {
+      position: relative;
+      z-index: 1;
+      margin-left: var(--side-w);
+      background: linear-gradient(180deg, rgba(18, 24, 60, .96), #080b26);
+      border-top: 1px solid var(--borda);
+      padding: 34px 32px calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .rodape-grade {
+      display: grid;
+      grid-template-columns: minmax(250px, 1.5fr) minmax(150px, .8fr) minmax(250px, 1.25fr) minmax(220px, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .rodape h4 {
+      margin: 0 0 13px;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--acento);
+    }
+
+    .rodape p,
+    .rodape li {
+      font-size: 13px;
+      color: var(--texto-suave);
+      margin: 0 0 7px;
+    }
+
+    .rodape ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .rodape a {
+      color: var(--texto-suave);
+      text-decoration: none;
+      transition: color .15s, border-color .15s, background .15s, transform .15s;
+    }
+
+    .rodape a:hover {
+      color: var(--texto);
+    }
+
+    .rodape-marca {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .rodape-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      flex: none;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--borda);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+    }
+
+    .rodape-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .rodape-logo span {
+      display: none;
+      font-weight: 800;
+      color: #0a0e28;
+      font-size: 16px;
+    }
+
+    .rodape-logo.sem-img img {
+      display: none;
+    }
+
+    .rodape-logo.sem-img span {
+      display: block;
+    }
+
+    .rodape-tagline {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--acento);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+
+    .rodape-texto {
+      max-width: 390px;
+      line-height: 1.6;
+    }
+
+    .rodape-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 0;
+    }
+
+    .rodape-links a::after {
+      content: "↗";
+      font-size: 11px;
+      opacity: .55;
+    }
+
+    .contato {
+      display: grid;
+      gap: 7px;
+    }
+
+    .contato li {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 2px 0;
+    }
+
+    .contato li svg {
+      width: 16px;
+      height: 16px;
+      flex: none;
+      margin-top: 3px;
+      color: var(--acento);
+    }
+
+    .contato a {
+      padding: 0;
+    }
+
+    .contato .whatsapp-link {
+      color: var(--texto);
+      font-weight: 700;
+    }
+
+    .contato .whatsapp-link small {
+      display: block;
+      margin-top: 2px;
+      color: var(--texto-suave);
+      font-weight: 500;
+    }
+
+    .redes-sociais {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(92px, 1fr));
+      gap: 9px;
+    }
+
+    .icone-social {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 9px;
+      min-height: 42px;
+      padding: 0 12px;
+      border-radius: 11px;
+      border: 1px solid var(--borda);
+      background: rgba(24, 32, 74, .82);
+      color: var(--texto-suave);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .icone-social svg {
+      width: 18px;
+      height: 18px;
+      flex: none;
+    }
+
+    .icone-social:hover {
+      color: var(--texto);
+      border-color: rgba(91, 108, 255, .6);
+      background: var(--surface-2);
+      transform: translateY(-2px);
+    }
+
+    .icone-social.whatsapp:hover {
+      color: #9bb0ff;
+      border-color: rgba(74, 222, 128, .65);
+    }
+
+    .rodape-fim {
+      margin-top: 28px;
+      padding-top: 17px;
+      border-top: 1px solid var(--borda);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+    .rodape-fim strong {
+      color: var(--texto);
+    }
+
+    /* Nota do rodapé: geração automática, TEMPO DE PROCESSAMENTO e a data de
+       geração — tudo em FONTE PEQUENA (11px). A linha do tempo
+       (`#rodapeProcessamento`) nasce com o tempo medido na gravação e é
+       REESCRITA no fim da execução, quando o bloco `statistics` do JSON já
+       existe (`ReportRendering.atualizar_rodape`). */
+    .rodape-info {
+      margin-top: 28px;
+      padding-top: 17px;
+      border-top: 1px solid var(--borda);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 22px;
+      align-items: baseline;
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+    .rodape-info p {
+      margin: 0;
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+    .rodape-aviso {
+      color: var(--texto);
+      font-weight: 700;
+    }
+
+    .rodape-processamento {
+      color: var(--acento);
+      font-weight: 700;
+    }
+
+    .rodape-gerado {
+      font-size: 11px;
+    }
+
+
+
+    /* Ajustes responsivos do painel flutuante de filtros */
+    @media (max-width: 900px) {
+      .painel.filtros-painel {
+        top: 72px;
+        right: 14px;
+        left: 14px;
+        width: auto;
+        max-height: calc(100vh - 92px);
+      }
+
+      .filtros-painel .prod-toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .filtros-painel .prod-filtro[style] {
+        grid-column: 1 / -1 !important;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .painel.filtros-painel {
+        top: 64px;
+        right: 8px;
+        left: 8px;
+        max-height: calc(100vh - 72px);
+        border-radius: 14px;
+      }
+
+      .filtros-painel .painel-topo {
+        align-items: flex-start;
+      }
+
+      .filtros-contagem {
+        order: 4;
+        width: 100%;
+        margin-left: 50px;
+      }
+
+      .filtros-painel .prod-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .filtros-painel .prod-filtro[style] {
+        grid-column: auto !important;
+      }
+
+      .btn-recolher-filtros {
+        margin-left: auto;
+      }
+    }
+
+    /* ---------- Celular / tablet ---------- */
+
+
+
+    @media (max-width: 900px) {
+
+
+
+      .sidebar {
+        transform: translateX(-100%);
+        width: min(82vw, 300px);
+        box-shadow: 8px 0 30px rgba(0, 0, 0, .5);
+      }
+
+
+
+      body.menu-aberto .sidebar {
+        transform: none;
+      }
+
+
+
+      body.menu-aberto .scrim {
+        display: block;
+      }
+
+
+
+      .conteudo,
+      .rodape {
+        margin-left: 0;
+      }
+
+
+
+      .btn-menu {
+        display: inline-flex;
+      }
+
+
+
+      .cab-logo {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+
+
+
+      .cabecalho {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+
+
+      .cabecalho h1 {
+        font-size: 16px;
+      }
+
+
+
+      .cabecalho .descricao {
+        display: none;
+      }
+
+
+
+      main {
+        padding: 4px 14px 24px;
+      }
+
+
+
+      .painel-topo,
+      .painel-corpo {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+
+
+      .rodape {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+
+
+      .rodape-grade {
+        grid-template-columns: 1fr;
+        gap: 22px;
+      }
+
+      .prod-toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+
+
+    }
+
+
+
+    @media (max-width: 560px) {
+
+      .prod-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .redes-sociais {
+        grid-template-columns: 1fr 1fr;
+      }
+
+    }
+
+
+
+    @media (prefers-reduced-motion: reduce) {
+
+
+
+      html {
+        scroll-behavior: auto;
+      }
+
+
+
+      .sidebar,
+      .classe-chip {
+        transition: none;
+      }
+
+
+
+    }
+  
+
+    /* ---------- V2: refinamento visual azul/preto, mais sofisticado ---------- */
+    :root {
+      --azul-base: #0003BE;
+      --azul-600: #2a3cff;
+      --azul-500: #5b6cff;
+      --azul-400: #8b9bff;
+      --bg: #0c1234;
+      --surface: rgba(24, 31, 74, .90);
+      --surface-2: rgba(34, 44, 100, .88);
+      --borda: rgba(122, 142, 255, .24);
+      --texto: #eef1ff;
+      --texto-suave: #9aa6d8;
+      --acento: #5b6cff;
+      --acento-2: #8b9bff;
+      --verde: #8b9bff;
+      --amarelo: #f6c66d;
+      --vermelho: #fb7185;
+      --azul: #5b6cff;
+      --azul-escuro: #dbe4ff;
+      --cinza-fundo: var(--bg);
+      --mod-geral: #60a5fa;
+      --mod-area: #00e5ff;
+      --mod-produtividade: #FFFF00;
+      --mod-pecuaria: #f4b56a;
+      --mod-fertilizantes: #c084fc;
+      --mod-combustivel: #f472b6;
+      --mod-nutrientes: #fbbf24;
+
+      --mod-energia: #22d3ee;
+      --mod-praticas: #22c55e;
+      --mod-alertas: #ff2f2f;
+    }
+
+    html {
+      scroll-padding-top: 84px;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(91, 108, 255, .17), transparent 26%),
+        radial-gradient(circle at 82% 18%, rgba(139, 155, 255, .11), transparent 24%),
+        radial-gradient(circle at 50% 120%, rgba(0, 3, 190, .20), transparent 36%),
+        linear-gradient(180deg, #0a0f2c 0%, #0e1540 44%, #121c54 100%);
+      color: var(--texto);
+    }
+
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      inset: auto;
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(70px);
+      opacity: .48;
+      animation: glowShift 16s ease-in-out infinite alternate;
+    }
+
+    body::before {
+      width: 320px;
+      height: 320px;
+      top: -60px;
+      right: 4%;
+      border-radius: 999px;
+      background: rgba(47, 60, 255, .20);
+    }
+
+    body::after {
+      width: 260px;
+      height: 260px;
+      left: 6%;
+      bottom: 2%;
+      border-radius: 999px;
+      background: rgba(139, 155, 255, .10);
+      animation-duration: 19s;
+    }
+
+    #fundo {
+      opacity: .74;
+      mix-blend-mode: screen;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, rgba(20, 27, 64, .92), rgba(24, 32, 74, .86));
+      border-right: 1px solid rgba(130, 164, 235, .14);
+      box-shadow: 14px 0 48px rgba(0, 0, 0, .34);
+      backdrop-filter: blur(22px);
+    }
+
+    .marca {
+      padding: 10px 10px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(123, 156, 224, .10);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    .logo {
+      border-color: rgba(255,255,255,.08);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .24);
+    }
+
+    .marca-nome {
+      font-size: 16px;
+      letter-spacing: .01em;
+    }
+
+    .marca-sub,
+    .menu-titulo {
+      color: #9aa6d8;
+    }
+
+    .menu {
+      gap: 7px;
+    }
+
+    .menu-titulo {
+      padding-top: 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-weight: 800;
+    }
+
+    .menu a {
+      position: relative;
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border-left: 0;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,.015);
+      transition: transform .18s ease, background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .menu a::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(91,108,255,.10), transparent 38%);
+      opacity: 0;
+      transition: opacity .18s ease;
+      pointer-events: none;
+    }
+
+    .menu a:hover {
+      transform: translateX(4px);
+      color: var(--texto);
+      background: rgba(255,255,255,.03);
+      border-color: rgba(122, 142, 255, .15);
+      box-shadow: 0 10px 22px rgba(0, 0, 0, .16);
+    }
+
+    .menu a:hover::before,
+    .menu a.ativo::before {
+      opacity: 1;
+    }
+
+    .menu a.ativo {
+      color: #f5f9ff;
+      border-color: rgba(91,108,255,.34);
+      background: linear-gradient(90deg, rgba(91,108,255,.18), rgba(255,255,255,.03));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 26px rgba(15, 23, 42, .26);
+    }
+
+    .menu a.ativo svg {
+      color: var(--acento-2);
+      filter: drop-shadow(0 0 10px rgba(139, 155, 255, .32));
+    }
+
+    .conteudo {
+      position: relative;
+    }
+
+    .cabecalho {
+      background: rgba(18, 24, 58, .72);
+      border-bottom: 1px solid rgba(122, 142, 255, .12);
+      backdrop-filter: blur(18px) saturate(1.15);
+      box-shadow: 0 10px 30px rgba(0,0,0,.14);
+    }
+
+    .cabecalho::after {
+      content: '';
+      position: absolute;
+      left: 32px;
+      right: 32px;
+      bottom: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,155,255,.28), transparent);
+      pointer-events: none;
+    }
+
+    .cab-texto h1 {
+      letter-spacing: -.02em;
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+    }
+
+    .cab-texto .descricao {
+      color: #9eb0cc;
+    }
+
+    .btn-menu,
+    .btn-filtros,
+    .btn-recolher-filtros,
+    .btn-limpar {
+      border-color: rgba(122, 142, 255, .18);
+      background: linear-gradient(180deg, rgba(26, 34, 78, .95), rgba(20, 27, 64, .92));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.18);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, color .18s ease;
+    }
+
+    .btn-menu:hover,
+    .btn-filtros:hover,
+    .btn-recolher-filtros:hover,
+    .btn-limpar:hover {
+      transform: translateY(-1px);
+      border-color: rgba(91,108,255,.34);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px rgba(0,0,0,.22), 0 0 0 1px rgba(91,108,255,.10);
+      color: var(--texto);
+    }
+
+    .btn-filtros {
+      color: var(--texto);
+    }
+
+    .filtros-badge {
+      box-shadow: 0 0 0 4px rgba(91,108,255,.12);
+    }
+
+    /* A barra de contexto ("Você está em …") foi removida — ver comentário
+       no bloco de navegação acima. */
+
+    main {
+      padding: 10px 32px 40px;
+    }
+
+    .painel {
+      position: relative;
+      isolation: isolate;
+      border-radius: 22px;
+      border: 1px solid rgba(122, 142, 255, .14);
+      background: linear-gradient(180deg, rgba(23, 30, 72,.94), rgba(19, 26, 64,.92));
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255,255,255,.03);
+      overflow: hidden;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+      animation: painelIntro .35s ease-out both;
+    }
+
+    .painel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(90deg, var(--modulo-cor, var(--acento)), transparent 70%)
+        top left / 100% 3px no-repeat;
+      opacity: .95;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .painel::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, color-mix(in srgb, var(--modulo-cor, var(--acento)) 9%, transparent), transparent 36%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .painel:hover {
+      transform: translateY(-3px);
+      border-color: rgba(122, 142, 255, .20);
+      box-shadow: 0 26px 56px rgba(0, 0, 0, .30), 0 0 0 1px rgba(91,108,255,.05);
+    }
+
+    .painel-topo {
+      position: relative;
+      padding: 18px 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015));
+      border-bottom: 1px solid rgba(122, 142, 255, .10);
+    }
+
+    .painel-topo h2 {
+      font-size: 18px;
+      letter-spacing: -.01em;
+    }
+
+    .painel-topo p {
+      color: #a1b1cc;
+    }
+
+    .painel-icone {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      border: 1px solid color-mix(in srgb, var(--modulo-cor, var(--acento)) 28%, transparent);
+      background: color-mix(in srgb, var(--modulo-cor, var(--acento)) 14%, rgba(255,255,255,.03));
+      color: var(--modulo-cor, var(--acento));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 22px rgba(0,0,0,.16);
+    }
+
+    .painel-corpo {
+      padding: 22px 22px 26px;
+      background: linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,0));
+    }
+
+    #geral { --modulo-cor: var(--mod-geral); }
+    #area { --modulo-cor: var(--mod-area); }
+    #produtividade { --modulo-cor: var(--mod-produtividade); }
+    #pecuaria { --modulo-cor: var(--mod-pecuaria); }
+    #fertilizantes { --modulo-cor: var(--mod-fertilizantes); }
+    #nutrientes { --modulo-cor: var(--mod-nutrientes); }
+    #combustivel { --modulo-cor: var(--mod-combustivel); }
+    #energia { --modulo-cor: var(--mod-energia); }
+    #alertas { --modulo-cor: var(--mod-alertas); }
+    #filtros { --modulo-cor: var(--mod-area); }
+
+    .secao h2,
+    .painel-corpo h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .01em;
+      border-bottom-color: rgba(122,142,255,.10);
+      color: #f3f7ff;
+    }
+
+    .secao h2::before,
+    .painel-corpo h3::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--modulo-cor, var(--acento));
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--modulo-cor, var(--acento)) 16%, transparent);
+      flex: none;
+    }
+
+    .cartao,
+    .prod-media-card,
+    .painel-consolidado,
+    #prodTabelaWrap,
+    #fertTabla,
+    #pecTabelaWrap,
+    #fertTabelaWrap,
+    #combPainel,
+    #combTablaAno,
+    #combTabla,
+    #combTabelaWrap,
+    #combPivot,
+    #enerPainel,
+    #enerTablaAno,
+    #enerTabla,
+    #enerTabelaWrap,
+    #enerPivot,
+    .validacoes li,
+    details.talhoes,
+    .prod-crop-card,
+    .prod-crop-ano,
+    .prod-chip,
+    #nutriTabla,
+    #nutriTabelaWrap {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border: 1px solid rgba(122,142,255,.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    .cartao {
+      border-left: 1px solid rgba(122,142,255,.12);
+      border-top: 3px solid var(--modulo-cor, var(--acento));
+      border-radius: 16px;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      box-shadow: 0 16px 30px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    .cartao:hover,
+    .prod-media-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(91,108,255,.20);
+      box-shadow: 0 22px 36px rgba(0,0,0,.18);
+    }
+
+    .cartao-valor {
+      font-size: 28px;
+      letter-spacing: -.02em;
+    }
+
+    .cartao-rotulo,
+    .anos,
+    .muted,
+    .prod-chip,
+    .prod-topo p,
+    .prod-bloco-titulo p,
+    .validacoes li .muted,
+    .panel-legend {
+      color: #9aa6d8;
+    }
+
+    .pill,
+    .prod-cultura,
+    .prod-chip {
+      border-radius: 999px;
+      background: rgba(91,108,255,.10);
+      border: 1px solid rgba(91,108,255,.18);
+      color: #d3daff;
+    }
+
+    .prod-cultura {
+      background: linear-gradient(180deg, rgba(91,108,255,.12), rgba(139,155,255,.08));
+      color: #e0e5ff;
+    }
+
+    .prod-bloco-titulo {
+      padding: 14px 16px 0;
+      margin: 6px 0 0;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .prod-toolbar {
+      gap: 12px;
+    }
+
+    .prod-filtro label {
+      color: #aab4e0;
+      font-size: 10px;
+      letter-spacing: .10em;
+    }
+
+    .prod-filtro select,
+    .prod-filtro input {
+      min-height: 44px;
+      border-radius: 12px;
+      border-color: rgba(122,142,255,.14);
+      background: rgba(22, 30, 70, .82);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .prod-filtro select:hover,
+    .prod-filtro input:hover {
+      border-color: rgba(122,142,255,.26);
+    }
+
+    .prod-filtro select:focus,
+    .prod-filtro input:focus {
+      border-color: rgba(91,108,255,.55);
+      box-shadow: 0 0 0 4px rgba(91,108,255,.10), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    table {
+      overflow: hidden;
+      border-radius: 14px;
+    }
+
+    th {
+      background: rgba(255,255,255,.04);
+      color: #c3cbf0;
+      border-bottom-color: rgba(122,142,255,.12);
+    }
+
+    td {
+      border-bottom-color: rgba(122,142,255,.08);
+    }
+
+    tbody tr:hover td {
+      background: rgba(91,108,255,.06);
+    }
+
+    tr.total td {
+      border-top-color: rgba(91,108,255,.40);
+      background: rgba(91,108,255,.08);
+    }
+
+    details.talhoes {
+      border-radius: 14px;
+      background: rgba(255,255,255,.02);
+    }
+
+    details.talhoes summary {
+      transition: background .18s ease, color .18s ease;
+    }
+
+    details.talhoes summary:hover {
+      background: rgba(255,255,255,.03);
+    }
+
+    details.talhoes summary::before {
+      color: var(--acento-2);
+    }
+
+    .validacoes li {
+      border-radius: 14px;
+    }
+
+    .classe-chip {
+      border-color: rgba(122,142,255,.14);
+      background: rgba(255,255,255,.025);
+      transition: transform .18s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .classe-chip:hover {
+      background: rgba(255,255,255,.05);
+      transform: translateY(-1px);
+    }
+
+    .classe-chip.active {
+      background: linear-gradient(90deg, rgba(91,108,255,.90), rgba(139,155,255,.72));
+      color: #03101e;
+      border-color: transparent;
+      box-shadow: 0 12px 26px rgba(91,108,255,.22);
+    }
+
+    .filtros-overlay {
+      background: rgba(8, 12, 36, .66);
+      backdrop-filter: blur(4px);
+    }
+
+    .painel.filtros-painel {
+      top: 94px;
+      border-radius: 22px;
+      border: 1px solid rgba(122,142,255,.18);
+      background: linear-gradient(180deg, rgba(21, 28, 68,.98), rgba(17, 23, 60,.96));
+      box-shadow: 0 32px 70px rgba(0,0,0,.40), 0 0 0 1px rgba(91,108,255,.06);
+    }
+
+    .painel.filtros-painel:hover {
+      transform: none;
+    }
+
+    .filtros-painel .painel-topo {
+      background: rgba(22, 30, 70, .92);
+      border-bottom-color: rgba(122,142,255,.12);
+    }
+
+    .rodape {
+      position: relative;
+      margin-top: 26px;
+      background: linear-gradient(180deg, rgba(20, 27, 64, .72), rgba(20, 27, 64, .92));
+      border-top: 1px solid rgba(122,142,255,.10);
+      backdrop-filter: blur(12px);
+    }
+
+    .rodape::before {
+      content: '';
+      position: absolute;
+      left: 30px;
+      right: 30px;
+      top: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,155,255,.18), transparent);
+    }
+
+    .rodape-fim,
+    .rodape-info {
+      border-top-color: rgba(122,142,255,.10);
+    }
+
+    .rodape-fim {
+      color: #9aa6d8;
+    }
+
+    .icone-social {
+      border-color: rgba(122,142,255,.12);
+      background: rgba(255,255,255,.025);
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
+    }
+
+    .icone-social:hover {
+      transform: translateY(-2px);
+      border-color: rgba(91,108,255,.28);
+      box-shadow: 0 14px 28px rgba(0,0,0,.18);
+      color: #e0e5ff;
+    }
+
+    .icone-social.whatsapp:hover {
+      color: #e0e5ff;
+      border-color: rgba(91,108,255,.28);
+    }
+
+    @keyframes glowShift {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(8px, 16px, 0) scale(1.08); }
+    }
+
+    @keyframes painelIntro {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        background: linear-gradient(180deg, rgba(20, 27, 64, .96), rgba(24, 32, 74, .94));
+      }
+
+      .cabecalho {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      main {
+        padding: 10px 14px 28px;
+      }
+
+      .painel {
+        border-radius: 18px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      html {
+        scroll-padding-top: 84px;
+      }
+
+      .painel-topo,
+      .painel-corpo {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+    }
+
+  
+
+    /* ---------- V3: padronização de alinhamento dos dados ---------- */
+    /*
+       A hierarquia editorial permanece normal (etiqueta, título e descrição
+       dos painéis / subtítulos). Somente a apresentação dos dados abaixo
+       desses cabeçalhos é centralizada e padronizada.
+    */
+
+    /* Cabeçalhos editoriais: preserva leitura natural à esquerda */
+    .painel-topo,
+    .painel-topo .painel-identidade,
+    .painel-topo .painel-identidade h2,
+    .painel-topo .painel-identidade p,
+    .painel-topo .painel-etiqueta,
+    .painel-corpo > .prod-bloco-titulo,
+    .painel-corpo > .prod-bloco-titulo h3,
+    .painel-corpo > .prod-bloco-titulo p,
+    .painel-corpo > .secao > h2,
+    .painel-corpo > h3 {
+      text-align: left;
+    }
+
+    .painel-corpo > .prod-bloco-titulo h3,
+    .painel-corpo > .secao > h2,
+    .painel-corpo > h3 {
+      justify-content: flex-start;
+    }
+
+    /* Cards de indicadores: valor, rótulo e complementos no mesmo eixo */
+    .painel-corpo .cartao,
+    .painel-corpo .prod-media-card {
+      text-align: center;
+    }
+
+    .painel-corpo .cartao-valor,
+    .painel-corpo .cartao-rotulo,
+    .painel-corpo .prod-minmax-cartao,
+    .painel-corpo .anos {
+      width: 100%;
+      text-align: center;
+    }
+
+    .painel-corpo .anos,
+    .painel-corpo .prod-culturas,
+    .painel-corpo .prod-resumo {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .painel-corpo .pill,
+    .painel-corpo .prod-chip,
+    .painel-corpo .prod-cultura {
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* Tabelas: cabeçalho e dados passam a compartilhar o mesmo eixo */
+    .painel-corpo table th,
+    .painel-corpo table td,
+    .prod-paineles-cultura th,
+    .prod-paineles-cultura td,
+    .prod-paineles-cultura th[scope="row"],
+    .prod-paineles-cultura th[scope="col"] {
+      text-align: center !important;
+      vertical-align: middle;
+    }
+
+    /* Hierarquias OS > Fazenda > Talhão: remove mistura esquerda/direita */
+    .painel-consolidado .det-row,
+    .prod-hierarquia .det-row {
+      align-items: center;
+    }
+
+    .painel-consolidado .det-row > span,
+    .prod-hierarquia .det-row > span,
+    .prod-hierarquia .prod-cel-cultura,
+    .prod-hierarquia .cel-regs,
+    .prod-hierarquia .cel-ano,
+    .prod-hierarquia .cel-cultura,
+    .prod-hierarquia .pec-sem-valor {
+      text-align: center !important;
+    }
+
+    .prod-hierarquia .prod-cel-cultura .prod-media-valor,
+    .prod-hierarquia .prod-cel-cultura .prod-minmax,
+    .prod-hierarquia .prod-unidade {
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Painel de práticas (2 · Manejo por OS · Fazenda · Talhão):
+       todas as colunas centralizadas */
+    #pratTabelaWrap .det-row,
+    #pratTabelaWrap .det-row > span,
+    #pratTabelaWrap .det-head,
+    #pratTabelaWrap .det-total,
+    #pratTabelaWrap summary {
+      text-align: center !important;
+    }
+
+    /* Realce de manejo: termos destacados (Convencional, Gradagem) */
+    .prat-destaque {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    /* Linhas expansíveis seguem a mesma coluna visual */
+    .painel-consolidado details.cons-os summary,
+    .painel-consolidado details.cons-faz summary,
+    .prod-hierarquia details.cons-os summary,
+    .prod-hierarquia details.cons-faz summary,
+    details.talhoes summary {
+      text-align: center;
+    }
+
+    /* Blocos de evolução / fertilizantes */
+    #fertTabla,
+    #prodTabelaWrap,
+    #pecTabelaWrap,
+    #fertTabelaWrap,
+    .prod-crop-tabla,
+    .painel-consolidado,
+    .prod-hierarquia,
+    #nutriTabla,
+    #nutriTabelaWrap {
+      text-align: center;
+    }
+
+    /* Painel de combustível: mesmo eixo visual dos demais painéis */
+    #combPainel,
+    #combTablaAno,
+    #combTabla,
+    #combTabelaWrap,
+    #enerPainel,
+    #enerTablaAno,
+    #enerTabla,
+    #enerTabelaWrap {
+      text-align: center;
+    }
+
+    #combTabelaWrap,
+    #enerTabelaWrap {
+      overflow-x: auto;
+    }
+
+    .comb-evo-celda {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .comb-barra {
+      margin-inline: auto;
+    }
+
+    /* Gráficos e seletores de séries centralizados no bloco de dados */
+    .prod-paineles-cultura .prod-crop-chips,
+    .prod-paineles-cultura .prod-crop-grafico {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .prod-paineles-cultura .prod-crop-grafico svg {
+      margin-inline: auto;
+    }
+
+    /* Alertas: mantém cabeçalhos normais, mas padroniza o conteúdo de dados */
+    #alertas .alertas-classes {
+      justify-content: center;
+    }
+
+    #alertas .alerta-detalhe table th,
+    #alertas .alerta-detalhe table td {
+      text-align: center !important;
+    }
+
+    /* A coluna da mensagem é texto longo: sai alinhada à esquerda. */
+    #alertas .alerta-detalhe table th:last-child,
+    #alertas .alerta-detalhe table td:last-child {
+      text-align: left !important;
+    }
+
+    /* Mensagens textuais longas de validação continuam legíveis à esquerda */
+    #alertas .validacoes li {
+      text-align: left;
+    }
+
+    /* Responsivo: centralização se mantém sem comprimir os títulos */
+    @media (max-width: 560px) {
+      .painel-corpo table th,
+      .painel-corpo table td {
+        text-align: center !important;
+      }
+
+      .painel-topo .painel-identidade,
+      .painel-corpo > .prod-bloco-titulo,
+      .painel-corpo > .secao > h2,
+      .painel-corpo > h3 {
+        text-align: left;
+      }
+    }
+
+  
+
+    /* ---------- V4: descrições em tooltips para reduzir ruído visual ---------- */
+    .info-tooltip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+      margin-left: 7px;
+      vertical-align: middle;
+    }
+
+    .info-tooltip-btn {
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(139, 155, 255, .28);
+      background: rgba(91, 108, 255, .10);
+      color: #bfe2ff;
+      font: 800 12px/1 "Segoe UI", Roboto, Arial, sans-serif;
+      font-style: normal;
+      cursor: help;
+      display: inline-grid;
+      place-items: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+
+    .info-tooltip-btn:hover,
+    .info-tooltip-btn:focus-visible,
+    .info-tooltip.aberto .info-tooltip-btn {
+      transform: translateY(-1px);
+      background: rgba(91, 108, 255, .20);
+      border-color: rgba(139, 155, 255, .50);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(47,60,255,.16), 0 0 0 3px rgba(91,108,255,.08);
+      outline: none;
+    }
+
+    .info-tooltip-box {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      z-index: 120;
+      width: max-content;
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(122,142,255,.20);
+      background: rgba(16, 22, 52, .97);
+      color: #dce8fb;
+      box-shadow: 0 18px 45px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.04);
+      backdrop-filter: blur(14px);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      text-align: left;
+      white-space: normal;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transform: translate(-50%, 6px) scale(.98);
+      transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+    }
+
+    .info-tooltip-box::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      width: 9px;
+      height: 9px;
+      background: rgba(16, 22, 52, .97);
+      border-right: 1px solid rgba(122,142,255,.20);
+      border-bottom: 1px solid rgba(122,142,255,.20);
+      transform: translate(-50%, -4px) rotate(45deg);
+    }
+
+    .info-tooltip:hover .info-tooltip-box,
+    .info-tooltip:focus-within .info-tooltip-box,
+    .info-tooltip.aberto .info-tooltip-box {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, 0) scale(1);
+    }
+
+    /* Títulos permanecem limpos e a informação fica ao lado do texto. */
+    .painel-identidade h2,
+    .prod-bloco-titulo h3,
+    .filtros-painel .painel-topo h2 {
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* Notas explicativas geradas dinamicamente também viram tooltip. */
+    .prod-crop-nota.tooltip-nota {
+      margin: 8px 0 2px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 26px;
+    }
+
+    @media (max-width: 560px) {
+      .info-tooltip-box {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        bottom: 18px;
+        width: auto;
+        max-width: none;
+        transform: translateY(8px) scale(.985);
+      }
+      .info-tooltip-box::after { display: none; }
+      .info-tooltip:hover .info-tooltip-box,
+      .info-tooltip:focus-within .info-tooltip-box,
+      .info-tooltip.aberto .info-tooltip-box {
+        transform: translateY(0) scale(1);
+      }
+    }
+    /* ---------- V4: título único do painel + cor base translúcida ---------- */
+    /*
+       Cada painel passa a mostrar um único título grande: o NÚMERO do painel
+       na cor do módulo, um ponto e o NOME descritivo (ex.: "02 · Estrutura
+       territorial"). O rótulo duplicado .painel-etiqueta foi removido e cada
+       painel recebe uma cor base translúcida derivada de --modulo-cor,
+       mantendo a mesma estrutura/padronização para todos.
+    */
+    .painel-topo .painel-identidade h2 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.015em;
+      line-height: 1.2;
+      flex-wrap: wrap;
+      row-gap: 4px;
+    }
+
+    .painel-topo .painel-identidade h2 .painel-numero {
+      color: var(--modulo-cor, var(--acento));
+      font-variant-numeric: tabular-nums;
+    }
+
+    .painel-topo .painel-identidade h2 .painel-numero::after {
+      content: "·";
+      margin: 0 .5em;
+      opacity: .75;
+    }
+
+    /* Fundo e borda tingidos pela cor do módulo (delimitação translúcida) */
+    main > .painel:not(.filtros-painel) {
+      border-color: color-mix(in srgb, var(--modulo-cor, var(--acento)) 34%, rgba(122,142,255,.12));
+      background:
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--modulo-cor, var(--acento)) 10%, transparent),
+          color-mix(in srgb, var(--modulo-cor, var(--acento)) 2%, transparent) 220px,
+          transparent 360px),
+        linear-gradient(180deg, rgba(23, 30, 72,.95), rgba(19, 26, 64,.93));
+      box-shadow:
+        0 20px 50px rgba(0,0,0,.24),
+        inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    main > .painel:not(.filtros-painel):hover {
+      border-color: color-mix(in srgb, var(--modulo-cor, var(--acento)) 48%, rgba(122,142,255,.12));
+    }
+
+    @media (max-width: 560px) {
+      .painel-topo .painel-identidade h2 { font-size: 20px; }
+    }
+
+    /* ---------- Fertilizantes: tabela agrupada por produto × ano ---------- */
+    /*
+       Cada fertilizante vira um grupo com 4 linhas (Total kg, Área tratada,
+       Dose média e Registros); as colunas são Geral + uma por ano. A coluna
+       Geral é destacada e cada grupo é separado por uma borda no topo.
+    */
+    #fertTabla table.fert-pivot,
+    #nutriTabla table.fert-pivot {
+      min-width: 720px;
+    }
+
+    #fertTabla .fert-nome,
+    #nutriTabla .fert-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+    }
+
+    #fertTabla .fert-metrica,
+    #nutriTabla .fert-metrica {
+      color: var(--texto-suave);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #fertTabla .fert-geral,
+    #nutriTabla .fert-geral {
+      font-weight: 700;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    #fertTabla tbody tr.fert-grupo > td,
+    #nutriTabla tbody tr.fert-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    /* Cores de fundo da cobertura de evidência (NF) no 5.1 — faixas do %
+       (config.COBERTURA_EVIDENCIA_FAIXAS). A especificidade maior que a da
+       `.fert-geral` garante que a cor vença o destaque sutil da coluna Geral. */
+    #fertTabla td.cov-vermelho { background: rgba(214, 56, 56, .30); }
+    #fertTabla td.cov-amarelo { background: rgba(224, 168, 32, .30); }
+    #fertTabla td.cov-verde { background: rgba(52, 168, 83, .30); }
+    #fertTabla td.cov-transparente { background: transparent; }
+
+    /* ---------- Combustíveis 7.1: consumo informado × evidência (NF) ---------- */
+    /*
+       Cada combustível/fonte vira um grupo de DUAS linhas — em cima o consumo
+       informado (com a unidade: L ou kWh) e embaixo o `Total Evidências` do
+       TIPO, com o % de cobertura (evidenciado ÷ informado × 100) colorido pelas
+       MESMAS faixas do 5.1 (`configCobertura`). O diesel usa o total do tipo
+       (S10 + S500); gasolina e etanol são um produto só cada, sempre em litros.
+    */
+    #combTablaAno .comb-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+    }
+
+    /* O rótulo da linha de evidência é a MÉTRICA do grupo, não um nome: sai
+       discreto, como o `.fert-metrica` do 5.1. */
+    #combTablaAno .comb-evid-rotulo {
+      font-weight: 600;
+      color: var(--texto-suave);
+      white-space: nowrap;
+    }
+
+    /* Régua entre um grupo (combustível/fonte) e o seguinte. */
+    #combTablaAno tbody tr.comb-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    /* Cores de fundo da cobertura de evidência (NF) no 7.1 — as faixas do %
+       (`config.COBERTURA_EVIDENCIA_FAIXAS`), iguais às do 5.1. */
+    #combTablaAno td.cov-vermelho { background: rgba(214, 56, 56, .30); }
+    #combTablaAno td.cov-amarelo { background: rgba(224, 168, 32, .30); }
+    #combTablaAno td.cov-verde { background: rgba(52, 168, 83, .30); }
+    #combTablaAno td.cov-transparente { background: transparent; }
+
+    /* ---------- Fertilizantes 5.2: um painel por fertilizante ---------- */
+    /*
+       Cada fertilizante unificado (slots 1/2/3 do mesmo produto somados) vira
+       um subpainel próprio. Dentro dele, cada nó (OS → Fazenda → Talhão) é um
+       grupo de 4 linhas — Total (kg), Área tratada (ha), Dose média (kg/ha) e
+       Registros — com uma coluna Geral + uma por ano, expandindo/recolhendo
+       OS e Fazenda (começa recolhido). Mesmo estilo do painel 4.2 / 6.x.
+    */
+    #fertTabelaWrap .fert-pivot-cont,
+    #nutriTabelaWrap .fert-pivot-cont {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #fertTabelaWrap table.fert-pivot,
+    #nutriTabelaWrap table.fert-pivot {
+      min-width: 720px;
+    }
+
+    #fertTabelaWrap .fert-nome,
+    #nutriTabelaWrap .fert-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+      text-align: left;
+    }
+
+    #fertTabelaWrap .fert-nivel-faz,
+    #nutriTabelaWrap .fert-nivel-faz {
+      padding-left: 2rem;
+      font-weight: 600;
+    }
+
+    #fertTabelaWrap .fert-nivel-tal,
+    #nutriTabelaWrap .fert-nivel-tal {
+      padding-left: 4rem;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #fertTabelaWrap .fert-clicavel,
+    #nutriTabelaWrap .fert-clicavel {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #fertTabelaWrap .fert-clicavel:hover,
+    #nutriTabelaWrap .fert-clicavel:hover {
+      color: var(--acento);
+    }
+
+    #fertTabelaWrap .fert-seta,
+    #nutriTabelaWrap .fert-seta {
+      display: inline-block;
+      width: 1em;
+      color: var(--texto-suave);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #fertTabelaWrap .fert-metrica,
+    #nutriTabelaWrap .fert-metrica {
+      color: var(--texto-suave);
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    #fertTabelaWrap .fert-cel,
+    #nutriTabelaWrap .fert-cel {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #fertTabelaWrap .fert-geral,
+    #nutriTabelaWrap .fert-geral {
+      font-weight: 700;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    #fertTabelaWrap .fert-sem-valor,
+    #nutriTabelaWrap .fert-sem-valor {
+      text-align: center;
+      color: var(--texto-suave);
+    }
+
+    #fertTabelaWrap tbody tr.fert-inicio-grupo > td,
+    #nutriTabelaWrap tbody tr.fert-inicio-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    /* Cada fertilizante do 5.2 é um <details> recolhido por padrão. */
+    #fertTabelaWrap .fert-detalhe,
+    #nutriTabelaWrap .fert-detalhe {
+      margin: 6px 0 14px;
+    }
+
+    #fertTabelaWrap .fert-detalhe-titulo,
+    #nutriTabelaWrap .fert-detalhe-titulo {
+      cursor: pointer;
+      user-select: none;
+      text-align: left;
+      padding: 6px 4px;
+    }
+
+    #fertTabelaWrap .fert-detalhe-titulo h4,
+    #nutriTabelaWrap .fert-detalhe-titulo h4 {
+      display: inline-block;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--texto);
+    }
+
+    #fertTabelaWrap summary.fert-detalhe-titulo::marker,
+    #nutriTabelaWrap summary.fert-detalhe-titulo::marker {
+      color: var(--acento);
+    }
+
+    /* ---------- Pecuária: tabela agrupada por nível × ano ---------- */
+    /*
+       Cada nó (OS → Fazenda → Talhão) vira um grupo com 5 linhas — Área de
+       pastagem (ha), Nº animais (cab.), UA (UA/ha), GMD (kg/cab./dia) e Rend.
+       carcaça (%) — e as colunas são Geral + uma por ano. O nome do nó fica
+       na primeira célula (rowspan) com recuo por nível; a coluna Geral é
+       destacada e cada grupo é separado por uma borda no topo.
+    */
+    #pecTabla table.pec-pivot {
+      min-width: 820px;
+    }
+
+    #pecTabla .pec-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+      text-align: left;
+    }
+
+    #pecTabla .pec-nivel-faz {
+      padding-left: 2rem;
+      font-weight: 600;
+    }
+
+    #pecTabla .pec-nivel-tal {
+      padding-left: 4rem;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #pecTabla .pec-clicavel {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #pecTabla .pec-clicavel:hover {
+      color: var(--acento);
+    }
+
+    #pecTabla .pec-seta {
+      display: inline-block;
+      width: 1em;
+      color: var(--texto-suave);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #pecTabla .pec-metrica {
+      color: var(--texto-suave);
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    #pecTabla .pec-cel {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #pecTabla .pec-geral {
+      font-weight: 700;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    /*
+       Coluna "Variação %": uma por métrica (Área, Nº animais, UA, GMD e Rend.
+       carcaça). O valor sai em todas as linhas, mas a COR da linha só é
+       aplicada à métrica Área de pastagem (ha) — verde ≤5%, amarelo 5–20%,
+       vermelho >20% e cinza quando o talhão não tem pastagem em algum ano e
+       não há variação.
+    */
+    #pecTabla .pec-var {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--texto-suave);
+      white-space: nowrap;
+    }
+
+    #pecTabla tbody tr.pec-inicio-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+
+    /* ---------- Combustível/Energia: tabela agrupada por nível × ano ---------- */
+    /*
+       Cada nó (OS → Fazenda → Talhão) vira um grupo com 4 linhas — Consumo
+       total, Área (ha), Consumo por hectare e Registros — e as colunas são
+       Geral + uma por ano. O talhão só aparece quando há consumo registrado
+       por talhão (registros agregados TODAS/TODOS/RATEIO ficam na fazenda).
+    */
+    #combPivot,
+    #enerPivot {
+      overflow-x: auto;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+    }
+
+    #combPivot table.comb-pivot,
+    #enerPivot table.comb-pivot {
+      min-width: 720px;
+    }
+
+    #combPivot .comb-nome,
+    #enerPivot .comb-nome {
+      font-weight: 700;
+      vertical-align: top;
+      white-space: normal;
+      min-width: 180px;
+      color: var(--texto);
+      text-align: left;
+    }
+
+    #combPivot .comb-nivel-faz,
+    #enerPivot .comb-nivel-faz {
+      padding-left: 2rem;
+      font-weight: 600;
+    }
+
+    #combPivot .comb-nivel-tal,
+    #enerPivot .comb-nivel-tal {
+      padding-left: 4rem;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    #combPivot .comb-clicavel,
+    #enerPivot .comb-clicavel {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #combPivot .comb-clicavel:hover,
+    #enerPivot .comb-clicavel:hover {
+      color: var(--acento);
+    }
+
+    #combPivot .comb-seta,
+    #enerPivot .comb-seta {
+      display: inline-block;
+      width: 1em;
+      color: var(--texto-suave);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #combPivot .comb-metrica,
+    #enerPivot .comb-metrica {
+      color: var(--texto-suave);
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    #combPivot .comb-cel,
+    #enerPivot .comb-cel {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #combPivot .comb-geral,
+    #enerPivot .comb-geral {
+      font-weight: 700;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    #combPivot .comb-sem-valor,
+    #enerPivot .comb-sem-valor {
+      text-align: center;
+      color: var(--texto-suave);
+    }
+
+    #combPivot tbody tr.comb-inicio-grupo > td,
+    #enerPivot tbody tr.comb-inicio-grupo > td {
+      border-top: 2px solid var(--borda);
+    }
+    /* =====================================================================
+       V2 · Camada de acabamento (paleta azul #0003BE)
+       Unifica as scrollbars, as animações e os ícones de expansão de todo o
+       relatório e reestiliza os subpainéis de fertilizantes (5.5).
+       ===================================================================== */
+
+    /* ---------- Scrollbars azuis (padrão único em todo o relatório) ---------- */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--azul-500) rgba(18, 24, 58, .65);
+    }
+
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: rgba(18, 24, 58, .55); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--azul-400), var(--azul-base));
+      border: 3px solid rgba(18, 24, 58, .65);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, var(--azul-400), var(--azul-600));
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
+
+    /* ---------- Animações ---------- */
+    main > .painel { animation: v2PainelIn .55s cubic-bezier(.22, .61, .36, 1) both; }
+    main > .painel:nth-child(2) { animation-delay: .05s; }
+    main > .painel:nth-child(3) { animation-delay: .1s; }
+    main > .painel:nth-child(4) { animation-delay: .15s; }
+    main > .painel:nth-child(5) { animation-delay: .2s; }
+
+    @keyframes v2PainelIn {
+      from { opacity: 0; transform: translateY(14px) scale(.994); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes v2Revela {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    details[open] > .cons-body,
+    details[open] > .prod-crop-cuerpo,
+    details[open] > .fert-pivot-cont {
+      animation: v2Revela .32s ease both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      main > .painel,
+      details[open] > .cons-body,
+      details[open] > .prod-crop-cuerpo,
+      details[open] > .fert-pivot-cont { animation: none !important; }
+    }
+
+    /* ---------- Ícones de expansão unificados (chevron fino azul) ---------- */
+    :root {
+      --v2-chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c7d0ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 6 15 12 9 18'/%3E%3C/svg%3E");
+    }
+
+    .toggle,
+    .fert-seta,
+    .comb-seta,
+    .pec-seta,
+    #prodAreaCulturaWrap .pac-seta,
+    #ativTabla .ativ-seta,
+    .painel-consolidado .toggle,
+    .prod-hierarquia .toggle,
+    #fertTabelaWrap .fert-seta,
+    #pecTabla .pec-seta,
+    #combPivot .comb-seta,
+    #enerPivot .comb-seta,
+    .prod-crop summary::before,
+    details.talhoes summary::before,
+    #fertTabelaWrap .fert-detalhe-titulo::before,
+    #nutriTabelaWrap .fert-seta,
+    #nutriTabelaWrap .fert-detalhe-titulo::before {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border-radius: 4px;
+      content: "";
+      background-color: rgba(91, 108, 255, .11);
+      background-image: var(--v2-chev);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 13px 13px;
+      border: 1px solid rgba(122, 142, 255, .28);
+      font-size: 0;
+      line-height: 1;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+      transition: transform .3s cubic-bezier(.4, 0, .2, 1), background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+      vertical-align: middle;
+    }
+
+    .prod-crop summary::before,
+    details.talhoes summary::before {
+      margin-right: 9px;
+    }
+
+    .prod-paineles-cultura .prod-crop summary,
+    #fertTabelaWrap .fert-detalhe-titulo,
+    details.talhoes summary,
+    #nutriTabelaWrap .fert-detalhe-titulo {
+      list-style: none;
+    }
+
+    .prod-paineles-cultura .prod-crop summary::-webkit-details-marker,
+    #fertTabelaWrap .fert-detalhe-titulo::-webkit-details-marker,
+    details.talhoes summary::-webkit-details-marker,
+    #nutriTabelaWrap .fert-detalhe-titulo::-webkit-details-marker { display: none; }
+
+    /* Célula sem conteúdo (cabeçalho/folha/total): sem badge */
+    .toggle:empty {
+      background-color: transparent;
+      background-image: none;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    /* O chevron gira para baixo quando o grupo abre */
+    .toggle.aberto,
+    .fert-seta.aberto,
+    .comb-seta.aberto,
+    .pec-seta.aberto,
+    .painel-consolidado details[open] .toggle,
+    .prod-hierarquia details[open] .toggle,
+    #pratTabelaWrap details[open] .toggle,
+    .prod-crop[open] > summary::before,
+    details.talhoes[open] > summary::before,
+    #fertTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo::before,
+    #nutriTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo::before {
+      transform: rotate(90deg);
+    }
+
+    .comb-nome.comb-clicavel:hover .comb-seta,
+    .fert-nome.fert-clicavel:hover .fert-seta,
+    .pec-nome.pec-clicavel:hover .pec-seta,
+    #ativTabla .ativ-nome.ativ-clicavel:hover .ativ-seta,
+    .prod-crop summary:hover::before,
+    details.talhoes summary:hover::before,
+    #fertTabelaWrap .fert-detalhe-titulo:hover::before,
+    #nutriTabelaWrap .fert-detalhe-titulo:hover::before {
+      background-color: rgba(91, 108, 255, .22);
+      border-color: rgba(122, 142, 255, .50);
+      box-shadow: 0 0 0 4px rgba(91, 108, 255, .12);
+    }
+
+
+    /* ---------- 5.5 · subpainéis de fertilizantes (cartões azuis) ---------- */
+    #fertTabelaWrap .fert-detalhe,
+    #nutriTabelaWrap .fert-detalhe {
+      margin: 12px 0 16px;
+      border: 1px solid rgba(122, 142, 255, .16);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(91, 108, 255, .07), rgba(255, 255, 255, .012));
+      overflow: hidden;
+      transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+    }
+
+    #fertTabelaWrap .fert-detalhe:hover,
+    #nutriTabelaWrap .fert-detalhe:hover {
+      border-color: rgba(122, 142, 255, .34);
+      box-shadow: 0 16px 34px rgba(0, 3, 190, .16);
+      transform: translateY(-2px);
+    }
+
+    #fertTabelaWrap .fert-detalhe-titulo,
+    #nutriTabelaWrap .fert-detalhe-titulo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      text-align: left;
+      transition: background .25s ease;
+    }
+
+    #fertTabelaWrap .fert-detalhe-titulo::marker,
+    #nutriTabelaWrap .fert-detalhe-titulo::marker { content: ""; }
+
+    #fertTabelaWrap .fert-detalhe-titulo::before,
+    #nutriTabelaWrap .fert-detalhe-titulo::before {
+      flex: none;
+      margin: 0;
+    }
+
+    #fertTabelaWrap .fert-detalhe-titulo:hover,
+    #nutriTabelaWrap .fert-detalhe-titulo:hover { background: rgba(91, 108, 255, .09); }
+
+    #fertTabelaWrap .fert-detalhe-titulo h4,
+    #nutriTabelaWrap .fert-detalhe-titulo h4 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--texto);
+    }
+
+    #fertTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo,
+    #nutriTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo {
+      background: rgba(91, 108, 255, .10);
+      border-bottom: 1px solid rgba(122, 142, 255, .16);
+    }
+
+    #fertTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo::before,
+    #nutriTabelaWrap .fert-detalhe[open] .fert-detalhe-titulo::before { transform: rotate(90deg); }
+
+    #fertTabelaWrap .fert-detalhe .fert-pivot-cont,
+    #nutriTabelaWrap .fert-detalhe .fert-pivot-cont {
+      margin: 12px;
+      border-color: rgba(122, 142, 255, .16);
+    }
+
+    #fertTabelaWrap .fert-detalhe .fert-pivot,
+    #nutriTabelaWrap .fert-detalhe .fert-pivot { background: transparent; }
+
+
+    /* ---------- Painéis numerados: recolher/expandir ---------- */
+    main > section.painel > .painel-corpo {
+      animation: v2Revela .3s ease both;
+    }
+
+    main > section.painel.painel-recolhido > .painel-corpo {
+      display: none;
+    }
+
+    .painel-topo-clicavel {
+      cursor: pointer;
+    }
+
+    .painel-toggle {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 4px;
+      border: 1px solid rgba(122, 142, 255, .30);
+      background-color: rgba(91, 108, 255, .12);
+      background-image: var(--v2-chev);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 16px 16px;
+      cursor: pointer;
+      transition: transform .3s cubic-bezier(.4, 0, .2, 1), background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+
+    main > section.painel:not(.painel-recolhido) .painel-toggle {
+      transform: rotate(90deg);
+    }
+
+    .painel-toggle:hover {
+      background-color: rgba(91, 108, 255, .22);
+      border-color: rgba(122, 142, 255, .55);
+      box-shadow: 0 0 0 4px rgba(91, 108, 255, .10);
+    }
+
+    /* Ações do cabeçalho: info + expandir, quadrados e do mesmo tamanho */
+    .painel-acoes {
+      margin-left: auto;
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .painel-acoes .info-tooltip {
+      margin: 0;
+    }
+
+    .painel-acoes .info-tooltip-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      border-radius: 4px;
+      font: 800 15px/1 "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    .painel-acoes .info-tooltip .info-tooltip-box {
+      left: auto;
+      right: 0;
+      transform: translate(0, 6px) scale(.98);
+    }
+
+    .painel-acoes .info-tooltip:hover .info-tooltip-box,
+    .painel-acoes .info-tooltip:focus-within .info-tooltip-box,
+    .painel-acoes .info-tooltip.aberto .info-tooltip-box {
+      transform: translate(0, 0) scale(1);
+    }
+
+    .painel-acoes .info-tooltip-box::after {
+      left: auto;
+      right: 15px;
+      transform: translate(0, -4px) rotate(45deg);
+    }
+
+    /* Os tooltips devem sair por cima do painel (não podem ser recortados) */
+    main > .painel {
+      overflow: visible;
+    }
+
+    main > .painel > .painel-topo {
+      border-top-left-radius: inherit;
+      border-top-right-radius: inherit;
+    }
+
+    main > .painel > .painel-corpo {
+      border-bottom-left-radius: inherit;
+      border-bottom-right-radius: inherit;
+    }
+
+    main > .painel::before,
+    main > .painel::after {
+      border-radius: inherit;
+    }
+
+    main > section.painel.painel-recolhido .painel-topo::after {
+      opacity: .22;
+    }
+
+    /* ---------- V5: celular — navegação fluida e tabelas sem rolagem ---------- */
+    /*
+       Regras exclusivas de tela estreita (telefones / tablets em pé):
+       1. Fluidez — desliga o que custa caro no celular: brilhos de fundo
+          animados, canvas de partículas, desfoques (`backdrop-filter`) e as
+          animações de entrada de cada painel.
+       2. Tabelas — as tabelas largas deixam de ser roladas na horizontal e
+          passam a ser cartões no formato "coluna: valor". Os rótulos saem da
+          célula `data-col`, preenchida pelo JavaScript do relatório a partir
+          do próprio cabeçalho (`thead th` / `.det-head`), de modo que vale
+          tanto para o HTML gerado no servidor quanto para os painéis
+          montados em JavaScript.
+       3. Cartões fora da tela — cada cartão (linha de tabela e linha das
+          hierarquias OS → Fazenda → Talhão) usa `content-visibility: auto`:
+          o navegador só calcula e pinta o que está perto da tela. Abrir um
+          painel grande deixa de pagar por milhares de cartões invisíveis.
+    */
+
+    /* Aviso enquanto o painel sob demanda é montado (primeira abertura) */
+    main > section.painel.painel-carregando > .painel-corpo::before {
+      content: "Gerando painel…";
+      display: block;
+      padding: 14px 2px;
+      color: var(--texto-suave);
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* Botão "voltar ao topo" — aparece só no celular */
+    .btn-topo {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+
+      /* --- 1. Fluidez: sai o que trava a rolagem no celular --- */
+      body::before,
+      body::after,
+      #fundo {
+        display: none;
+      }
+
+      /* Rede de segurança: nenhum conteúdo pode gerar rolagem lateral.
+         `clip` (e não `hidden`) para não quebrar o `position: sticky` do
+         cabeçalho. */
+      body {
+        overflow-x: clip;
+      }
+
+      .sidebar,
+      .cabecalho,
+      .rodape,
+      main > .painel,
+      .painel-topo,
+      .painel-corpo,
+      .cartao,
+      .prod-media-card,
+      .filtros-overlay,
+      .painel.filtros-painel,
+      .filtros-painel .painel-topo,
+      .info-tooltip-box,
+      .alertas-classes,
+      .alerta-detalhe,
+      .prod-crop-cuerpo {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      main > .painel,
+      main > .painel:nth-child(2),
+      main > .painel:nth-child(3),
+      main > .painel:nth-child(4),
+      main > .painel:nth-child(5),
+      .painel,
+      main > section.painel > .painel-corpo,
+      details[open] > .cons-body,
+      details[open] > .prod-crop-cuerpo,
+      details[open] > .fert-pivot-cont {
+        animation: none !important;
+      }
+
+      /* Alvos de toque maiores e cabeçalho mais compacto */
+      .painel-toggle,
+      .painel-acoes .info-tooltip-btn {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+      }
+
+      /* Selo de expandir/recolher (chevron) sempre QUADRADO. O chevron é um
+         `background-image` com `font-size: 0`: quando a largura vira
+         automática (como nos cartões) o selo de 26 px encolhe para ~0 px e
+         aparece como uma barra fina — por isso largura e altura fixas aqui. */
+      .toggle,
+    .fert-seta,
+    .comb-seta,
+    .pec-seta,
+    .painel-consolidado .toggle,
+    .prod-hierarquia .toggle,
+    #fertTabelaWrap .fert-seta,
+    #ativTabla .ativ-seta,
+    #pecTabla .pec-seta,
+    #combPivot .comb-seta,
+    #enerPivot .comb-seta,
+    .prod-crop summary::before,
+    details.talhoes summary::before,
+    #fertTabelaWrap .fert-detalhe-titulo::before,
+    #nutriTabelaWrap .fert-seta,
+    #nutriTabelaWrap .fert-detalhe-titulo::before {
+        display: inline-flex !important;
+        flex: none;
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px;
+        background-position: center;
+        background-size: 12px 12px;
+      }
+
+      main {
+        padding: 6px 10px 26px;
+      }
+
+      main > .painel:not(.filtros-painel) {
+        margin-top: 26px;
+        border-radius: 16px;
+      }
+
+      .painel-topo,
+      .painel-corpo {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .btn-topo {
+        position: fixed;
+        right: 14px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        z-index: 25;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(122, 142, 255, .35);
+        background: rgba(20, 27, 64, .94);
+        color: var(--texto);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .42);
+        cursor: pointer;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .2s ease, visibility .2s ease;
+      }
+
+      .btn-topo.visivel {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .btn-topo svg {
+        width: 20px;
+        height: 20px;
+      }
+
+    }
+
+
+    /* ---------- V5 (cont.): hierarquias em grade viram cartões ---------- */
+    /*
+       Vale para os painéis OS → Fazenda → Talhão (02 Área, 3.4/3.5, 4.2,
+       5.5, 7.4–7.8, 8.3 e o consolidado): cada linha vira um cartão com o
+       nome como título e um chip "COLUNA valor" por coluna — nada de
+       rolagem horizontal.
+    */
+    @media (max-width: 760px) {
+
+      .tabela-wrap,
+    .secao,
+    .painel-consolidado,
+    .prod-hierarquia,
+    #prodTabelaWrap,
+    #fertTabla,
+    #fertTabelaWrap,
+    #pecTabla,
+    #pecTabelaWrap,
+    #ativTabla,
+    #combPainel,
+    #combTabla,
+    #combTablaAno,
+    #combTabelaWrap,
+    #enerPainel,
+    #enerTabla,
+    #enerTablaAno,
+    #enerTabelaWrap,
+    #pratTabelaWrap,
+    .prod-crop-tabla,
+    #nutriTabla,
+    #nutriTabelaWrap {
+        overflow-x: visible;
+        -webkit-overflow-scrolling: auto;
+      }
+
+      .painel-consolidado .det-head,
+      .prod-hierarquia .det-head {
+        /* `!important`: a regra `.det-row { display: block }` logo abaixo tem a
+           mesma especificidade e, sem isto, o cabeçalho reapareceria no celular
+           (era o caso também nos painéis 3.4/3.5). */
+        display: none !important;
+      }
+
+      .painel-consolidado .det-row,
+      .prod-hierarquia .det-row {
+        display: block;
+        min-width: 0;
+        margin: 0 0 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .035);
+        text-align: left !important;
+        /* Fluidez: o cartão que está fora da tela não é calculado nem pintado
+           (`content-visibility: auto`) — abrir um painel grande passa a custar
+           só o trecho visível. `contain-intrinsic-size: auto` guarda a altura
+           real de cada cartão depois de medido, então a rolagem não salta. */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 56px;
+      }
+
+      .painel-consolidado .det-row.det-total,
+      .prod-hierarquia .det-row.det-total {
+        border-color: var(--acento);
+        background: rgba(91, 108, 255, .12);
+      }
+
+      .painel-consolidado .cons-body,
+      .prod-hierarquia .cons-body {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .painel-consolidado .det-row > span,
+      .prod-hierarquia .det-row > span {
+        display: block;
+        width: 100%;
+        overflow: visible;
+        white-space: normal;
+        text-overflow: clip;
+        text-align: left !important;
+      }
+
+      /* Título do cartão: a coluna 1 (nome do nó) — isto é, toda célula que
+         NÃO recebeu rótulo (`data-col`) e não é o selo. A largura desconta o
+         selo de 24 px para o título não quebrar linha no celular. */
+      .painel-consolidado .det-row > span:not([data-col]):not(.toggle),
+      .prod-hierarquia .det-row > span:not([data-col]):not(.toggle) {
+        display: inline-block;
+        width: calc(100% - 2.1rem);
+        margin-bottom: 6px;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--texto);
+        vertical-align: middle;
+      }
+
+      /* Selo de expandir/recolher: SEM largura automática — o chevron é um
+         `background-image` com `font-size: 0`, então `width: auto` zerava o
+         selo e ele virava uma barra fina. */
+      .painel-consolidado .det-row > .toggle,
+      .prod-hierarquia .det-row > .toggle {
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      /* A coluna fixa é só do desktop: no celular cada linha vira cartão. */
+      .painel-consolidado .det-row > .toggle,
+      .painel-consolidado .det-row > .cel-nome,
+      .prod-hierarquia .det-row > .toggle,
+      .prod-hierarquia .det-row > .cel-nome {
+        position: static;
+        background: none;
+      }
+
+      .painel-consolidado .det-row > span[data-col],
+      .prod-hierarquia .det-row > span[data-col] {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        margin: 3px 5px 0 0;
+        padding: 3px 9px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        background: rgba(122, 142, 255, .10);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .painel-consolidado .det-row > span[data-col]::before,
+      .prod-hierarquia .det-row > span[data-col]::before {
+        content: attr(data-col);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--texto-suave);
+      }
+
+      /* Colunas sem valor não aparecem no cartão */
+      .painel-consolidado .det-row > span:empty,
+      .prod-hierarquia .det-row > span:empty,
+      .painel-consolidado .det-row > span[data-col]:empty::before,
+      .prod-hierarquia .det-row > span[data-col]:empty::before {
+        display: none;
+      }
+
+      .alertas-classes {
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* 9.2 no celular: o topo do grupo empilha (planilha · nível · linhas) e o
+         motivo do grupo ocupa a linha inteira. */
+      .alerta-grupo > summary {
+        gap: 4px 8px;
+      }
+
+      .alerta-grupo .alerta-motivo {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+    }
+
+      /* ---------- V5 (cont.): tabelas viram cartões no celular ---------- */
+    /*
+       Cada `<tr>` passa a ser um cartão: o cabeçalho (`thead`) desaparece e
+       cada célula mostra "COLUNA valor" (rótulo vindo de `data-col`). Nas
+       tabelas agrupadas por `rowspan` (4.2, 5.1, 5.5, 6.x, 7.x, 8.1) as linhas de
+       continuação repetem o nome do grupo via `data-no`, para não perder o
+       contexto de qual OS/fazenda/talhão/fertilizante se trata.
+    */
+    @media (max-width: 760px) {
+
+      main .painel-corpo table {
+        display: block;
+        width: 100%;
+        /* `!important`: os wrappers abaixo usam ids (ex.: #fertTabla table,
+           #pecTabla table) e venceriam esta regra por especificidade. */
+        min-width: 0 !important;
+        border: 0;
+        background: none;
+        font-size: 12.5px;
+      }
+
+      main .painel-corpo thead {
+        display: none;
+      }
+
+      main .painel-corpo tbody {
+        display: block;
+        width: 100%;
+      }
+
+      main .painel-corpo tr {
+        display: block;
+        width: 100%;
+        margin: 0 0 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .035);
+        /* Fluidez: linha-cartão fora da tela não é calculada nem pintada; a
+           altura medida fica memorizada (`auto`) para a rolagem não saltar. */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 56px;
+      }
+
+      /* Essencial: as tabelas agrupadas (4.2, 5.1, 5.5, 6.x, 7.x, 8.1) escondem as
+         linhas recolhidas com o atributo `hidden`; sem estas regras o
+         `display: block` acima revelaria as linhas fechadas. */
+      main .painel-corpo tr[hidden],
+      main .painel-corpo th[hidden],
+      main .painel-corpo td[hidden],
+      main .painel-corpo tbody tr[hidden],
+      .painel-consolidado .det-row[hidden],
+      .prod-hierarquia .det-row[hidden] {
+        display: none !important;
+      }
+
+      /* --- Bloco contínuo: as linhas de uma MESMA agregação deixam de ser
+             cartões soltos e passam a ler como um só bloco (as 5 métricas da
+             pecuária, as 4 do fertilizante e as 4 do combustível). Dentro do
+             grupo: sem respiro entre as linhas, uma só borda entre elas e
+             cantos arredondados apenas na primeira e na última. Entre um
+             grupo e o seguinte volta o respiro grande (14px) com uma régua
+             fina marcando o começo do bloco. Nas tabelas agrupadas cada linha
+             traz `data-g` (id do nó); no 5.1 e no 7.1 a abertura do grupo é a
+             linha `tr.fert-grupo` / `tr.comb-grupo`. */
+      main .painel-corpo tbody tr[data-g],
+    #fertTabla tbody tr,
+    #combTablaAno tbody tr,
+    #nutriTabla tbody tr {
+        margin: 0;
+        border-radius: 0;
+      }
+
+      /* Linha de continuação: cola na anterior (borda única, sem costura). A
+         abertura de um grupo novo fica FORA desta regra (`:not(...)`) — sem
+         isso ela venceria por especificidade e os grupos ficariam colados. */
+      main .painel-corpo tbody tr[data-g] + tr[data-g]:not([class*="inicio-grupo"]),
+    #fertTabla tbody tr + tr:not(.fert-grupo),
+    #combTablaAno tbody tr + tr:not(.comb-grupo),
+    #nutriTabla tbody tr + tr:not(.fert-grupo) {
+        margin-top: -1px;
+      }
+
+      /* Abertura do bloco (primeira linha do grupo): respiro grande entre um
+         grupo e o seguinte + régua fina + cantos de cima. */
+      main .painel-corpo tbody tr[data-g][class*="inicio-grupo"],
+    #fertTabla tbody tr.fert-grupo,
+    #combTablaAno tbody tr.comb-grupo,
+    #nutriTabla tbody tr.fert-grupo {
+        margin-top: 14px;
+        border-top: 1px solid var(--borda);
+        border-radius: 12px 12px 0 0;
+      }
+
+      /* Primeira linha da tabela: mesma abertura, sem o respiro acima. */
+      main .painel-corpo tbody tr[data-g]:first-child,
+    #fertTabla tbody tr:first-child,
+    #combTablaAno tbody tr:first-child,
+    #nutriTabla tbody tr:first-child {
+        margin-top: 0;
+        border-top: 1px solid var(--borda);
+        border-radius: 12px 12px 0 0;
+      }
+
+      /* Fechamento do bloco: última linha da tabela ou linha anterior à
+         abertura do grupo seguinte (`:has`). */
+      main .painel-corpo tbody tr[data-g]:last-child,
+    main .painel-corpo tbody tr[data-g]:has(+ tr[data-g][class*="inicio-grupo"]),
+    #fertTabla tbody tr:last-child,
+    #fertTabla tbody tr:has(+ tr.fert-grupo),
+    #combTablaAno tbody tr:last-child,
+    #combTablaAno tbody tr:has(+ tr.comb-grupo),
+    #nutriTabla tbody tr:last-child,
+    #nutriTabla tbody tr:has(+ tr.fert-grupo) {
+        border-radius: 0 0 12px 12px;
+      }
+
+      /* A régua de 2px do desktop entre grupos sai de cena: no celular quem
+         separa os blocos é o respiro + a régua fina de 1px acima. */
+      #fertTabla tbody tr.fert-grupo > td,
+    #combTablaAno tbody tr.comb-grupo > td,
+    #fertTabelaWrap tbody tr.fert-inicio-grupo > td,
+    #pecTabla tbody tr.pec-inicio-grupo > td,
+    #prodAreaCulturaWrap tbody tr.pac-inicio-grupo > td,
+    #combPivot tbody tr.comb-inicio-grupo > td,
+    #enerPivot tbody tr.comb-inicio-grupo > td,
+    #nutriTabla tbody tr.fert-grupo > td,
+    #nutriTabelaWrap tbody tr.fert-inicio-grupo > td {
+        border-top: 0;
+      }
+
+      /* Coluna de texto longo (mensagem dos alertas): rótulo acima do valor */
+      #alertas .alerta-detalhe table td:last-child {
+        display: block;
+        text-align: left !important;
+      }
+
+      main .painel-corpo tr.total,
+      main .painel-corpo tr.fert-grupo {
+        border-color: var(--acento);
+        background: rgba(91, 108, 255, .12);
+      }
+
+      main .painel-corpo tr[data-no]::before {
+        content: attr(data-no);
+        display: block;
+        margin-bottom: 5px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+        color: var(--texto-suave);
+      }
+
+      main .painel-corpo th,
+      main .painel-corpo td {
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+        align-items: baseline;
+        width: 100%;
+        padding: 3px 0;
+        border: 0;
+        font-size: 12.5px;
+        text-align: left !important;
+        white-space: normal;
+      }
+
+      main .painel-corpo tbody th[scope="row"],
+      main .painel-corpo td[rowspan] {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--texto);
+      }
+
+      /* 3.6: no celular a célula do ano sem atividade não vira chip. */
+      #ativTabla td.ativ-cel:not(.ativ-tem) { display: none; }
+
+      /* 3.6: o ano COM atividade sai com o rótulo do ano e os chips agrupados à
+         esquerda — sem o `space-between` das demais células, que espalharia um
+         chip em cada ponta do cartão. */
+      #ativTabla td.ativ-cel.ativ-tem {
+        display: block !important;
+      }
+
+      #ativTabla td.ativ-cel.ativ-tem::before {
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      main .painel-corpo td[data-col]::before,
+      main .painel-corpo th[data-col]::before {
+        content: attr(data-col);
+        flex: none;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--texto-suave);
+      }
+
+      /* O painel de filtros usa uma grade de 2/3 colunas no desktop */
+      .filtros-painel .prod-filtro[style] {
+        grid-column: auto !important;
+      }
+
+      .prod-crop-tabla {
+        border: 0;
+        border-radius: 0;
+      }
+
+      .prod-crop-cuerpo {
+        padding: 0 2px;
+      }
+
+      .prod-crop-tabla table {
+        min-width: 0;
+      }
+
+    }
+
+  
+    /* ---------- Painel 09 · laudos para download (9.3 + topo do painel) ----------
+       O laudo (.docx + PDF) vem ANEXADO no HTML: o 9.3 lista um item por OS e o
+       topo do painel 09 ganha os mesmos botões, ao lado do `i` e do expandir.
+       Com mais de um laudo (consolidado) o topo usa um menu (`<details>`). */
+    .painel-laudos {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .laudo-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(122, 142, 255, .30);
+      background-color: rgba(91, 108, 255, .12);
+      color: var(--texto);
+      font: 800 11px/1 "Segoe UI", Roboto, Arial, sans-serif;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .laudo-btn:hover,
+    .laudo-btn:focus-visible {
+      background-color: rgba(91, 108, 255, .22);
+      border-color: rgba(122, 142, 255, .55);
+      box-shadow: 0 0 0 4px rgba(91, 108, 255, .10);
+    }
+
+    .laudos-menu {
+      position: relative;
+    }
+
+    .laudos-menu > summary {
+      list-style: none;
+    }
+
+    .laudos-menu > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .laudos-menu[open] > .laudos-menu-resumo {
+      background-color: rgba(91, 108, 255, .22);
+      border-color: rgba(122, 142, 255, .55);
+    }
+
+    .laudos-menu-lista {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 40;
+      min-width: 280px;
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border-radius: var(--raio);
+      border: 1px solid var(--borda);
+      background: var(--surface);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+    }
+
+    /* Lista do 9.3: uma linha por OS com os botões dos formatos disponíveis. */
+    #laudosLista {
+      display: grid;
+      gap: 8px;
+    }
+
+    .laudo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--raio);
+      border: 1px solid rgba(122, 142, 255, .22);
+      background-color: rgba(91, 108, 255, .07);
+    }
+
+    .laudo-item-os {
+      font-weight: 700;
+      letter-spacing: .02em;
+      overflow-wrap: anywhere;
+    }
+
+    .laudo-item-acoes {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @media (max-width: 760px) {
+      /* No celular o cabeçalho do painel não comporta o menu flutuante: os
+         laudos do topo saem compactos e a lista do 9.3 abre em coluna. */
+      .painel-acoes .painel-laudos .laudo-btn {
+        padding: 0 8px;
+      }
+
+      .laudos-menu-lista {
+        position: static;
+        min-width: 0;
+        margin-top: 8px;
+        box-shadow: none;
+      }
+
+      .laudo-item {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    /* ---------- V6: bolinha do título das seções e nome no painel 02 ---------- */
+    /*
+       1) A `.secao` é contêiner de rolagem (`overflow-x: auto`, acima) e RECORTA
+          tudo o que sai da caixa — inclusive a sombra de 5px da bolinha do
+          título (`.secao h2::before`), que sai para a ESQUERDA do scrollport: no
+          painel 02 o círculo aparecia cortado pela metade. Os 6px de respiro à
+          esquerda (compensados pelo `margin-left`) trazem a sombra para dentro
+          da caixa SEM mexer no eixo do conteúdo — a bolinha fica inteira, no
+          mesmo padrão dos títulos dos painéis 03–07 (que não têm recorte).
+       2) A grade do painel 02 usa `minmax(200px, 1fr)` na coluna do nome (só a
+          sobra: a largura é definida no JS), então a célula do nome QUEBRA em
+          várias linhas: um nome de fazenda extenso desce para a linha de baixo
+          em vez de empurrar/espremer as colunas de área, variação, ano e
+          registros.
+    */
+    .secao {
+      padding-left: 6px;
+      margin-left: -6px;
+    }
+
+    #area .area-painel .det-row > .cel-nome {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-overflow: clip;
+    }
+
+    /* ---------- V7: limite da grade do painel 02 (2.1 · OS · Fazenda · Ano) ---------- */
+    /*
+       1) LIMITE DE LARGURA. A grade do 2.1 tem mínimo por coluna (nome
+          `minmax(200px, 1fr)`, 96/74/84/64 px nas demais) e o JS publica a soma
+          desses mínimos + os vãos em `--min-w`. Sem ele a LINHA ficava com a
+          largura da caixa e a grade TRANSBORDAVA a própria caixa: as colunas de
+          ano e de registros saíam da caixa OS/Fazenda e o `overflow: clip` (que
+          existe para arredondar os cantos sem criar contêiner de rolagem, e
+          assim preservar o `position: sticky` da coluna do nome) as RECORTAVA.
+          Resultado ao reduzir a tela: só o cabeçalho e o "Total geral" mostravam
+          os anos/registros ao rolar para o lado — as linhas de fazenda e de
+          talhão perdiam as últimas colunas, sem alcance pela rolagem.
+          Com `min-width: var(--min-w)` a linha nunca é menor que as próprias
+          colunas: a caixa cresce junto, nada é recortado e o `min-width` vira o
+          LIMITE pedido — acima dele o nome quebra em mais linhas (é a coluna do
+          nome, `minmax(200px, 1fr)`, que cede); abaixo dele a grade para de
+          encolher e a rolagem horizontal (no `.painel-consolidado`) ativa.
+       2) LARGURAS IGUAIS ENTRE OS NÍVEIS. O `border` das caixas virou
+          `box-shadow: inset` (mesma borda de 1 px, sem os 2 px que o border-box
+          consumia por nível) e o `.cons-body` perdeu o recuo lateral de 8 px.
+          Assim as linhas de OS, de fazenda e de talhão têm EXATAMENTE a mesma
+          largura e as colunas de todos os níveis alinham na vertical (antes cada
+          nível perdia 18 px e as colunas de ano iam deslocando para a esquerda).
+          A hierarquia continua legível pelo aninhamento das caixas e o recuo
+          segue existindo nos cartões do celular (regra abaixo de 760 px).
+       Vale só acima do ponto de virada: em ≤ 760 px as linhas viram cartões
+       (`display: block`) e não há grade nem rolagem horizontal.
+    */
+    @media (min-width: 761px) {
+
+      #area .painel-consolidado .det-row {
+        min-width: var(--min-w, 640px);
+      }
+
+      #area .painel-consolidado details.cons-os,
+      #area .painel-consolidado details.cons-faz {
+        min-width: var(--min-w, 640px);
+        border: 0;
+        box-shadow: inset 0 0 0 1px var(--borda);
+      }
+
+      #area .painel-consolidado .cons-body {
+        padding: 6px 0;
+      }
+    }
+
+
+/* ---------------------------------------------------------------------------
+   Cabeçalho — logo do CLIENTE (API 7) ao lado do título.
+   O logo vem de `dados_gerais.<OS>.cliente.logotipo`; sem logo (ou sem
+   cliente) o HTML usa o logo da AgroRobótica. O NOME do cliente entra na
+   própria linha do título (`Relatório … -- NOME`), não num bloco à parte.
+   --------------------------------------------------------------------------- */
+.cab-cliente {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.cliente-logo {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.cliente-logo img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .cab-cliente {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 620px) {
+  .cab-cliente {
+    width: 34px;
+    height: 34px;
+    padding: 3px;
+  }
+}
+
+

@@ -513,9 +513,15 @@ alteradas.
   (`zonas_manejo`) como `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo
   gravado na OS pelo `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` →
   `fazenda`/`talhao`/`area_ha`; `ZONA` → `zona`) e desenhados no navegador pelo
-  Leaflet; abaixo de cada mapa vem o resumo da base (`base_limites`/
-  `base_zonas`). O subpainel **2.1** (fazendas e talhões) é derivado do MESMO
-  shape de limites.
+  Leaflet. A **legenda fica SOBRE o mapa** (canto superior direito, translúcida,
+  com rolagem própria e o checkbox "Mostrar nome dos talhões") — não ao lado. O
+  subpainel **2.1** (fazendas e talhões) é derivado do MESMO shape de limites.
+- Abaixo de cada mapa (2.2 e 2.3) vem o **resumo da base** (`base_limites` /
+  `base_zonas`, via `PanelBuilder.base_info`): dois cartões — a **contagem** com
+  rótulo coerente (**Talhões** no 2.2 e **Zonas** no 2.3; chave neutra
+  `contagem`, no lugar do antigo `feicoes`) e a **Área (ha)** — e uma linha com
+  **Arquivo**, **Origem** e **Registrado em**. Base sem registro mostra "Base não
+  registrada nesta OS.".
 - Chaves que o banco **ainda não fornece** (tipos de manejo, atividades, área
   contratada, CARs, data de início e cenário base) permanecem **vazias** — nada é
   adaptado/inventado; o template já sabe exibir o estado vazio.

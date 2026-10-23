@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<meta content="#0c1234" name="theme-color"/>
+<title>$TITULO_JANELA</title>
+<style>$ESTILOS</style>
+</head>
+<body>
+<canvas aria-hidden="true" id="fundo"></canvas>
+<aside aria-label="Menu de tópicos" class="sidebar" id="sidebar">
+<div class="marca">
+<div class="logo" id="logoLateral">
+<img alt="Logo Agrorobótica" decoding="async" loading="lazy" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEby-oJq0xHblxKGo3G3E4RDuOpaOEi9GGwjA7LfNkTw&amp;s=10"/>
+<span>AR</span>
+</div>
+<div>
+<div class="marca-nome">Agrorobótica</div>
+<div class="marca-sub">$ROTULO_APLICACAO</div>
+</div>
+</div>
+<nav class="menu">
+<div class="menu-titulo">Navegação do relatório</div>
+<div class="menu-grupo">Visão geral</div>
+<a class="ativo" href="#geral">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="9" rx="1" width="7" x="3" y="3"></rect>
+<rect height="5" rx="1" width="7" x="14" y="3"></rect>
+<rect height="9" rx="1" width="7" x="14" y="12"></rect>
+<rect height="5" rx="1" width="7" x="3" y="16"></rect>
+</svg>
+
+
+
+        01 · Visão geral
+
+
+
+      </a>
+<a href="#area">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2 3 7v10l9 5 9-5V7z"></path>
+<path d="m3 7 9 5 9-5M12 12v10"></path>
+</svg>
+
+
+
+        02 · Estrutura territorial
+
+
+
+      </a>
+<div class="menu-grupo">Produção e manejo</div>
+<a href="#produtividade">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 19V9"></path>
+<path d="M10 19V5"></path>
+<path d="M16 19v-7"></path>
+<path d="M22 19H2"></path>
+</svg>
+
+        03 · Produtividade
+
+      </a>
+<a href="#pecuaria">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 5c3 2 0 0 3 3-3 0 3-2"></path>
+<path d="M6 9c3-2 0 0 3-3 3 0 3 2"></path>
+<path d="M14 5c3 2 0 0 3 3-3 0 3-2"></path>
+<path d="M14 9c3-2 0 0 3-3 3 0 3 2"></path>
+<path d="M10 17h4"></path>
+</svg>
+
+        04 · Pecuária
+
+      </a>
+<a href="#fertilizantes">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 20V6l4-4 8-14 4-6 4 6-6h-4z"></path>
+<path d="M8 6v-4 10 4 8 5h4"></path>
+<path d="M16 6h4v8h4-8"></path>
+<path d="M20 14h-2v4"></path>
+<path d="M6 16l14 0"></path>
+</svg>
+
+        05 · Fertilizantes
+
+      </a>
+<a href="#nutrientes">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 3h6"></path>
+<path d="M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"></path>
+<path d="M7.5 14h9"></path>
+</svg>
+
+        06 · Nutrientes da adubação
+
+      </a>
+<a href="#combustivel">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2.5s6 6.33 6 11a6 6 0 0 1-12 0c0-4.67 6-11 6-11z"></path>
+</svg>
+
+        07 · Combustíveis e energia
+
+      </a>
+<a href="#praticas">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"></path>
+<path d="M5 20c4-4 8-8 14-14"></path>
+</svg>
+
+        08 · Práticas de solo
+
+      </a>
+<a href="#evidencias">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 2h6l4 4v16H5V2h4z"></path>
+<path d="M9 2v4h6"></path>
+<path d="M7 12h10M7 16h10"></path>
+</svg>
+
+        09 · Evidências
+
+      </a>
+<div class="menu-grupo">Ferramentas e controle</div>
+<a href="#filtros" id="linkFiltros" role="button">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M22 3H2l8 9.46V19l4 2v-8.54z"></path>
+</svg>
+
+        Filtros
+
+      </a>
+<a href="#alertas">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+<path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
+</svg>
+
+
+
+        10 · Qualidade dos dados
+
+
+
+      </a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div aria-hidden="true" class="filtros-overlay" hidden="" id="filtrosOverlay"></div>
+<section aria-labelledby="t-filtros" aria-modal="true" class="painel filtros-painel" hidden="" id="filtros" role="dialog">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M22 3H2l8 9.46V19l4 2v-8.54z"></path>
+</svg></div>
+<div>
+<h2 id="t-filtros">Filtros <span class="info-tooltip"><button aria-describedby="tooltip-desc-1" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-1" role="tooltip">Filtros globais — aplicados a todos os painéis que leem os dados (ex.: produtividade). OS e Fazenda são grades de caixas (marque quantas quiser; o botão marca/desmarca todas) e os demais filtros se ajustam ao recorte marcado: a opção que não existe nas OS/fazendas marcadas sai da lista.</span></span></h2>
+
+</div>
+<span class="filtros-contagem muted" id="filtrosContagem">0 filtros ativos</span>
+<button aria-label="Recolher filtros" class="btn-recolher-filtros" id="recolherFiltros" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="m18 6-12 12M6 6l12 12"></path>
+</svg>Recolher</button>
+</div>
+<div class="painel-corpo">
+<div aria-label="Filtros globais" class="prod-toolbar">
+<div class="prod-filtro prod-filtro-grade" style="grid-column: span 2"><div class="prod-filtro-topo"><label id="lblFiltroOS">OS</label><button class="btn-todos-checks" data-todos="os" type="button">Selecionar todos</button></div><div aria-labelledby="lblFiltroOS" class="filtro-checks" data-filtro-grade="os" id="filtroOS" role="group"></div></div>
+<div class="prod-filtro prod-filtro-grade" style="grid-column: span 2"><div class="prod-filtro-topo"><label id="lblFiltroFazenda">Fazenda</label><button class="btn-todos-checks" data-todos="fazenda" type="button">Selecionar todos</button></div><div aria-labelledby="lblFiltroFazenda" class="filtro-checks" data-filtro-grade="fazenda" id="filtroFazenda" role="group"></div></div>
+<div class="prod-filtro"><label for="filtroTalhao">Talhão</label><select data-filtro="talhao" id="filtroTalhao">
+<option value="">Todos os talhões</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroAno">Ano</label><select data-filtro="ano" id="filtroAno">
+<option value="">Todos os anos</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroCenario">Cenário</label><select data-filtro="cenario" id="filtroCenario">
+<option value="">Todos os cenários</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroCultura">Cultura</label><select data-filtro="cultura" id="filtroCultura">
+<option value="">Todas as culturas</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroFertilizante">Fertilizante</label><select data-filtro="fertilizante" id="filtroFertilizante">
+<option value="">Todos os fertilizantes</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroCombustivel">Combustível / Energia</label><select data-filtro="combustivel" id="filtroCombustivel">
+<option value="">Todos os combustíveis / fontes</option>
+</select></div>
+<div class="prod-filtro"><label for="filtroPratica">Prática de solo</label><select data-filtro="pratica" id="filtroPratica">
+<option value="">Todas as práticas</option>
+</select></div>
+<div class="prod-filtro" style="grid-column: span 3"><label for="buscaFiltros">Busca rápida</label><input autocomplete="off" data-filtro="busca" id="buscaFiltros" placeholder="Buscar OS, fazenda, talhão, cultura..." type="search"/></div>
+<div class="prod-acoes"><button class="btn-limpar" id="limparFiltros" type="button">Limpar filtros</button>
+</div>
+</div>
+</div>
+</section>
+
+<div class="conteudo">
+<header class="cabecalho">
+<button aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menu" class="btn-menu" id="btnMenu">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 6h16M4 12h16M4 18h16"></path>
+</svg>
+</button>
+<div class="cab-cliente">
+<div class="cliente-logo">
+<img alt="Logo do cliente" decoding="async" loading="lazy" src="$LOGO_CLIENTE" onerror="this.onerror=null;this.src='$LOGO_FALLBACK'"/>
+</div>
+</div>
+<div class="cab-texto">
+<h1>$TITULO_PAGINA</h1>
+<p class="descricao">$SUBTITULO</p>
+</div>
+<button aria-controls="filtros" aria-expanded="false" aria-label="Abrir ou fechar painel de filtros" class="btn-filtros" id="btnFiltros" type="button">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M22 3H2l8 9.46V19l4 2v-8.54z"></path>
+</svg>
+
+        Filtros
+
+        <span class="filtros-badge" hidden="" id="filtrosBadge">0</span>
+</button>
+</header>
+<!-- Barra de contexto ("Você está em …" + atalhos Geral/Área/…) removida:
+     a navegação entre módulos fica só no menu lateral. -->
+<main>
+<section aria-labelledby="t-geral" class="painel" id="geral">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="9" rx="1" width="7" x="3" y="3"></rect>
+<rect height="5" rx="1" width="7" x="14" y="3"></rect>
+<rect height="9" rx="1" width="7" x="14" y="12"></rect>
+<rect height="5" rx="1" width="7" x="3" y="16"></rect>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-geral"><span class="painel-numero">01</span>Visão geral <span class="info-tooltip"><button aria-describedby="tooltip-desc-2" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-2" role="tooltip">Visão consolidada dos dados</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+
+
+
+          $PAINEL_GERAL
+
+
+
+        </div>
+</section>
+<section aria-labelledby="t-area" class="painel" id="area">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2 3 7v10l9 5 9-5V7z"></path>
+<path d="m3 7 9 5 9-5M12 12v10"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-area"><span class="painel-numero">02</span>Estrutura territorial <span class="info-tooltip"><button aria-describedby="tooltip-desc-3" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-3" role="tooltip">Detalhe por área e talhão</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+
+
+
+          $PAINEL_AREA
+
+
+
+        </div>
+</section>
+<section aria-labelledby="t-produtividade" class="painel" id="produtividade">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 19V9"></path>
+<path d="M10 19V5"></path>
+<path d="M16 19v-7"></path>
+<path d="M22 19H2"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-produtividade"><span class="painel-numero">03</span>Produção agrícola <span class="info-tooltip"><button aria-describedby="tooltip-desc-4" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-4" role="tooltip">Produtividade por OS · Fazenda · Talhão — média, máxima e mínima por cultura, com a unidade (sc/ha, t/ha, @/ha etc.)</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="prodResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>3.1 · Resumo de produtividade por cultura <span class="info-tooltip"><button aria-describedby="tooltip-desc-5" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-5" role="tooltip">Média, máxima e mínima do conjunto filtrado — cada cultura com a sua unidade (sc/ha, t/ha, @/ha etc.)</span></span></h3>
+
+</div>
+<div aria-label="Resumo de produtividade por cultura" class="prod-media" id="prodMedia"></div>
+<div aria-label="Culturas cadastradas" class="prod-culturas" id="prodCulturas"></div>
+<div class="prod-bloco-titulo">
+<h3>3.2 · Área das culturas por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-area-cult" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-area-cult" role="tooltip">Gráfico de linhas: hectares (ha) de cada cultura ao longo dos anos. Cada cultura aparece uma única vez — o eucalipto e a aroeira, que têm dois métodos de colheita, contam como uma só área. A linha tracejada Área física (base) é a área física do conjunto filtrado: cada talhão conta uma só vez pela MAIOR área registrada entre as safras. O Total pode ser MAIOR que a área física porque o mesmo talhão recebe mais de uma atividade (cultura) no mesmo ano e cada atividade soma a área do talhão. Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda das culturas (área)" class="prod-linhas-leyenda" id="prodAreaLeyenda"></div>
+<div class="prod-linhas" id="prodAreaLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>3.3 · Produtividade por hectare (t/ha) por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-prod-tha" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-prod-tha" role="tooltip">Gráfico de linhas: produtividade por hectare unificada em t/ha ao longo dos anos. sc/ha, @/ha, sc benef./ha e cx 40,8 kg/ha são convertidas para t/ha; m³/ha não tem conversão de massa e fica fora. Clique na legenda para mostrar/ocultar uma cultura</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda das culturas (produtividade)" class="prod-linhas-leyenda" id="prodProdLeyenda"></div>
+<div class="prod-linhas" id="prodProdLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>3.4 · Produtividade por OS · Fazenda · Talhão <span class="info-tooltip"><button aria-describedby="tooltip-desc-7" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-7" role="tooltip">Clique na OS para expandir as médias de produtividade de cada fazenda; clique na fazenda para ver os talhões</span></span></h3>
+
+</div>
+<div id="prodTabelaWrap">
+
+            $PAINEL_PRODUTIVIDADE
+
+          </div>
+<div class="prod-bloco-titulo">
+<h3>3.5 · Parecer por cultura (OS · Fazenda · Talhão) <span class="info-tooltip"><button aria-describedby="tooltip-desc-area-cultura" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-area-cultura" role="tooltip">Um subpainel por cultura, com o mesmo widget do painel 4.1: cada nó (OS → Fazenda → Talhão) é um grupo de 4 métricas — Área (ha), Total produzido e Média (ambos na unidade da cultura, sem conversão) e Variedade — com uma coluna Geral, uma coluna Variação % e uma por ano. No talhão a Média é o valor da planilha; na OS, na fazenda e no total é a média ponderada pela área — Σ(área × produtividade) ÷ Σ(área dos registros COM produtividade informada), já na mesma unidade da cultura: a produção 0 (zero) conta na média e o talhão não colhido (sem produtividade) não entra na conta. A Variação % usa a mesma fórmula/limiares do painel de área (verde ≤5%, amarelo 5–20%, vermelho &gt;20%) e a cor da linha só é aplicada à métrica Área (ha); cinza = talhão sem área em algum ano e sem variação (0%)</span></span></h3>
+</div>
+<div aria-label="Parecer por cultura por OS · Fazenda · Talhão" class="prod-paineles-cultura" id="prodAreaCulturaWrap"></div>
+<div class="prod-vazio" id="prodAreaCulturaVazio">Nenhum registro de área por cultura corresponde aos filtros selecionados.</div>
+<div class="prod-bloco-titulo">
+<h3>3.6 · Atividades por talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-atividades" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-atividades" role="tooltip">Cada talhão lista, ano a ano, os NOMES das atividades registradas (culturas e pecuária) — sem métricas nem cálculos. Cada atividade sai num chip com a SUA cor: a paleta é atribuída em tempo real pelo nome da atividade (não existe cultura com cor fixa) e a legenda acima da tabela mostra a cor de cada uma. Quando o ano tem MAIS DE UMA atividade, elas saem juntas num conjunto azul marcando o combinado. OS e fazenda são agrupadores expansíveis; clique no nome para abrir</span></span></h3>
+</div>
+<div id="ativTabla"></div>
+<div class="prod-vazio" id="ativVazio">Nenhuma atividade corresponde aos filtros selecionados.</div>
+<div class="prod-bloco-titulo">
+<h3>3.7 · Matriz de produtividade por cultura (talhão · ano) <span class="info-tooltip"><button aria-describedby="tooltip-desc-matriz-prod" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-matriz-prod" role="tooltip">Um subpainel por cultura: cada linha é um talhão (OS · Fazenda · Talhão) e cada coluna é a Média do talhão na cultura mais um ano do período — o valor é a produtividade daquela cultura naquele ano, na unidade da cultura (sem conversão) e a Média é ponderada pela área — Σ(área × produtividade) ÷ Σ(área dos registros COM produtividade informada): a produção 0 (zero) conta e o talhão não colhido (sem produtividade) não entra na conta. A cor é relativa ao painel INTEIRO da cultura: o pior resultado sai no vermelho escuro e o melhor no verde escuro, mostrando em quais talhões estão os piores resultados (no 3.5, ao contrário, cada linha tem a sua própria faixa). O painel começa recolhido; clique no título para abrir</span></span></h3>
+</div>
+<div aria-label="Matriz de produtividade por cultura" class="prod-paineles-cultura" id="prodMatrizCulturaWrap"></div>
+<div class="prod-vazio" id="prodMatrizCulturaVazio">Nenhuma produtividade por cultura corresponde aos filtros selecionados.</div>
+<div class="prod-bloco-titulo">
+<h3>3.8 · Área por combinação de atividades · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-ativ-area" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-ativ-area" role="tooltip">Gráfico de linhas no estilo do 8.2: uma linha por COMBINAÇÃO de atividades do painel 3.6 — «Soja», «Soja + Milho», «Milho», «Pecuária», «Soja + Pecuária» e assim por diante — em hectares por ano. Cada talhão·ano entra numa ÚNICA combinação: as atividades registradas naquele talhão e naquele ano. Por isso a soja sozinha soma só para «Soja» e nunca para «Soja + Milho» — são classes diferentes. A pecuária é sempre registrada junto de uma cultura forrageira (braquiária, Massai, ...) e as duas contam como a MESMA atividade: as forrageiras entram na linha «Pecuária» — a pecuária total —, então «Brachiaria + Pecuária» e «Massai + Pecuária» somam-se em «Pecuária» e «Eucalipto + Massai + Pecuária» sai como «Eucalipto + Pecuária». A área de cada talhão·ano é a ÁREA FÍSICA do talhão (a MAIOR área registrada no período, entre culturas e pecuária), então o talhão conta 1× por ano, e não uma vez por atividade. A linha tracejada Área física (base) é a área física do conjunto filtrado e serve de referência (teto). A combinação de uma só atividade sai com a MESMA cor do chip dela no 3.6; as demais recebem cores próprias da paleta dinâmica (não existe cor fixa por cultura). O filtro Cultura NÃO se aplica (o gráfico mostra todas as atividades, como o 3.6). Clique na legenda para mostrar ou ocultar uma combinação</span></span></h3>
+<p>Gráfico de linhas: hectares de cada combinação de atividades por ano, dentro dos filtros ativos (OS, fazenda, talhão, ano, cenário e busca rápida). A pecuária entra sempre com a forrageira que a acompanha (braquiária, Massai, ...) numa única linha «Pecuária» — a pecuária total. Clique na legenda para mostrar/ocultar uma combinação</p>
+</div>
+<div class="prat-linhas-wrap">
+<div aria-label="Legenda das combinações de atividades" class="prat-leyenda" id="ativAreaLeyenda"></div>
+<div class="prat-linhas" id="ativAreaLinhas"></div>
+</div>
+<div class="prod-vazio" id="prodVazio">Nenhum registro corresponde aos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-pecuaria" class="painel" id="pecuaria">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 5c3 2 0 0 3 3-3 0 3-2"></path>
+<path d="M6 9c3-2 0 0 3-3 3 0 3 2"></path>
+<path d="M14 5c3 2 0 0 3 3-3 0 3-2"></path>
+<path d="M14 9c3-2 0 0 3-3 3 0 3 2"></path>
+<path d="M10 17h4"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-pecuaria"><span class="painel-numero">04</span>Produção animal <span class="info-tooltip"><button aria-describedby="tooltip-desc-8" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-8" role="tooltip">Pecuária por OS · Fazenda · Talhão — área de pastagem, Nº de animais, UA, GMD e rendimento de carcaça por ano</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="pecResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>4.1 · Pecuária por OS · Fazenda · Talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-10" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-10" role="tooltip">Cada nó (OS, Fazenda e Talhão) num grupo de 5 linhas — Área de pastagem (ha), Nº animais (cab.), UA (UA/ha), GMD (kg/cab./dia) e Rend. carcaça (%) — com uma coluna Geral, uma coluna Variação % e uma coluna por ano (a Variação % sai em todas as métricas; a cor da linha só é aplicada à Área de pastagem (ha): verde ≤5%, amarelo 5–20%, vermelho >20% e cinza = talhão sem pastagem em algum ano e sem variação). A evolução anual da pecuária — área, nº de animais, UA, GMD e rendimento de carcaça — é mostrada no painel 4.2</span></span></h3>
+
+</div>
+<div id="pecTabla"></div>
+<div hidden id="pecTabelaWrap">
+
+            $PAINEL_PECUARIA
+
+          </div>
+<div class="prod-vazio" id="pecVazio">Nenhum registro de pecuária corresponde aos filtros selecionados.</div>
+<div class="prod-bloco-titulo">
+<h3>4.2 · Evolução anual da pecuária com três escalas <span class="info-tooltip"><button aria-describedby="tooltip-desc-pec-42" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-pec-42" role="tooltip">Gráfico de linhas com TRÊS escalas verticais: Área de pastagem (ha) na escala da esquerda, Nº animais (cab.) na escala da direita e UA (UA/ha) · GMD (kg/cab./dia) · Rend. carcaça (0–1) na escala do centro — a mesma para as três, que têm a mesma ordem de grandeza (0 a 2). Cada ano é um ponto do eixo X: a linha liga os anos com valor e a dica mostra os valores do ano apontado. Clique na legenda para mostrar/ocultar uma métrica. As agregações são as da tabela 4.1: área e nº de animais somam, UA é Σ animais ÷ Σ área e GMD e rendimento são a média dos valores informados</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda da evolução anual da pecuária" class="prod-linhas-leyenda" id="pecEvolLeyenda"></div>
+<div class="prod-linhas" id="pecEvolLinhas"></div>
+</div>
+</div>
+</section>
+<section aria-labelledby="t-fertilizantes" class="painel" id="fertilizantes">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 20V6l4-4 8-14 4-6 4 6-6h-4z"></path>
+<path d="M8 6v-4 10 4 8 5h4"></path>
+<path d="M16 6h4v8h4-8"></path>
+<path d="M20 14h-2v4"></path>
+<path d="M6 16l14 0"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-fertilizantes"><span class="painel-numero">05</span>Insumos e adubação <span class="info-tooltip"><button aria-describedby="tooltip-desc-11" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-11" role="tooltip">Totais de fertilizantes por OS · Fazenda · Talhão — quantidade total (kg), área tratada (ha) e dose (kg/ha)</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="fertResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>5.1 · Total por fertilizante · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-12" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-12" role="tooltip">Cada fertilizante num grupo de 4 linhas — Total (kg), Área tratada (ha), Dose média (kg/ha) e Registros — com uma coluna Geral e uma coluna por ano, em ordem alfabética pelo nome. Nos formulados o nome exibido é só o NPK padronizado (ex.: 06-30-06): a parte de micronutrientes é guardada para o cálculo, mas não identifica o produto. Quando há nota fiscal, o grupo ganha uma 5ª linha — Total Evidências (kg) — com o % de cobertura (total evidenciado ÷ total aplicado × 100) colorido por faixa; produto só com NF entra com os totais zerados e apenas a evidência</span></span></h3>
+
+</div>
+<div aria-label="Total por fertilizante por ano" id="fertTabla"></div>
+<div class="prod-bloco-titulo">
+<h3>5.2 · Total aplicado por ano (kg) <span class="info-tooltip"><button aria-describedby="tooltip-desc-fert-tot" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-fert-tot" role="tooltip">Gráfico de linhas: quantidade total aplicada (kg) por ano — uma linha por fertilizante. Clique na legenda para mostrar/ocultar um produto</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (total aplicado por fertilizante)" class="prod-linhas-leyenda" id="fertTotaisLeyenda"></div>
+<div class="prod-linhas" id="fertTotaisLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>5.3 · Área tratada por ano (ha) <span class="info-tooltip"><button aria-describedby="tooltip-desc-fert-area" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-fert-area" role="tooltip">Gráfico de linhas: área tratada (ha) por ano — uma linha por fertilizante. A área é somada uma vez por talhão/ano. Clique na legenda para mostrar/ocultar um produto</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (área tratada por fertilizante)" class="prod-linhas-leyenda" id="fertAreaLeyenda"></div>
+<div class="prod-linhas" id="fertAreaLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>5.4 · Dose média por ano (kg/ha) <span class="info-tooltip"><button aria-describedby="tooltip-desc-fert-dose" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-fert-dose" role="tooltip">Gráfico de linhas: dose média (kg/ha = total aplicado ÷ área tratada) por ano — uma linha por fertilizante. Clique na legenda para mostrar/ocultar um produto</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (dose média por fertilizante)" class="prod-linhas-leyenda" id="fertDoseLeyenda"></div>
+<div class="prod-linhas" id="fertDoseLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>5.5 · Fertilizantes por OS · Fazenda · Talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-14" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-14" role="tooltip">Um painel por fertilizante — o produto é o NOME, não a coluna onde foi cadastrado (fórmula NPK 2, outro fertilizante sintético 1...): o mesmo produto sai uma só vez, com as quantidades somadas. Dentro de cada painel, cada nó (OS, Fazenda e Talhão) num grupo de 4 linhas — Total (kg), Área tratada (ha), Dose média (kg/ha) e Registros — com uma coluna Geral e uma coluna por ano</span></span></h3>
+
+</div>
+<div id="fertTabelaWrap">
+
+            $PAINEL_FERTILIZANTES
+
+          </div>
+<div class="prod-vazio" id="fertVazio">Nenhum registro de fertilizantes corresponde aos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-nutrientes" class="painel" id="nutrientes">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 3h6"></path>
+<path d="M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"></path>
+<path d="M7.5 14h9"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-nutrientes"><span class="painel-numero">06</span>Nutrientes da adubação <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri" role="tooltip">Massa de macro e micronutrientes (kg) que veio dos fertilizantes e corretivos, calculada pela API 6 a partir dos teores de cada produto. O N é o único nutriente separado em total, sintético e orgânico; os demais aparecem só pelo total. Todos os painéis respondem aos filtros globais (exceto o filtro de fertilizante, que é do painel 05)</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="nutriResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>6.1 · Total por nutriente · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri-1" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri-1" role="tooltip">Cada nutriente num grupo de 4 linhas — Total (kg), Área adubada (ha), Dose média (kg/ha) e Registros — com uma coluna Geral e uma coluna por ano, na ordem N → P2O5 → K2O → Ca → Mg → S → B → Cu → Fe → Mn → Zn → Cl → Mo → Ni. O N aparece em três linhas próprias (N total, N sintético e N orgânico); os demais nutrientes só pelo total. A área adubada conta cada talhão/ano UMA vez e só quando aquele nutriente veio da adubação</span></span></h3>
+
+</div>
+<div aria-label="Total por nutriente por ano" id="nutriTabla"></div>
+<div class="prod-bloco-titulo">
+<h3>6.2 · Total de nutrientes por ano (kg) <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri-tot" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri-tot" role="tooltip">Gráfico de linhas: massa total de cada nutriente (kg) por ano — uma linha por série (N total, N sintético, N orgânico e o total dos demais macro/micronutrientes). Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (total de nutrientes por ano)" class="prod-linhas-leyenda" id="nutriTotaisLeyenda"></div>
+<div class="prod-linhas" id="nutriTotaisLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>6.3 · Área adubada por ano (ha) <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri-area" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri-area" role="tooltip">Gráfico de linhas: hectares adubados com cada nutriente por ano — uma linha por série. A área conta UMA vez por talhão/ano e só nos registros em que aquele nutriente veio da adubação (por isso a área de um micronutriente pode ser menor que a do N). Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (área adubada por nutriente)" class="prod-linhas-leyenda" id="nutriAreaLeyenda"></div>
+<div class="prod-linhas" id="nutriAreaLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>6.4 · Dose média por ano (kg/ha) <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri-dose" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri-dose" role="tooltip">Gráfico de linhas: dose média de cada nutriente (kg/ha = massa total ÷ área adubada com aquele nutriente) por ano — uma linha por série. Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda (dose média por nutriente)" class="prod-linhas-leyenda" id="nutriDoseLeyenda"></div>
+<div class="prod-linhas" id="nutriDoseLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>6.5 · Nutrientes por OS · Fazenda · Talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-nutri-pivot" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-nutri-pivot" role="tooltip">Um painel por série de nutriente (N total, N sintético, N orgânico e o total de cada macro/micronutriente). Dentro de cada painel, cada nó (OS, Fazenda e Talhão) num grupo de 4 linhas — Total (kg), Área adubada (ha), Dose média (kg/ha) e Registros — com uma coluna Geral e uma coluna por ano. Só entram os registros em que aquele nutriente veio da adubação</span></span></h3>
+
+</div>
+<div id="nutriTabelaWrap">
+
+            $PAINEL_NUTRIENTES
+
+          </div>
+<div class="prod-vazio" id="nutriVazio">Nenhum registro de nutrientes da adubação corresponde aos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-combustivel" class="painel" id="combustivel">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2.5s6 6.33 6 11a6 6 0 0 1-12 0c0-4.67 6-11 6-11z"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-combustivel"><span class="painel-numero">07</span>Combustíveis e energia <span class="info-tooltip"><button aria-describedby="tooltip-desc-comb" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-comb" role="tooltip">Consumo de combustíveis (L) e de energia elétrica (kWh) por OS · Fazenda · Talhão, ano a ano. Linhas agregadas (fazenda/talhão TODAS, TODOS ou RATEIO) são rateadas igualmente por hectare</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="combResumo"></div>
+<div hidden id="combTabelaWrap">
+
+            $PAINEL_COMBUSTIVEL
+
+          </div>
+<div class="prod-bloco-titulo">
+<h3>7.1 · Consumo por combustível/fonte e por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-comb-ano" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-comb-ano" role="tooltip">Cada combustível/fonte é um grupo de DUAS linhas — em cima o consumo informado (com a unidade — L ou kWh) e embaixo o Total Evidências do tipo, com o % de cobertura (evidenciado ÷ informado × 100) colorido por faixa, como no painel 5.1. O diesel usa o total do tipo (S10 + S500); gasolina e etanol são um produto só cada, sempre em litros. Combustível/fonte sem nota fiscal (a energia elétrica) sai com travessão</span></span></h3>
+<p>Cada item é um combustível/fonte com DUAS linhas — em cima o consumo informado e embaixo o Total Evidências (NF) com o % de cobertura — e cada coluna é um ano, dentro dos filtros ativos</p>
+</div>
+<div aria-live="polite" id="combTablaAno"></div>
+<div class="prod-bloco-titulo">
+<h3>7.2 · Consumo total por ano — energia (kWh) e cada combustível (L) <span class="info-tooltip"><button aria-describedby="tooltip-desc-comb-evol-tot" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-comb-evol-tot" role="tooltip">Gráfico de linhas: consumo total por ano em DUAS escalas. A escala da ESQUERDA é a energia elétrica (kWh) e a escala da DIREITA reúne os combustíveis líquidos (L) — UM combustível por linha (Diesel, Gasolina, Álcool/Etanol, ...), como no painel 7.1. Cada ano é um ponto do eixo X e a linha só liga anos com consumo. Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+<p>Gráfico de linhas (responde aos filtros): energia elétrica (kWh) na escala da esquerda; cada combustível líquido (L — Diesel, Gasolina, Álcool/Etanol, ...) é uma linha na escala da direita</p>
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda do consumo total por ano" class="prod-linhas-leyenda" id="combEvolLeyenda"></div>
+<div class="prod-linhas" id="combEvolLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>7.3 · Consumo por hectare por ano — energia (kWh/ha) e cada combustível (L/ha) <span class="info-tooltip"><button aria-describedby="tooltip-desc-comb-evol-ha" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-comb-evol-ha" role="tooltip">Gráfico de linhas: consumo por hectare por ano em DUAS escalas. A escala da ESQUERDA é a energia elétrica (kWh/ha) e a escala da DIREITA reúne os combustíveis líquidos (L/ha) — UM combustível por linha (Diesel, Gasolina, Álcool/Etanol, ...). Consumo por hectare = Σ consumo total ÷ Σ área distinta (ha) do ano, como nos painéis 7.4–7.8. Clique na legenda para mostrar/ocultar uma série</span></span></h3>
+<p>Gráfico de linhas (responde aos filtros): energia elétrica (kWh/ha) na escala da esquerda; cada combustível líquido (L/ha — Diesel, Gasolina, Álcool/Etanol, ...) é uma linha na escala da direita</p>
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda do consumo por hectare por ano" class="prod-linhas-leyenda" id="combHaLeyenda"></div>
+<div class="prod-linhas" id="combHaLinhas"></div>
+</div>
+<div class="prod-bloco-titulo">
+<h3>7.4 · Combustíveis (L) por OS · Fazenda · Talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-comb-all" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-comb-all" role="tooltip">Soma de todos os combustíveis líquidos (L). Cada nó (OS, Fazenda e Talhão) num grupo de 4 linhas — Consumo total (L), Área (ha), Consumo por hectare (L/ha) e Registros — com uma coluna Geral e uma coluna por ano. O nível de talhão só aparece quando há consumo por talhão; senão discrimina por fazenda e, sem fazenda, por OS</span></span></h3>
+</div>
+<div id="combPivot"></div>
+<div class="prod-bloco-titulo">
+<h3>7.5 · Diesel por OS · Fazenda · Talhão · ano</h3>
+<p>Igual ao 7.4, somente o combustível Diesel</p>
+</div>
+<div id="combPivotDiesel"></div>
+<div class="prod-bloco-titulo">
+<h3>7.6 · Álcool (Etanol) por OS · Fazenda · Talhão · ano</h3>
+<p>Igual ao 7.4, somente o combustível Álcool/Etanol</p>
+</div>
+<div id="combPivotAlcool"></div>
+<div class="prod-bloco-titulo">
+<h3>7.7 · Gasolina por OS · Fazenda · Talhão · ano</h3>
+<p>Igual ao 7.4, somente o combustível Gasolina</p>
+</div>
+<div id="combPivotGasolina"></div>
+<div class="prod-bloco-titulo">
+<h3>7.8 · Energia (kWh) por OS · Fazenda · Talhão · ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-ener-pivot" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-ener-pivot" role="tooltip">Consumo de energia elétrica (kWh). Cada nó (OS, Fazenda e Talhão) num grupo de 4 linhas — Consumo total (kWh), Área (ha), Consumo por hectare (kWh/ha) e Registros — com uma coluna Geral e uma coluna por ano</span></span></h3>
+</div>
+<div id="enerPivot"></div>
+<div class="prod-vazio" id="combVazio">Nenhum registro de combustível/energia corresponde aos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-praticas" class="painel" id="praticas">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"></path>
+<path d="M5 20c4-4 8-8 14-14"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-praticas"><span class="painel-numero">08</span>Práticas de solo <span class="info-tooltip"><button aria-describedby="tooltip-desc-prat" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-prat" role="tooltip">Manejo do solo/implantação (Plantio direto, Cultivo mínimo, Preparo convencional, Gradagem) e demais práticas (ILP, IPF, ILPF, Agricultura de precisão, Pasto rotacionado, Ureia revestida, Solubilizador de P, Biológicos, Irrigação pivô/gotejamento, Sequeiro, Solo Exposto, Forrageira, Mix de plantas) — hectares por ano. A lista é dinâmica: mostra todas as práticas presentes nos dados (manejo do solo + indicadores "Sim" + campos de lista da V3 — manejo de água, integração e cobertura — + cobertura do solo). Os painéis 8.1 e 8.2 saem em ordem alfabética; a coluna Sucessão das planilhas não entra no painel. O 8.3 mostra só o preparo do solo (Convencional e Plantio direto)</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="pratResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>8.1 · Hectares por prática e por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-prat-1" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-prat-1" role="tooltip">Cada linha é uma prática e cada coluna um ano: hectares dos talhões naquela prática no ano, dentro dos filtros ativos</span></span></h3>
+<p>Cada linha é uma prática e cada coluna um ano: hectares dos talhões naquela prática no ano, dentro dos filtros ativos</p>
+</div>
+<div aria-label="Hectares por prática e por ano" id="pratTabla"></div>
+<div class="prod-bloco-titulo">
+<h3>8.2 · Evolução dos hectares das práticas por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-prat-2" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-prat-2" role="tooltip">Gráfico de linhas: hectares de cada prática ao longo dos anos, dentro dos filtros ativos. A linha tracejada Área física (base) é a área total física do conjunto filtrado — cada talhão conta 1× pela MAIOR área registrada entre as safras — e as práticas podem ultrapassá-la porque o mesmo talhão recebe mais de uma prática no mesmo ano. Clique na legenda para mostrar ou ocultar uma prática</span></span></h3>
+<p>Gráfico de linhas: hectares de cada prática ao longo dos anos (respondem aos filtros). Clique na legenda para mostrar/ocultar uma prática</p>
+</div>
+<div class="prat-linhas-wrap">
+<div aria-label="Legenda das práticas" class="prat-leyenda" id="pratLeyenda"></div>
+<div class="prat-linhas" id="pratLinhas"></div>
+</div>
+
+<div class="prod-bloco-titulo">
+<h3>8.3 · Preparo do solo por OS · Fazenda · Talhão e por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-prat-3" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-prat-3" role="tooltip">Clique na OS para expandir as fazendas; clique na fazenda para ver os talhões. Cada fila mostra o preparo do solo registrado em cada ano: só "Convencional" (Preparo convencional) e "Plantio direto" são exibidos</span></span></h3>
+<p>Clique na OS para expandir as fazendas; clique na fazenda para ver os talhões. Cada fila mostra o manejo de cada ano (Convencional / Plantio direto)</p>
+</div>
+<div id="pratTabelaWrap">
+
+            $PAINEL_PRATICAS
+
+          </div>
+<div class="prod-vazio" id="pratVazio">Nenhum registro de práticas corresponde aos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-evidencias" class="painel" id="evidencias">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 2h6l4 4v16H5V2h4z"></path>
+<path d="M9 2v4h6"></path>
+<path d="M7 12h10M7 16h10"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-evidencias"><span class="painel-numero">09</span>Evidências <span class="info-tooltip"><button aria-describedby="tooltip-desc-evid" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-evid" role="tooltip">Evidências das notas fiscais por TIPO (fertilizantes, sementes, diesel, gasolina, etanol, ARLA e defensivos) e por ano fiscal. Fertilizantes, sementes, defensivos e ração em kg; diesel, gasolina, etanol e ARLA em litros (L)</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+<div aria-live="polite" class="prod-resumo" id="evidResumo"></div>
+<div class="prod-bloco-titulo">
+<h3>9.1 · Evidências por tipo e por ano <span class="info-tooltip"><button aria-describedby="tooltip-desc-evid-1" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-evid-1" role="tooltip">Cada tipo de evidência (fertilizantes, sementes, diesel, gasolina, …) com o volume por ano fiscal. O tipo com VÁRIOS produtos (fertilizantes, diesel) mostra cada produto e a linha Tipo Total; o tipo com UM produto mostra uma linha só. A unidade é a do tipo (kg ou L)</span></span></h3>
+</div>
+<div aria-label="Evidências por tipo e por ano" id="evidTabla"></div>
+<div class="prod-bloco-titulo">
+<h3>9.2 · Evolução das evidências por tipo <span class="info-tooltip"><button aria-describedby="tooltip-desc-evid-2" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-evid-2" role="tooltip">Gráfico de linhas: total evidenciado por tipo ao longo dos anos fiscais. Fertilizantes, sementes, defensivos e ração em kg; diesel, gasolina, etanol e ARLA em litros. Clique na legenda para mostrar/ocultar um tipo</span></span></h3>
+</div>
+<div class="prod-linhas-wrap">
+<div aria-label="Legenda das evidências" class="prod-linhas-leyenda" id="evidLeyenda"></div>
+<div class="prod-linhas" id="evidLinhas"></div>
+</div>
+<div class="prod-vazio" id="evidVazio">Nenhuma evidência de nota fiscal nos filtros selecionados.</div>
+</div>
+</section>
+<section aria-labelledby="t-alertas" class="painel" id="alertas">
+<div class="painel-topo">
+<div class="painel-icone"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+<path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
+</svg></div>
+<div class="painel-identidade">
+<h2 id="t-alertas"><span class="painel-numero">10</span>Qualidade dos dados <span class="info-tooltip"><button aria-describedby="tooltip-desc-15" aria-label="Ver descrição" class="info-tooltip-btn" type="button">i</button><span class="info-tooltip-box" id="tooltip-desc-15" role="tooltip">Validações e pontos de atenção</span></span></h2>
+
+</div>
+</div>
+<div class="painel-corpo">
+
+
+
+          $PAINEL_ALERTAS
+
+
+
+        </div>
+</section>
+</main>
+</div>
+<footer class="rodape">
+<div class="rodape-grade">
+<div>
+<div class="rodape-marca">
+<div class="rodape-logo" id="logoRodape">
+<img alt="Logo Agrorobótica" decoding="async" loading="lazy" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEby-oJq0xHblxKGo3G3E4RDuOpaOEi9GGwjA7LfNkTw&amp;s=10"/>
+<span>AR</span>
+</div>
+<div>
+<div class="marca-nome">Agrorobótica</div>
+<div class="marca-sub">$ROTULO_APLICACAO</div>
+</div>
+</div>
+<p class="rodape-tagline">Fotônica em Certificações Agroambientais</p>
+<p class="rodape-texto">Tecnologia e automação para o campo. Relatório gerado automaticamente pelo $ROTULO_APLICACAO (Excel → JSON → validação).</p>
+</div>
+<div>
+<h4>Links</h4>
+<ul>
+<li><a href="https://agrorobotica.com.br" rel="noopener" target="_blank">Site da Agrorobótica</a></li>
+<li><a href="https://agrorobotica.com.br/en/" rel="noopener" target="_blank">Site em inglês (EN)</a></li>
+<li><a href="#geral">Voltar ao topo</a></li>
+</ul>
+</div>
+<div>
+<h4>Contato</h4>
+<ul class="contato">
+<li><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path>
+</svg><a class="whatsapp-link" href="https://wa.me/5516997181286" rel="noopener" target="_blank">(16)
+              99718-1286<small>Abrir conversa no WhatsApp</small></a></li>
+<li><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="16" rx="2" width="20" x="2" y="4"></rect>
+<path d="m22 7-10 6L2 7"></path>
+</svg><a href="mailto:contato@agrorobotica.com.br">contato@agrorobotica.com.br</a></li>
+<li><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+<circle cx="12" cy="10" r="3"></circle>
+</svg><span>Rua Alexandre Pedrazzani, 450 - Jardim Novo Horizonte</span></li>
+<li><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+<circle cx="12" cy="10" r="3"></circle>
+</svg><span>São Carlos, SP · CEP 13571-512, Brasil</span></li>
+</ul>
+</div>
+<div>
+<h4>Redes sociais</h4>
+<div class="redes-sociais">
+<a aria-label="LinkedIn" class="icone-social" href="https://www.linkedin.com/company/agroroboticafca/?originalSubdomain=br" rel="noopener" target="_blank"><svg fill="currentColor" viewbox="0 0 24 24">
+<path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.55C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.72C24 .77 23.2 0 22.22 0z"></path>
+</svg>LinkedIn</a>
+<a aria-label="Facebook" class="icone-social" href="https://www.facebook.com/Agrorobotica/" rel="noopener" target="_blank"><svg fill="currentColor" viewbox="0 0 24 24">
+<path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z"></path>
+</svg>Facebook</a>
+<a aria-label="Instagram" class="icone-social" href="https://www.instagram.com/agrorobotica/" rel="noopener" target="_blank"><svg fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38a5.9 5.9 0 0 0-1.38 2.13C.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13a5.9 5.9 0 0 0 2.13 1.38c.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.9 5.9 0 0 0 2.13-1.38 5.9 5.9 0 0 0 1.38-2.13c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.9 5.9 0 0 0-1.38-2.13A5.9 5.9 0 0 0 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0zm6.41 5.59a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"></path>
+</svg>Instagram</a>
+<a aria-label="WhatsApp" class="icone-social" href="https://wa.me/5516997181286" rel="noopener" target="_blank"><svg fill="currentColor" viewbox="0 0 24 24">
+<path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.89 1.22 3.09.15.2 2.11 3.22 5.1 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.42-.07-.12-.27-.2-.57-.35zM12.05 21.79h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88a9.83 9.83 0 0 1 6.99 2.9 9.83 9.83 0 0 1 2.9 7 9.88 9.88 0 0 1-9.9 9.87zm8.42-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.9c0 2.1.55 4.14 1.59 5.94L.06 24l6.3-1.65a11.9 11.9 0 0 0 5.68 1.44h.01c6.55 0 11.89-5.34 11.89-11.9a11.8 11.8 0 0 0-3.47-8.4z"></path>
+</svg>WhatsApp</a>
+</div>
+</div>
+</div>
+<div class="rodape-info">
+<p class="rodape-aviso">Relatório gerado automaticamente — alguns dados podem sofrer alteração.</p>
+<p class="rodape-processamento" id="rodapeProcessamento">$PROCESSAMENTO</p>
+<p class="rodape-gerado">Gerado em: $GERADO_EM</p>
+</div>
+<div class="rodape-fim">
+<span>© 2026 Agrorobótica · Fotônica em Certificações Agroambientais · Todos os direitos reservados.</span>
+<span>Desenvolvido por <strong>Matheus Martinelli</strong> · $VERSAO_RELATORIO</span>
+</div>
+</footer>
+<button aria-label="Voltar ao topo do relatório" class="btn-topo" id="btnTopo" type="button">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 19V5"></path>
+<path d="m5 12 7-7 7 7"></path>
+</svg>
+</button>
+<script>$SCRIPTS</script>
+</body>
+</html>

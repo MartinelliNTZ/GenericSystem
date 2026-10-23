@@ -49,8 +49,9 @@ class PanelBuilder(BaseUtil, ABC):
     def base_info(cls, context: ReportContext, key: str) -> Dict[str, Any]:
         """Resumo de UMA base gravada na OS (para os painéis espaciais).
 
-        Chaves: ``tem``, ``feicoes``, ``area_ha``, ``arquivo``, ``origem`` e
-        ``registrado`` — as MESMAS infos do relatório emitido em PDF.
+        Chaves: ``tem``, ``contagem`` (talhões no 2.2, zonas no 2.3),
+        ``area_ha``, ``arquivo``, ``origem`` e ``registrado`` — as MESMAS infos
+        do relatório emitido em PDF.
 
         Args:
             context: Contexto do relatório.
@@ -59,7 +60,7 @@ class PanelBuilder(BaseUtil, ABC):
         info = context.asset(key)
         return {
             "tem": bool(info.get("has")),
-            "feicoes": info.get("features", 0),
+            "contagem": info.get("features", 0),
             "area_ha": info.get("area_ha", 0.0),
             "arquivo": str(info.get("file", "") or ""),
             "origem": str(info.get("source", "") or ""),

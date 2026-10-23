@@ -75,11 +75,17 @@ th,td{padding:8px 14px;text-align:left;border-bottom:1px solid var(--borda)}
 th{color:var(--suave);font-size:12px;font-weight:600;white-space:nowrap}
 td.n,th.n{text-align:right}
 .total{margin-top:8px;display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--acento);background:rgba(91,108,255,.1);border-radius:8px;font-weight:700}
-.mapa-grade{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px}
+.base{margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.base .cartao{min-width:150px;padding:10px 14px}
+.base .cartao-valor{font-size:19px}
+.base .vazio{flex:1}
+.base-info{flex:1;min-width:240px;display:flex;flex-wrap:wrap;gap:8px 22px;align-content:center;background:var(--surface-2);border:1px solid var(--borda);border-radius:12px;padding:12px 16px;font-size:13px}
+.base-info b{display:block;color:var(--suave);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.base-info span{overflow-wrap:anywhere}
 .mapa-box{position:relative;border:1px solid var(--borda);border-radius:12px;overflow:hidden;min-height:480px}
 .mapa{height:100%;min-height:480px;background:#0d1230}
 .aviso{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:500;background:rgba(10,14,40,.88);border:1px solid var(--borda);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--suave);text-align:center;pointer-events:none;max-width:80%}
-.legenda{background:var(--surface-2);border:1px solid var(--borda);border-radius:12px;padding:14px;align-self:start}
+.legenda{position:absolute;top:12px;right:12px;z-index:600;width:min(250px,62%);max-height:calc(100% - 24px);overflow:auto;background:rgba(16,21,56,.94);border:1px solid var(--borda);border-radius:12px;padding:14px;backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .legenda h4{margin:0 0 10px;font-size:14px}
 .leg-item{display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 0;min-width:0}
 .leg-item span:last-child{overflow-wrap:anywhere}
@@ -100,8 +106,8 @@ body.menu-aberto .scrim{display:block}
 .cabecalho{padding:12px 16px}
 .gerado{display:none}
 main{padding:8px 16px 24px}
-.mapa-grade{grid-template-columns:1fr}
 .mapa-box,.mapa{min-height:380px}
+.legenda{width:min(220px,72%)}
 }
 </style>
 </head>
@@ -147,19 +153,21 @@ main{padding:8px 16px 24px}
 <div id="listaFazendas"></div>
 
 <h3 class="sub"><span class="painel-numero">2.2</span>Limites</h3>
-<div class="mapa-grade">
-<div class="mapa-box" id="caixaLimites"><div class="mapa" id="mapaLimites"></div><div class="aviso" id="avisoLimites">Aguardando o shape de limites</div></div>
+<div class="mapa-box" id="caixaLimites">
+<div class="mapa" id="mapaLimites"></div>
+<div class="aviso" id="avisoLimites">Aguardando o shape de limites</div>
 <aside class="legenda"><h4>Fazendas</h4><div id="legLimites"></div>
 <label class="opcao"><input type="checkbox" id="chkRotulos" checked> Mostrar nome dos talhões</label></aside>
 </div>
-<div class="tabela" id="baseLimites"></div>
+<div class="base" id="baseLimites"></div>
 
 <h3 class="sub"><span class="painel-numero">2.3</span>Zonas de manejo</h3>
-<div class="mapa-grade">
-<div class="mapa-box"><div class="mapa" id="mapaZonas"></div><div class="aviso" id="avisoZonas">Aguardando o shape de zonas de manejo</div></div>
+<div class="mapa-box">
+<div class="mapa" id="mapaZonas"></div>
+<div class="aviso" id="avisoZonas">Aguardando o shape de zonas de manejo</div>
 <aside class="legenda"><h4>Zonas de manejo</h4><div id="legZonas"></div></aside>
 </div>
-<div class="tabela" id="baseZonas"></div>
+<div class="base" id="baseZonas"></div>
 </div>
 </section>
 
@@ -218,8 +226,8 @@ window.DADOS_PROJETO = window.DADOS_PROJETO || {
   fazendas: [],              // ex.: [{ nome: "Fazenda A", talhoes: [{ nome: "T-01", area_ha: 30.5 }] }]
   limites: null,
   zonas: null,
-  base_limites: null,        // { tem, feicoes, area_ha, arquivo, origem, registrado }
-  base_zonas: null,
+  base_limites: null,        // { tem, contagem, area_ha, arquivo, origem, registrado }
+  base_zonas: null,          // contagem = talhões (2.2) ou zonas (2.3)
   /* Painel 3 — atividades */
   atividades: [],            // ex.: ["Amostragem de solo", "Colheita"]
   /* Painel 4 — base de dados */
@@ -236,7 +244,7 @@ var $ = function(id){ return document.getElementById(id); };
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function vazio(v){ return v == null || v === ''; }
 function num(v, c){ c = c == null ? 2 : c; return (vazio(v) || isNaN(v)) ? '—' : Number(v).toLocaleString('pt-BR', {minimumFractionDigits:c, maximumFractionDigits:c}); }
-function feicoes(fc){ return (fc && fc.features) ? fc.features : []; }
+function features(fc){ return (fc && fc.features) ? fc.features : []; }
 function cartoesHtml(lista){
   return (lista || []).map(function(c){
     var v = vazio(c[1]) ? '' : c[1];
@@ -255,18 +263,16 @@ function quando(v){
   return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 function nomeArquivo(p){ var t = String(vazio(p) ? '' : p); return t ? t.split(/[\\/]/).pop() : ''; }
-function baseHtml(el, base){
+function baseHtml(el, base, rotulo){
   if (!base || !base.tem) { el.innerHTML = '<p class="vazio">Base não registrada nesta OS.</p>'; return; }
-  var linhas = [
-    ['Feições', num(base.feicoes, 0)],
-    ['Área (ha)', num(base.area_ha)],
-    ['Arquivo', nomeArquivo(base.arquivo)],
-    ['Origem', base.origem],
-    ['Registrado em', quando(base.registrado)]
-  ];
-  el.innerHTML = '<table><tbody>' + linhas.map(function(l){
-    return '<tr><th>' + l[0] + '</th><td>' + (vazio(l[1]) ? '—' : esc(l[1])) + '</td></tr>';
-  }).join('') + '</tbody></table>';
+  el.innerHTML =
+    '<div class="cartao"><span class="cartao-valor">' + num(base.contagem, 0) + '</span><span class="cartao-rotulo">' + esc(rotulo) + '</span></div>' +
+    '<div class="cartao"><span class="cartao-valor">' + num(base.area_ha) + '</span><span class="cartao-rotulo">Área (ha)</span></div>' +
+    '<div class="base-info">' +
+      '<span><b>Arquivo</b>' + esc(nomeArquivo(base.arquivo) || '—') + '</span>' +
+      '<span><b>Origem</b>' + esc(base.origem || '—') + '</span>' +
+      '<span><b>Registrado em</b>' + esc(quando(base.registrado) || '—') + '</span>' +
+    '</div>';
 }
 
 /* Cabeçalho */
@@ -302,7 +308,7 @@ $('listaAtividades').innerHTML = (D.atividades || []).length
 
 /* Cores por fazenda: ordem de D.fazendas; depois as que só aparecem nos limites */
 var fazNomes = (D.fazendas || []).map(function(f){ return f.nome; });
-feicoes(D.limites).forEach(function(f){
+features(D.limites).forEach(function(f){
   var n = (f.properties || {}).fazenda;
   if (n && fazNomes.indexOf(n) < 0) fazNomes.push(n);
 });
@@ -342,7 +348,7 @@ function legenda(el, itens, fantasmas){
 
 /* Painel 2.2 — limites */
 var mL = criarMapa('mapaLimites'), contFaz = {};
-var fl = feicoes(D.limites);
+var fl = features(D.limites);
 fl.forEach(function(f){ var n = (f.properties || {}).fazenda || '—'; contFaz[n] = (contFaz[n] || 0) + 1; });
 if (mL && fl.length) {
   var gL = L.geoJSON(D.limites, {
@@ -361,11 +367,11 @@ legenda($('legLimites'), Object.keys(contFaz).length
   : fazNomes.map(function(n){ return {nome:n, cor:corFaz(n)}; }),
   ['Fazenda A', 'Fazenda B', 'Fazenda C']);
 $('chkRotulos').addEventListener('change', function(){ $('caixaLimites').classList.toggle('sem-rotulos', !this.checked); });
-baseHtml($('baseLimites'), D.base_limites);
+baseHtml($('baseLimites'), D.base_limites, 'Talhões');
 
 /* Painel 2.3 — zonas de manejo (só legenda, sem nome de talhão) */
 var mZ = criarMapa('mapaZonas'), zonas = [];
-var fz = feicoes(D.zonas);
+var fz = features(D.zonas);
 fz.forEach(function(f){ var n = (f.properties || {}).zona || '—'; if (zonas.indexOf(n) < 0) zonas.push(n); });
 function corZona(n){ return PALETA[(zonas.indexOf(n) + 3) % PALETA.length]; }
 if (mZ && fz.length) {
@@ -377,7 +383,7 @@ if (mZ && fz.length) {
   $('avisoZonas').hidden = true;
 }
 legenda($('legZonas'), zonas.map(function(n){ return {nome:n, cor:corZona(n)}; }), ['Zona 1', 'Zona 2', 'Zona 3']);
-baseHtml($('baseZonas'), D.base_zonas);
+baseHtml($('baseZonas'), D.base_zonas, 'Zonas');
 
 /* Painel 4 — base de dados (pastas criadas e anos com dados) */
 var pastas = D.lista_pastas || [], anos = D.anos_criados || [];

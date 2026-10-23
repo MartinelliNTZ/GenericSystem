@@ -115,11 +115,11 @@ Submódulo do Acompanhamento de OS, com classes **desacopladas** (o plugin conhe
 | `ReportContext` | Contexto IMUTÁVEL entregue aos builders (`record`, `mother`, `tool_key`, `generated_at`, `data_version`, `asset_paths`, `shapes`) — com `value(campo)` e `shape(base)` |
 | `ShapeGeoJsonReader` | Lê o vetor da base (`.shp`/`.gpkg`/`.kml`/`.kmz`/`.geojson`) via `VectorLayerSource.read_geodataframe`, reprojeta para **EPSG:4326** e devolve `FeatureCollection` só com as propriedades do template (`SHAPE_FIELDS`: `FAZENDA`/`TALHAO`/`AREA_HA` → `fazenda`/`talhao`/`area_ha`; `ZONA` → `zona`) |
 | `OsReportHtmlGenerator` | Template + dados → `.HTML`: troca o token `<!--{{DADOS_PROJETO}}-->` por `<script>window.DADOS_PROJETO = {…};</script>`; herda o DESTINO do `OsReportGenerator` (mesma pasta por TIPO) e muda só a extensão (`.HTML`) |
-| `panels/PanelBuilder` | Contrato dos builders de painel (`PANEL_ID` + `PANEL_TITLE` + `build(context)`); um painel pode ter **vários** builders com subnúmero (`3.1`, `3.2` …) |
+| `panels/PanelBuilder` | Contrato dos builders de painel (`PANEL_ID` + `PANEL_TITLE` + `build(context)`) e helper `base_info(context, key)` — resumo de uma base gravada na OS (`tem`, `contagem`, `area_ha`, `arquivo`, `origem`, `registrado`), usado pelos subpainéis 2.2/2.3; um painel pode ter **vários** builders com subnúmero (`2.1`, `2.2` …) |
 | `panels/PanelVisaoGeral` | **Painel 1** — visão geral: projeto + dados contratuais **+ dados da OS** (nome, cliente, nome comercial, CNPJ, pasta, pasta completa e última atualização — o antigo painel "Dados da OS" foi somado aqui) |
 | `panels/PanelFazendas` | **Painel 2.1** — fazendas e talhões, derivados do shape de `limites` |
-| `panels/PanelLimites` | **Painel 2.2** — GeoJSON dos limites (mapa) + resumo da base (`base_limites`) |
-| `panels/PanelZonas` | **Painel 2.3** — GeoJSON das zonas de manejo (mapa) + resumo da base (`base_zonas`) |
+| `panels/PanelLimites` | **Painel 2.2** — GeoJSON dos limites (mapa com a **legenda sobre o mapa**) + resumo da base (`base_limites`: **Talhões**, Área (ha), Arquivo, Origem e Registrado em) |
+| `panels/PanelZonas` | **Painel 2.3** — GeoJSON das zonas de manejo (mapa com a **legenda sobre o mapa**) + resumo da base (`base_zonas`: **Zonas**, Área (ha), Arquivo, Origem e Registrado em) |
 | `panels/PanelAtividades` | **Painel 3** — atividades da propriedade (ainda sem fonte no banco) |
 | `panels/PanelBaseDados` | **Painel 4** — base de dados: **4.1** pastas criadas e **4.2** anos com dados |
 
