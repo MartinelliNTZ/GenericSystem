@@ -1,3 +1,9 @@
+[1.16.4][2026.10.23][10:37] - Base de Limites: pasta geral renomeada para VERRA_DATA (Consolidado + Limites por OS)
+  - plugins/limites_db/LimitesService.py: `BASE_ROOT` passa a apontar para `<BASE_DADOS>/VERRA_DATA` (a pasta de backup GERAL da base, antes `limites`); novas constantes `CONSOLIDATED_FOLDER = "Consolidado"` e `OS_LIMITS_FOLDER = "Limites"`
+  - Completões (`limites.shp` e `zonas_manejo.shp`) passam a ser gravados em `<BASE_DADOS>/VERRA_DATA/Consolidado/` e o arquivo de cada OS em `<BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_<tipo>.shp` (`_consolidated_path`/`_os_file_path`) — as subpastas são criadas automaticamente na gravação (`VectorLayerSource.write_geodataframe_atomic`)
+  - A cópia no projeto (`08_LIMITES/TALHOES` e `13_ZONAS_DE_MANEJO`) e o registro `limites`/`zonas_manejo` no banco NÃO mudaram; `find_existing` (ATUALIZAR) passa a procurar o arquivo da OS no novo caminho
+  - plugins/limites_db/LimitesPlugin.py, docs/skills/CatalogoClasses.md e docs/mapa_plugins.html: caminhos atualizados
+
 [1.16.3][2026.10.23][09:20] - Mapa de plugins: novo docs/mapa_plugins.html (SISTEMA + 17 plugins em grade)
   - docs/mapa_plugins.html: NOVO — página estática no mesmo formato/estilo do docs/mapa_apis.html, mas para os PLUGINS: hero, estatísticas, visão geral (entradas → plugin → saídas), seção do SISTEMA (00) com o ciclo de vida e os serviços do núcleo, grade de plugins (quadrados clicáveis + painel com Precisa/Gera/Depois e subdivisões internas numeradas), padronizações e famílias de saída
   - Sem sequência e sem rotas: os plugins são exibidos em GRADE de quadrados (.grid-tools) — cada quadrado traz o número, o nome e o grupo (ToolType · CategoryTool); a navegação Anterior/Próxima foi removida e a seção "Rotas: quem alimenta quem" (com o array R e o CSS .routes/.chip) foi eliminada, já que plugins não têm ordem nem rotas

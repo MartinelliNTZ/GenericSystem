@@ -5,14 +5,18 @@ LimitesService — Regras de negócio da Base de Limites e das Zonas de Manejo
 Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
 
 **Limites** (``MODE_LIMITES``):
-    <BASE_DADOS>/limites/limites.shp                       → completão (todas as OS)
-    <BASE_DADOS>/limites/<OS>/<OS>_limites.shp             → um arquivo por OS
-    <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp      → cópia no projeto
+    <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp              → completão (todas as OS)
+    <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp        → um arquivo por OS
+    <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp            → cópia no projeto
 
 **Zonas de Manejo** (``MODE_ZONAS``):
-    <BASE_DADOS>/limites/zonas_manejo.shp                  → completão de zonas
-    <BASE_DADOS>/limites/<OS>/<OS>_zonas_manejo.shp        → um arquivo por OS
+    <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp         → completão de zonas
+    <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_zonas_manejo.shp   → um arquivo por OS
     <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
+
+``VERRA_DATA`` é a pasta de BACKUP GERAL da base (dentro de ``BASE_DADOS``): os
+completões de todos os modos ficam agrupados na subpasta ``Consolidado`` e cada OS
+tem a sua própria pasta (``<OS>/Limites``) com os arquivos do modo.
 
 A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra já
 diferencia as OS de um mesmo projeto, então cada OS tem o seu próprio arquivo e a
@@ -82,8 +86,10 @@ _TOOL_KEY = ToolKey.LIMITES_DB.value
 
 BASE_ROOT = (
     r"C:\Users\MatheusMartinelli\OneDrive - Agrorobotica Fotonica Em Certificacoes "
-    r"Agroambientais\BASE_DADOS\limites"
+    r"Agroambientais\BASE_DADOS\VERRA_DATA"
 )
+CONSOLIDATED_FOLDER = "Consolidado"
+OS_LIMITS_FOLDER = "Limites"
 CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
 DEFAULT_TOLERANCE_PCT = 1.0
@@ -560,17 +566,22 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def _consolidated_path(cls, config: LimitesImportConfig) -> str:
-        """Caminho do completão do modo (arquivo com todas as OS)."""
+        """Caminho do completão do modo (pasta ``Consolidado`` da base)."""
         return os.path.join(
-            config.output_root, cls.settings(config.mode)["consolidated"]
+            config.output_root,
+            CONSOLIDATED_FOLDER,
+            cls.settings(config.mode)["consolidated"],
         )
 
     @classmethod
     def _os_file_path(cls, config: LimitesImportConfig, os_key: str) -> str:
-        """Caminho do arquivo do modo dentro da pasta da OS na base."""
+        """Caminho do arquivo do modo dentro da pasta ``Limites`` da OS na base."""
         settings = cls.settings(config.mode)
         return os.path.join(
-            config.output_root, os_key, f"{os_key}{settings['os_suffix']}.shp"
+            config.output_root,
+            os_key,
+            OS_LIMITS_FOLDER,
+            f"{os_key}{settings['os_suffix']}.shp",
         )
 
     @classmethod
