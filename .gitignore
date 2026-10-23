@@ -37,6 +37,7 @@ venv/
 .venv/
 .venv
 env/
+~$TURAS_AETHERIS.docx
 
 # Cache Python
 __pycache__/
