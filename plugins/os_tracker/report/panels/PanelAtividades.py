@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-PanelCulturas — Painel 2 · Culturas
-===================================
-Lista de todas as culturas da propriedade.
+PanelAtividades — Painel 3 · Atividades
+=======================================
+Atividades da propriedade (era o painel "Culturas").
 
-O banco ainda não fornece as culturas da OS, então o painel devolve a lista
+O banco ainda não fornece as atividades da OS, então o painel devolve a lista
 VAZIA (o template exibe o próprio estado vazio). Nada é adaptado/inventado.
 """
 
@@ -16,13 +16,13 @@ from plugins.os_tracker.report.ReportContext import ReportContext
 from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
 
 
-class PanelCulturas(PanelBuilder):
-    """Painel 2 — Culturas."""
+class PanelAtividades(PanelBuilder):
+    """Painel 3 — Atividades."""
 
-    PANEL_ID = "2"
-    PANEL_TITLE = "Culturas"
+    PANEL_ID = "3"
+    PANEL_TITLE = "Atividades"
 
     @classmethod
     def build(cls, context: ReportContext) -> Dict[str, Any]:
         """Sem fonte no banco: lista vazia (o template mostra o estado vazio)."""
-        return {"culturas": []}
+        return {"atividades": []}

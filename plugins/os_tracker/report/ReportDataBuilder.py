@@ -21,10 +21,9 @@ from typing import Any, Dict, Tuple, Type
 from utils.BaseUtil import BaseUtil
 
 from plugins.os_tracker.report.ReportContext import ReportContext
-from plugins.os_tracker.report.panels.PanelBases import PanelBases
+from plugins.os_tracker.report.panels.PanelAtividades import PanelAtividades
+from plugins.os_tracker.report.panels.PanelBaseDados import PanelBaseDados
 from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
-from plugins.os_tracker.report.panels.PanelCulturas import PanelCulturas
-from plugins.os_tracker.report.panels.PanelDadosOs import PanelDadosOs
 from plugins.os_tracker.report.panels.PanelFazendas import PanelFazendas
 from plugins.os_tracker.report.panels.PanelLimites import PanelLimites
 from plugins.os_tracker.report.panels.PanelVisaoGeral import PanelVisaoGeral
@@ -40,38 +39,40 @@ class ReportDataBuilder(BaseUtil):
         "os": "",
         "nome_comercial": "",
         "tipos_manejo": [],
-        "culturas": [],
         "area_contratada_ha": None,
         "n_cars": None,
         "data_inicio": "",
         "ano_cenario_base": None,
         "gerado_em": "",
         "versao_data": "",
-        "fazendas": [],
-        "limites": None,
-        "zonas": None,
-        # Painel 6 — Dados da OS (as mesmas infos do relatório emitido em PDF).
+        # Painel 1 — dados da OS (as mesmas infos do relatório emitido em PDF).
         "nome": "",
         "cliente": "",
         "cnpj": "",
         "pasta": "",
         "pasta_completa": "",
+        "atualizado_em": "",
+        # Painel 2 — distribuição espacial.
+        "fazendas": [],
+        "limites": None,
+        "zonas": None,
+        "base_limites": None,
+        "base_zonas": None,
+        # Painel 3 — atividades.
+        "atividades": [],
+        # Painel 4 — base de dados.
         "pastas_criadas": None,
         "lista_pastas": [],
         "anos_criados": [],
-        "atualizado_em": "",
-        # Painel 7 — Bases gravadas na OS.
-        "bases": [],
     }
     # Painéis na ORDEM do template (um painel pode ter vários builders).
     PANELS: Tuple[Type[PanelBuilder], ...] = (
         PanelVisaoGeral,
-        PanelCulturas,
         PanelFazendas,
         PanelLimites,
         PanelZonas,
-        PanelDadosOs,
-        PanelBases,
+        PanelAtividades,
+        PanelBaseDados,
     )
 
     @classmethod

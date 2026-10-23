@@ -11,15 +11,14 @@ Painéis atuais:
 
 | Painel | Builder | Conteúdo |
 |---|---|---|
-| 1 | ``PanelVisaoGeral`` | OS e nome comercial (contratuais ainda sem fonte) |
-| 2 | ``PanelCulturas`` | Culturas (ainda sem fonte no banco) |
-| 3 | ``PanelFazendas`` | Fazendas e talhões (derivados do shape de limites) |
-| 4 | ``PanelLimites`` | GeoJSON dos limites (mapa) |
-| 5 | ``PanelZonas`` | GeoJSON das zonas de manejo (mapa) |
-| 6 | ``PanelDadosOs`` | Dados da OS (nome, cliente, CNPJ, pasta, pastas/anos, atualização) |
-| 7 | ``PanelBases`` | Bases gravadas (feições, área, arquivo, origem, registro) |
+| 1 | ``PanelVisaoGeral`` | Visão geral: projeto + dados da OS (o antigo painel "Dados da OS" foi somado aqui) |
+| 2.1 | ``PanelFazendas`` | Fazendas e talhões (derivados do shape de limites) |
+| 2.2 | ``PanelLimites`` | GeoJSON dos limites (mapa) + resumo da base |
+| 2.3 | ``PanelZonas`` | GeoJSON das zonas de manejo (mapa) + resumo da base |
+| 3 | ``PanelAtividades`` | Atividades (ainda sem fonte no banco) |
+| 4 | ``PanelBaseDados`` | Base de Dados: 4.1 pastas criadas e 4.2 anos com dados |
 
-Os painéis **6** e **7** replicam no HTML TODAS as infos que o relatório emitido
-em PDF (template Word ``MODELO_RELATORIO_OS.docx``) traz em "Dados Gerais",
-"Base de Limites" e "Base de Zonas de Manejo".
+Os painéis **1**, **2.2**, **2.3** e **4** trazem as MESMAS infos que o relatório
+emitido em PDF (template Word ``MODELO_RELATORIO_OS.docx``) em "Dados Gerais",
+"Base de Limites", "Base de Zonas de Manejo" e as pastas/anos da OS.
 """

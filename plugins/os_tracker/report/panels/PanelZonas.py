@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-PanelZonas — Painel 5 · Zonas de manejo
-=======================================
-Mapa das zonas de manejo da propriedade, identificadas pela legenda.
+PanelZonas — Painel 2.3 · Zonas de manejo
+=========================================
+Mapa das zonas de manejo da propriedade, identificadas pela legenda, seguido do
+resumo da base gravada na OS.
 
 Entrega o GeoJSON (``FeatureCollection`` em EPSG:4326) da base
-``zonas_manejo`` gravada na OS — a propriedade usada é ``zona``. Sem a base,
-entrega ``None`` e o template mostra "Aguardando o shape de zonas de manejo".
+``zonas_manejo`` — propriedade ``zona`` — e o resumo da base (``base_zonas``:
+feições, área, arquivo, origem e registro). Sem a base, o GeoJSON sai ``None``
+e o template mostra "Aguardando o shape de zonas de manejo".
 """
 
 from __future__ import annotations
@@ -18,13 +20,16 @@ from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
 
 
 class PanelZonas(PanelBuilder):
-    """Painel 5 — Zonas de manejo."""
+    """Painel 2.3 — Zonas de manejo."""
 
-    PANEL_ID = "5"
+    PANEL_ID = "2.3"
     PANEL_TITLE = "Zonas de manejo"
     ZONAS_KEY = "zonas_manejo"
 
     @classmethod
     def build(cls, context: ReportContext) -> Dict[str, Any]:
-        """GeoJSON das zonas (``None`` quando a OS não tem a base)."""
-        return {"zonas": context.shape(cls.ZONAS_KEY)}
+        """GeoJSON das zonas + resumo da base (``tem = False`` sem registro)."""
+        return {
+            "zonas": context.shape(cls.ZONAS_KEY),
+            "base_zonas": cls.base_info(context, cls.ZONAS_KEY),
+        }

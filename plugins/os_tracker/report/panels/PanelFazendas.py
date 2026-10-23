@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-PanelFazendas — Painel 3 · Fazendas e talhões
-=============================================
-Resumo das fazendas e a lista de talhões de cada uma.
-
-O painel é dividido em dois pedaços (subpainéis) que consomem o MESMO dado:
-``3.1`` resumo/agrupamento das fazendas e ``3.2`` a tabela de talhões com área.
+PanelFazendas — Painel 2.1 · Fazendas e talhões
+==============================================
+Resumo das fazendas e a lista de talhões de cada uma — primeiro pedaço do
+painel **2 · Distribuição espacial**.
 
 A fonte é o SHAPE de limites já convertido em GeoJSON (``FAZENDA``,
-``TALHAO`` e ``AREA_HA``) — exatamente o mesmo dado que alimenta o Painel 4.
-Sem o shape, a lista sai vazia (o template mostra o próprio estado vazio).
+``TALHAO`` e ``AREA_HA``) — exatamente o mesmo dado do subpainel 2.2. Sem o
+shape, a lista sai vazia (o template mostra o próprio estado vazio).
 """
 
 from __future__ import annotations
@@ -21,12 +19,10 @@ from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
 
 
 class PanelFazendas(PanelBuilder):
-    """Painel 3 — Fazendas e talhões (subpainéis 3.1 e 3.2)."""
+    """Painel 2.1 — Fazendas e talhões."""
 
-    PANEL_ID = "3"
+    PANEL_ID = "2.1"
     PANEL_TITLE = "Fazendas e talhões"
-    # Subpainéis do painel 3 (mesmo dado, dois pedaços do template).
-    SUB_PANELS = {"3.1": "Resumo das fazendas", "3.2": "Talhões por fazenda"}
     LIMITES_KEY = "limites"
     UNKNOWN_FARM = "—"
 

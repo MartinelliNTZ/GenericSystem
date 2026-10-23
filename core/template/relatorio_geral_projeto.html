@@ -55,13 +55,12 @@ main{padding:8px 32px 32px;flex:1}
 .pill.fantasma{background:none;border:1px dashed var(--borda);color:var(--suave);font-weight:400}
 .vazio{margin:0;padding:14px 16px;border:1px dashed var(--borda);border-radius:12px;color:var(--suave);font-size:13px}
 .caminho{margin:0;padding:10px 14px;border:1px solid var(--borda);border-radius:10px;background:var(--surface-2);font-family:Consolas,monospace;font-size:12px;color:var(--suave);overflow-wrap:anywhere}
-.bases .sub{margin-top:18px}
-.bases .sub:first-child{margin-top:0}
+.sub .painel-numero{margin-right:6px}
 .resumo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .chip{background:var(--surface-2);border:1px solid var(--borda);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--suave)}
 .chip strong{color:var(--texto)}
-.culturas{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.cultura{background:var(--surface-2);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px}
+.itens{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.item{background:var(--surface-2);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px}
 details.faz{border:1px solid var(--borda);border-radius:10px;background:var(--surface-2);overflow:hidden;margin-top:8px}
 details.faz summary{cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:600;min-height:44px;list-style:none}
 details.faz summary::-webkit-details-marker{display:none}
@@ -112,12 +111,9 @@ main{padding:8px 16px 24px}
 <nav class="menu">
 <div class="menu-titulo">Painéis</div>
 <a class="ativo" href="#visao-geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>1 · Visão geral</a>
-<a href="#culturas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg>2 · Culturas</a>
-<a href="#fazendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg>3 · Fazendas e talhões</a>
-<a href="#limites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>4 · Limites</a>
-<a href="#zonas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>5 · Zonas de manejo</a>
-<a href="#dados-os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>6 · Dados da OS</a>
-<a href="#bases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>7 · Bases gravadas</a>
+<a href="#distribuicao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>2 · Distribuição espacial</a>
+<a href="#atividades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg>3 · Atividades</a>
+<a href="#base-dados"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>4 · Base de Dados</a>
 </nav>
 <div class="side-info">Versão V1<br><span id="verData">—</span></div>
 </aside>
@@ -133,57 +129,55 @@ main{padding:8px 16px 24px}
 
 <main>
 <section class="painel" id="visao-geral" aria-labelledby="t1">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div><div><h2 id="t1"><span class="painel-numero">Painel 1</span>Visão geral</h2><p>Identificação do projeto e dados contratuais</p></div></div>
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div><div><h2 id="t1"><span class="painel-numero">Painel 1</span>Visão geral</h2><p>Identificação do projeto, dados contratuais e dados da OS</p></div></div>
 <div class="painel-corpo">
 <div class="cartoes" id="cartoes"></div>
 <h3 class="sub">Tipos de manejo</h3>
 <div class="pills" id="manejos"></div>
-</div>
-</section>
-
-<section class="painel" id="culturas" aria-labelledby="t2">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg></div><div><h2 id="t2"><span class="painel-numero">Painel 2</span>Culturas</h2><p>Todas as culturas da propriedade</p></div></div>
-<div class="painel-corpo"><div class="culturas" id="listaCulturas"></div></div>
-</section>
-
-<section class="painel" id="fazendas" aria-labelledby="t3">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg></div><div><h2 id="t3"><span class="painel-numero">Painel 3</span>Fazendas e talhões</h2><p>Clique na fazenda para ver os talhões</p></div></div>
-<div class="painel-corpo"><div class="resumo" id="resumoFaz"></div><div id="listaFazendas"></div></div>
-</section>
-
-<section class="painel" id="limites" aria-labelledby="t4">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></div><div><h2 id="t4"><span class="painel-numero">Painel 4</span>Limites</h2><p>Shapes dos talhões sobre imagem de satélite, uma cor por fazenda</p></div></div>
-<div class="painel-corpo"><div class="mapa-grade">
-<div class="mapa-box" id="caixaLimites"><div class="mapa" id="mapaLimites"></div><div class="aviso" id="avisoLimites">Aguardando o shape de limites</div></div>
-<aside class="legenda"><h4>Fazendas</h4><div id="legLimites"></div>
-<label class="opcao"><input type="checkbox" id="chkRotulos" checked> Mostrar nome dos talhões</label></aside>
-</div></div>
-</section>
-
-<section class="painel" id="zonas" aria-labelledby="t5">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div><div><h2 id="t5"><span class="painel-numero">Painel 5</span>Zonas de manejo</h2><p>Zonas da propriedade, identificadas pela legenda</p></div></div>
-<div class="painel-corpo"><div class="mapa-grade">
-<div class="mapa-box"><div class="mapa" id="mapaZonas"></div><div class="aviso" id="avisoZonas">Aguardando o shape de zonas de manejo</div></div>
-<aside class="legenda"><h4>Zonas de manejo</h4><div id="legZonas"></div></aside>
-</div></div>
-</section>
-
-<section class="painel" id="dados-os" aria-labelledby="t6">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div><div><h2 id="t6"><span class="painel-numero">Painel 6</span>Dados da OS</h2><p>Identificação do registro e da pasta da OS</p></div></div>
-<div class="painel-corpo">
-<div class="cartoes" id="cartoesOs"></div>
-<h3 class="sub">Pastas criadas</h3>
-<div class="pills" id="listaPastas"></div>
-<h3 class="sub">Anos criados</h3>
-<div class="pills" id="listaAnos"></div>
-<h3 class="sub">Pasta completa</h3>
+<h3 class="sub">Pasta</h3>
 <p class="caminho" id="pastaCompleta">—</p>
 </div>
 </section>
 
-<section class="painel" id="bases" aria-labelledby="t7">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div><div><h2 id="t7"><span class="painel-numero">Painel 7</span>Bases gravadas</h2><p>Resumo de cada base do banco registrada na OS</p></div></div>
-<div class="painel-corpo bases" id="basesCorpo"></div>
+<section class="painel" id="distribuicao" aria-labelledby="t2">
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div><div><h2 id="t2"><span class="painel-numero">Painel 2</span>Distribuição espacial</h2><p>Fazendas, talhões, limites e zonas de manejo</p></div></div>
+<div class="painel-corpo">
+<h3 class="sub"><span class="painel-numero">2.1</span>Fazendas e talhões</h3>
+<div class="resumo" id="resumoFaz"></div>
+<div id="listaFazendas"></div>
+
+<h3 class="sub"><span class="painel-numero">2.2</span>Limites</h3>
+<div class="mapa-grade">
+<div class="mapa-box" id="caixaLimites"><div class="mapa" id="mapaLimites"></div><div class="aviso" id="avisoLimites">Aguardando o shape de limites</div></div>
+<aside class="legenda"><h4>Fazendas</h4><div id="legLimites"></div>
+<label class="opcao"><input type="checkbox" id="chkRotulos" checked> Mostrar nome dos talhões</label></aside>
+</div>
+<div class="tabela" id="baseLimites"></div>
+
+<h3 class="sub"><span class="painel-numero">2.3</span>Zonas de manejo</h3>
+<div class="mapa-grade">
+<div class="mapa-box"><div class="mapa" id="mapaZonas"></div><div class="aviso" id="avisoZonas">Aguardando o shape de zonas de manejo</div></div>
+<aside class="legenda"><h4>Zonas de manejo</h4><div id="legZonas"></div></aside>
+</div>
+<div class="tabela" id="baseZonas"></div>
+</div>
+</section>
+
+<section class="painel" id="atividades" aria-labelledby="t6">
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg></div><div><h2 id="t6"><span class="painel-numero">Painel 3</span>Atividades</h2><p>Atividades da propriedade</p></div></div>
+<div class="painel-corpo"><div class="itens" id="listaAtividades"></div></div>
+</section>
+
+<section class="painel" id="base-dados" aria-labelledby="t7">
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div><div><h2 id="t7"><span class="painel-numero">Painel 4</span>Base de Dados</h2><p>O que já existe na base da OS</p></div></div>
+<div class="painel-corpo">
+<h3 class="sub"><span class="painel-numero">4.1</span>Pastas criadas</h3>
+<div class="resumo" id="resumoPastas"></div>
+<div class="pills" id="listaPastas"></div>
+<h3 class="sub"><span class="painel-numero">4.2</span>Anos com dados</h3>
+<div class="resumo" id="resumoAnos"></div>
+<div class="pills" id="listaAnos"></div>
+</div>
 </section>
 </main>
 <footer class="rodape"><span>© 2026 Agrorobótica · Fotônica em Certificações Agroambientais</span><span>Relatório geral · V1</span></footer>
@@ -207,28 +201,31 @@ window.DADOS_PROJETO = window.DADOS_PROJETO || {
   os: "",                    // número da OS (ID interno)
   nome_comercial: "",
   tipos_manejo: [],          // ex.: ["Lavoura", "Pasto", "ETF"]
-  culturas: [],              // ex.: ["Soja", "Milho"]
   area_contratada_ha: null,
   n_cars: null,
   data_inicio: "",           // ex.: "01/01/2025"
   ano_cenario_base: null,
   gerado_em: "",
   versao_data: "",
-  fazendas: [],              // ex.: [{ nome: "Fazenda A", talhoes: [{ nome: "T-01", area_ha: 30.5 }] }]
-  limites: null,
-  zonas: null,
-  /* Painel 6 — Dados da OS (mesmas infos do relatório emitido em PDF) */
+  /* Painel 1 — dados da OS (as mesmas infos do relatório emitido em PDF) */
   nome: "",
   cliente: "",
   cnpj: "",
   pasta: "",
   pasta_completa: "",
+  atualizado_em: "",         // ISO (ex.: "2026-10-23T13:44:20")
+  /* Painel 2 — distribuição espacial */
+  fazendas: [],              // ex.: [{ nome: "Fazenda A", talhoes: [{ nome: "T-01", area_ha: 30.5 }] }]
+  limites: null,
+  zonas: null,
+  base_limites: null,        // { tem, feicoes, area_ha, arquivo, origem, registrado }
+  base_zonas: null,
+  /* Painel 3 — atividades */
+  atividades: [],            // ex.: ["Amostragem de solo", "Colheita"]
+  /* Painel 4 — base de dados */
   pastas_criadas: null,
   lista_pastas: [],
-  anos_criados: [],
-  atualizado_em: "",         // ISO (ex.: "2026-10-23T13:44:20")
-  /* Painel 7 — Bases gravadas na OS */
-  bases: []                  // ex.: [{ chave, titulo, tem, feicoes, area_ha, arquivo, origem, registrado }]
+  anos_criados: []
 };
 </script>
 <script>
@@ -258,6 +255,19 @@ function quando(v){
   return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 function nomeArquivo(p){ var t = String(vazio(p) ? '' : p); return t ? t.split(/[\\/]/).pop() : ''; }
+function baseHtml(el, base){
+  if (!base || !base.tem) { el.innerHTML = '<p class="vazio">Base não registrada nesta OS.</p>'; return; }
+  var linhas = [
+    ['Feições', num(base.feicoes, 0)],
+    ['Área (ha)', num(base.area_ha)],
+    ['Arquivo', nomeArquivo(base.arquivo)],
+    ['Origem', base.origem],
+    ['Registrado em', quando(base.registrado)]
+  ];
+  el.innerHTML = '<table><tbody>' + linhas.map(function(l){
+    return '<tr><th>' + l[0] + '</th><td>' + (vazio(l[1]) ? '—' : esc(l[1])) + '</td></tr>';
+  }).join('') + '</tbody></table>';
+}
 
 /* Cabeçalho */
 $('verData').textContent = D.versao_data || '—';
@@ -265,24 +275,30 @@ $('gerado').textContent = D.gerado_em || '—';
 if (D.os) $('titulo').textContent = 'Relatório geral — OS ' + D.os;
 if (D.nome_comercial) $('subtitulo').textContent = D.nome_comercial;
 
-/* Painel 1 — visão geral */
+/* Painel 1 — visão geral (projeto + dados da OS) */
 var cartoes = [
   ['OS (ID interno)', D.os],
+  ['Nome', D.nome],
+  ['Cliente', D.cliente],
   ['Nome comercial', D.nome_comercial],
+  ['CNPJ', D.cnpj],
+  ['Pasta', D.pasta],
   ['Área contratada', vazio(D.area_contratada_ha) ? '' : num(D.area_contratada_ha) + ' ha'],
   ['Nº de CARs', vazio(D.n_cars) ? '' : num(D.n_cars, 0)],
   ['Data de início', D.data_inicio],
-  ['Ano do cenário base', D.ano_cenario_base]
+  ['Ano do cenário base', D.ano_cenario_base],
+  ['Última atualização', quando(D.atualizado_em)]
 ];
 $('cartoes').innerHTML = cartoesHtml(cartoes);
+$('pastaCompleta').textContent = D.pasta_completa || '—';
 $('manejos').innerHTML = (D.tipos_manejo || []).length
   ? D.tipos_manejo.map(function(t){ return '<span class="pill">' + esc(t) + '</span>'; }).join('')
   : ['Lavoura','Pasto','ETF'].map(function(t){ return '<span class="pill fantasma">' + t + '</span>'; }).join('') + '<span class="vazio" style="border:0;padding:3px 8px">exemplos — preencher tipos_manejo</span>';
 
-/* Painel 2 — culturas */
-$('listaCulturas').innerHTML = (D.culturas || []).length
-  ? D.culturas.map(function(c){ return '<div class="cultura">' + esc(c) + '</div>'; }).join('')
-  : '<p class="vazio" style="grid-column:1/-1">Nenhuma cultura informada. Preencha culturas em DADOS_PROJETO.</p>';
+/* Painel 3 — atividades */
+$('listaAtividades').innerHTML = (D.atividades || []).length
+  ? D.atividades.map(function(a){ return '<div class="item">' + esc(a) + '</div>'; }).join('')
+  : '<p class="vazio" style="grid-column:1/-1">Nenhuma atividade informada.</p>';
 
 /* Cores por fazenda: ordem de D.fazendas; depois as que só aparecem nos limites */
 var fazNomes = (D.fazendas || []).map(function(f){ return f.nome; });
@@ -292,7 +308,7 @@ feicoes(D.limites).forEach(function(f){
 });
 function corFaz(n){ var i = fazNomes.indexOf(n); return PALETA[(i < 0 ? 0 : i) % PALETA.length]; }
 
-/* Painel 3 — fazendas e talhões */
+/* Painel 2.1 — fazendas e talhões */
 var fazs = D.fazendas || [], totTal = 0, totArea = 0;
 $('listaFazendas').innerHTML = fazs.length ? fazs.map(function(f){
   var ts = f.talhoes || [], a = 0;
@@ -324,7 +340,7 @@ function legenda(el, itens, fantasmas){
     : fantasmas.map(function(n){ return '<div class="leg-item fantasma"><span class="dot"></span><span>' + n + '</span></div>'; }).join('');
 }
 
-/* Painel 4 — limites */
+/* Painel 2.2 — limites */
 var mL = criarMapa('mapaLimites'), contFaz = {};
 var fl = feicoes(D.limites);
 fl.forEach(function(f){ var n = (f.properties || {}).fazenda || '—'; contFaz[n] = (contFaz[n] || 0) + 1; });
@@ -345,8 +361,9 @@ legenda($('legLimites'), Object.keys(contFaz).length
   : fazNomes.map(function(n){ return {nome:n, cor:corFaz(n)}; }),
   ['Fazenda A', 'Fazenda B', 'Fazenda C']);
 $('chkRotulos').addEventListener('change', function(){ $('caixaLimites').classList.toggle('sem-rotulos', !this.checked); });
+baseHtml($('baseLimites'), D.base_limites);
 
-/* Painel 5 — zonas de manejo (só legenda, sem nome de talhão) */
+/* Painel 2.3 — zonas de manejo (só legenda, sem nome de talhão) */
 var mZ = criarMapa('mapaZonas'), zonas = [];
 var fz = feicoes(D.zonas);
 fz.forEach(function(f){ var n = (f.properties || {}).zona || '—'; if (zonas.indexOf(n) < 0) zonas.push(n); });
@@ -360,38 +377,14 @@ if (mZ && fz.length) {
   $('avisoZonas').hidden = true;
 }
 legenda($('legZonas'), zonas.map(function(n){ return {nome:n, cor:corZona(n)}; }), ['Zona 1', 'Zona 2', 'Zona 3']);
+baseHtml($('baseZonas'), D.base_zonas);
 
-/* Painel 6 — dados da OS (mesmas infos do relatório emitido em PDF) */
-var anos = D.anos_criados || [];
-var cartoesOs = [
-  ['Nome', D.nome],
-  ['Cliente', D.cliente],
-  ['CNPJ', D.cnpj],
-  ['Pasta', D.pasta],
-  ['Pastas criadas', vazio(D.pastas_criadas) ? '' : num(D.pastas_criadas, 0)],
-  ['Anos criados', anos.length ? num(anos.length, 0) : ''],
-  ['Última atualização', quando(D.atualizado_em)]
-];
-$('cartoesOs').innerHTML = cartoesHtml(cartoesOs);
-pillsHtml($('listaPastas'), D.lista_pastas, 'Nenhuma pasta registrada.');
-pillsHtml($('listaAnos'), anos, 'Nenhum ano registrado.');
-$('pastaCompleta').textContent = D.pasta_completa || '—';
-
-/* Painel 7 — bases gravadas na OS (Limites e Zonas de manejo) */
-var bases = D.bases || [];
-$('basesCorpo').innerHTML = bases.length ? bases.map(function(b){
-  if (!b.tem) return '<h3 class="sub">' + esc(b.titulo) + '</h3><p class="vazio">Base não registrada nesta OS.</p>';
-  var linhas = [
-    ['Feições', num(b.feicoes, 0)],
-    ['Área (ha)', num(b.area_ha)],
-    ['Arquivo', nomeArquivo(b.arquivo)],
-    ['Origem', b.origem],
-    ['Registrado em', quando(b.registrado)]
-  ];
-  return '<h3 class="sub">' + esc(b.titulo) + '</h3><div class="tabela"><table><tbody>' +
-    linhas.map(function(l){ return '<tr><th>' + l[0] + '</th><td>' + (vazio(l[1]) ? '—' : esc(l[1])) + '</td></tr>'; }).join('') +
-    '</tbody></table></div>';
-}).join('') : '<p class="vazio">Nenhuma base registrada nesta OS.</p>';
+/* Painel 4 — base de dados (pastas criadas e anos com dados) */
+var pastas = D.lista_pastas || [], anos = D.anos_criados || [];
+$('resumoPastas').innerHTML = '<span class="chip"><strong>' + num(pastas.length, 0) + '</strong> pastas criadas</span>';
+pillsHtml($('listaPastas'), pastas, 'Nenhuma pasta criada.');
+$('resumoAnos').innerHTML = '<span class="chip"><strong>' + num(anos.length, 0) + '</strong> anos com dados</span>';
+pillsHtml($('listaAnos'), anos, 'Nenhum ano com dados.');
 
 /* Menu: celular e destaque do painel visível */
 var corpo = document.body, btn = $('btnMenu');

@@ -42,5 +42,26 @@ class PanelBuilder(BaseUtil, ABC):
 
     @classmethod
     def label(cls) -> str:
-        """Identificação do painel (ex.: ``Painel 3 · Fazendas e talhões``)."""
+        """Identificação do painel (ex.: ``Painel 2.1 · Fazendas e talhões``)."""
         return f"Painel {cls.PANEL_ID} · {cls.PANEL_TITLE}"
+
+    @classmethod
+    def base_info(cls, context: ReportContext, key: str) -> Dict[str, Any]:
+        """Resumo de UMA base gravada na OS (para os painéis espaciais).
+
+        Chaves: ``tem``, ``feicoes``, ``area_ha``, ``arquivo``, ``origem`` e
+        ``registrado`` — as MESMAS infos do relatório emitido em PDF.
+
+        Args:
+            context: Contexto do relatório.
+            key: Chave da base no banco (``limites`` | ``zonas_manejo``).
+        """
+        info = context.asset(key)
+        return {
+            "tem": bool(info.get("has")),
+            "feicoes": info.get("features", 0),
+            "area_ha": info.get("area_ha", 0.0),
+            "arquivo": str(info.get("file", "") or ""),
+            "origem": str(info.get("source", "") or ""),
+            "registrado": str(info.get("inserted_at", "") or ""),
+        }

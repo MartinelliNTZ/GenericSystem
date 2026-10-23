@@ -484,29 +484,39 @@ alteradas.
   `ShapeGeoJsonReader` (vetor da base → GeoJSON EPSG:4326) e
   `OsReportHtmlGenerator` (template + dados → `.HTML`). O atalho **RELATÓRIO
   HTML** (painel Atalhos) gera o arquivo e **abre a pasta** do relatório.
+- O relatório HTML tem **4 painéis numerados** e um painel pode ser dividido em
+  **subpainéis** (o template marca cada pedaço com `Painel N.M`):
+
+  | Painel | Conteúdo |
+  |---|---|
+  | **1 · Visão geral** | projeto + dados contratuais **+ dados da OS** (nome, cliente, CNPJ, pasta, pasta completa, última atualização) |
+  | **2 · Distribuição espacial** | **2.1** fazendas e talhões · **2.2** limites (mapa + resumo da base) · **2.3** zonas de manejo (mapa + resumo da base) |
+  | **3 · Atividades** | atividades da propriedade (ainda sem fonte no banco) |
+  | **4 · Base de Dados** | **4.1** pastas criadas · **4.2** anos com dados |
+
+  Cada painel/subpainel é preenchido por um builder desacoplado em
+  `plugins/os_tracker/report/panels/` (`PanelBuilder` + um arquivo por painel),
+  registrado em `ReportDataBuilder.PANELS` na ORDEM do template — para dividir um
+  painel, basta registrar outro builder com subnúmero (ex.: `PANEL_ID = "2.4"`).
 - **TODAS as infos do relatório emitido em PDF/Word entram no HTML**: os painéis
-  **6 · Dados da OS** (nome, cliente, CNPJ, pasta, pasta completa, pastas criadas
-  com a lista, anos criados e última atualização — o mesmo "Dados Gerais" do
-  template Word) e **7 · Bases gravadas** (para `limites` e `zonas_manejo`:
-  feições, área em ha, arquivo, origem e data de registro) replicam os campos de
+  **1** (o "Dados Gerais" do template Word: nome, cliente, nome comercial, CNPJ,
+  pasta e última atualização), **2.2**/**2.3** (seções "Base de Limites" e "Base
+  de Zonas de Manejo": feições, área em ha, arquivo, origem e data de registro) e
+  **4** (pastas criadas e anos) replicam os campos de
   `OsTrackerService.report_data` usados no `MODELO_RELATORIO_OS.docx`.
 - O **template** do relatório HTML é `core/template/relatorio_geral_projeto.html`
   (editável — é a fonte do layout) e traz o token `<!--{{DADOS_PROJETO}}-->`, que
   o gerador troca por um `<script>` com `window.DADOS_PROJETO`. O bloco de dados
   que já existe no template é apenas o PADRÃO (`window.DADOS_PROJETO || {…}`):
   abrir o template direto mostra o layout com os campos vazios.
-- O template é dividido em **PAINÉIS numerados** (`Painel 1` … `Painel 5`) e um
-  painel pode ser dividido em **subpainéis** (`3.1`, `3.2` …). Cada painel é
-  preenchido por um builder desacoplado em `plugins/os_tracker/report/panels/`
-  (`PanelBuilder` + um arquivo por painel), registrado em
-  `ReportDataBuilder.PANELS` na ORDEM do template — para dividir um painel, basta
-  registrar outro builder com subnúmero (ex.: `PANEL_ID = "3.1"`).
-- Os **shapes** entram nos painéis 4 (`limites`) e 5 (`zonas_manejo`) como
-  `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo gravado na OS pelo
-  `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` → `fazenda`/`talhao`/
-  `area_ha`; `ZONA` → `zona`) e desenhados no navegador pelo Leaflet. O painel 3
-  (fazendas e talhões) é derivado do MESMO shape de limites.
-- Chaves que o banco **ainda não fornece** (tipos de manejo, culturas, área
+- Os **shapes** entram nos subpainéis **2.2** (`limites`) e **2.3**
+  (`zonas_manejo`) como `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo
+  gravado na OS pelo `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` →
+  `fazenda`/`talhao`/`area_ha`; `ZONA` → `zona`) e desenhados no navegador pelo
+  Leaflet; abaixo de cada mapa vem o resumo da base (`base_limites`/
+  `base_zonas`). O subpainel **2.1** (fazendas e talhões) é derivado do MESMO
+  shape de limites.
+- Chaves que o banco **ainda não fornece** (tipos de manejo, atividades, área
   contratada, CARs, data de início e cenário base) permanecem **vazias** — nada é
   adaptado/inventado; o template já sabe exibir o estado vazio.
 - O destino do HTML é o MESMO do relatório Word (mesma pasta por TIPO), mudando
