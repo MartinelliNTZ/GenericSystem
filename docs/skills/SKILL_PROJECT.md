@@ -453,13 +453,35 @@ alteradas.
 - O painel **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da
   OS** (`OsTrackerService.project_folder`), a **pasta do arquivo de cada base
   obtida** (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido
-  quando a OS não tem o registro) e o **changelog Word** da OS
+  quando a OS não tem o registro), o **changelog Word** da OS
   (`OsTrackerService.changelog_path` → `ProjectStructureChangelog.document_path`),
-  aberto no aplicativo padrão. **Não** há link para o shapefile — a abertura da
-  pasta é feita pelos botões de atalho. O caminho do arquivo de limites/zonas
-  (`asset_file_path`) é resolvido em cascata — **absoluto → relativo à pasta-mãe →
-  relativo à pasta da OS** — cobrindo registros antigos ou gravados fora da
-  pasta-mãe. O painel **"Últimas alterações da OS"** continua vindo do **banco**
-  (`estrutura_changelog`), nunca do Word.
+  aberto no aplicativo padrão, e **BAIXAR RELATÓRIO**, que gera o **relatório da
+  OS** pelo template Word (`utils.OsReportGenerator` + `OsTrackerService.report_data`)
+  dentro de `<pasta da OS>/14_RELATORIOS/<TIPO>/` e **abre a pasta do relatório**
+  no gerenciador de arquivos (não imprime). **Não** há link para o shapefile — a
+  abertura da pasta é feita pelos botões de atalho. O caminho do arquivo de
+  limites/zonas (`asset_file_path`) é resolvido em cascata — **absoluto →
+  relativo à pasta-mãe → relativo à pasta da OS** — cobrindo registros antigos ou
+  gravados fora da pasta-mãe. O painel **"Últimas alterações da OS"** continua
+  vindo do **banco** (`estrutura_changelog`), nunca do Word.
+- O **relatório** da OS usa o TEMPLATE Word
+  `core/template/MODELO_RELATORIO_OS.docx` como fonte do layout: o corpo já vem
+  pré-preenchido com os campos `{{chave}}` (Dados Gerais, Base de Limites e Base
+  de Zonas de Manejo) e o cabeçalho/rodapé da Agrorobótica é preservado. Para
+  mudar o relatório, **edite o template** — nenhuma alteração de código é
+  necessária. As **últimas alterações NÃO entram** no relatório (é um retrato dos
+  dados atuais do banco).
+- O **destino** do relatório é a pasta de relatórios da própria OS — uma pasta
+  por TIPO, criada se não existir — com data/hora no nome:
+  `14_RELATORIOS/<TIPO>/OS_<chave>_<TIPO>_<AAAAMMDDHHMMSS>.DOCX` (ex.:
+  `14_RELATORIOS/Relatorio Geral Projeto/OS_220_Relatorio Geral Projeto_20261023134420.DOCX`).
+  O TIPO é `OsReportGenerator.REPORT_TYPE` (`"Relatorio Geral Projeto"`) e a pasta
+  raiz é `OsReportGenerator.REPORTS_FOLDER` (`"14_RELATORIOS"`).
+- O botão **EDITAR OS** (ExecutionButtons) abre um formulário
+  (`FormLineEditDialog`) pré-preenchido com os campos EDITÁVEIS do registro —
+  **nome, cliente, nome comercial e CNPJ** (`OsTrackerService.EDITABLE_FIELDS`) —
+  e grava a alteração na fonte oficial via `OsTrackerService.update_order` →
+  `CloudProjectDatabase.save_order`. A chave da OS, a pasta e as bases
+  (limites/zonas) são derivadas e **não** entram na edição.
 - `python-docx` é dependência declarada em `requirements.txt`.
 

@@ -104,7 +104,13 @@ from utils.FormatUtils import FormatUtils
 
 size = FormatUtils.format_size(2048)
 date = FormatUtils.format_date(time.time())
+brasilia = FormatUtils.format_brasilia_date("2026-07-07T00:00:00+00:00")
+inteiro = FormatUtils.format_int(1234)          # "1.234"
+decimal = FormatUtils.format_decimal(1234.567)  # "1.234,57"
 ```
+
+`format_int` e `format_decimal` usam o padrão brasileiro (`.` no milhar e `,` no
+decimal) — valores não numéricos viram `"0"`/`"0,00"`.
 
 ### `utils.ProjectUtil`
 
@@ -541,6 +547,43 @@ Quando o dicionário da alteração traz `first_run: True` (primeira detecção 
 OS — ver `StructureSyncService._compact_first_runs`), o bloco recebe apenas
 `Primeira inicialização: estrutura completa registrada como linha de base.` em
 vez dos bullets de pastas/arquivos.
+
+### `utils.OsReportGenerator`
+
+Gera o **relatório da OS** a partir de um TEMPLATE Word: o template é a fonte do
+layout e fica pré-preenchido com os campos no formato `{{chave}}`; o gerador
+apenas troca cada campo pelo valor recebido e salva o `.DOCX` pronto.
+
+```python
+from utils.OsReportGenerator import OsReportGenerator
+
+path = OsReportGenerator.generate(
+    {"os": "169A", "cliente": "Fulano"},   # chave do template -> valor
+    os_folder="C:/.../OS_169A_AGUA_VIVA",  # pasta da OS (destino)
+    os_key="169A",
+    tool_key=ToolKey.OS_TRACKER.value,
+)
+# path -> ".../OS_169A_AGUA_VIVA/14_RELATORIOS/Relatorio Geral Projeto/
+#          OS_169A_Relatorio Geral Projeto_20261023134420.DOCX"
+```
+
+- **Destino**: `<pasta da OS>/14_RELATORIOS/<TIPO>/` — `14_RELATORIOS` e a pasta
+  do tipo são criadas se não existirem. Sem pasta de OS (registro sem pasta em
+  disco), cai no temp do sistema.
+- **Nome do arquivo**: `OS_<chave>_<TIPO>_<AAAAMMDDHHMMSS>.DOCX`
+  (`report_path`); o TIPO vem de `REPORT_TYPE` (`"Relatorio Geral Projeto"`) e a
+  pasta de `REPORTS_FOLDER` (`"14_RELATORIOS"`). `report_folder` devolve a pasta
+  garantida.
+- Template: `core/template/MODELO_RELATORIO_OS.docx` (o cabeçalho/rodapé da
+  Agrorobótica é preservado). **Editar o template é a forma de mudar o
+  relatório** — nenhuma alteração de código é necessária.
+- Cobre o corpo, as **tabelas** (recursivamente, inclusive aninhadas) e o
+  cabeçalho/rodapé; quando o Word divide um campo entre vários `runs` do mesmo
+  parágrafo, o texto é remontado antes da troca.
+- Campos sem valor no mapa são deixados como estão (útil para detectar erro de
+  digitação no template); `None` vira string vazia.
+- Quem monta os valores é o domínio (`OsTrackerService.report_data`), não o
+  gerador — o gerador não conhece as chaves da OS.
 
 
 

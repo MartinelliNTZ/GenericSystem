@@ -34,6 +34,7 @@ from core.enum.ToolKey import ToolKey
 from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from core.firebase.CloudStructureDatabase import CloudStructureDatabase
 from utils.BaseUtil import BaseUtil
+from utils.FormatUtils import FormatUtils
 from utils.ProjectStructureChangelog import ProjectStructureChangelog
 from utils.ProjectStructureCreator import ProjectStructureCreator
 from utils.ProjectStructureUtil import ProjectStructureUtil
@@ -43,6 +44,18 @@ class OsTrackerService(BaseUtil):
     """Lê e mantém os registros de OS e as pastas associadas."""
 
     RECENT_CHANGES_LIMIT = 6
+    # Campos do banco que podem ser editados na ferramenta (chave -> rótulo).
+    EDITABLE_FIELDS = (
+        ("name", "Nome"),
+        ("client", "Cliente"),
+        ("commercial_name", "Nome comercial"),
+        ("cnpj", "CNPJ"),
+    )
+    # Bases gravadas na OS: (chave do banco, prefixo dos campos do relatório).
+    REPORT_ASSETS = (
+        ("limites", "limites"),
+        ("zonas_manejo", "zonas"),
+    )
     _CHANGE_SUMMARY_LABELS = (
         ("pasta(s) criada(s)", "added_folders"),
         ("pasta(s) removida(s)", "removed_folders"),
@@ -237,6 +250,72 @@ class OsTrackerService(BaseUtil):
             return ""
         return str(ProjectStructureChangelog.document_path(folder))
 
+    # ── Relatório (template Word) ───────────────────────────────────
+
+    @classmethod
+    def report_data(
+        cls,
+        mother: Optional[Path],
+        record: Optional[Dict[str, Any]],
+        tool_key: str = ToolKey.OS_TRACKER.value,
+    ) -> Dict[str, str]:
+        """Dados formatados da OS para preencher o template do relatório.
+
+        As chaves são os campos ``{{chave}}`` do template
+        (``core/template/MODELO_RELATORIO_OS.docx``). As ÚLTIMAS ALTERAÇÕES não
+        entram — o relatório traz apenas os dados atuais do banco.
+        """
+        record = record or {}
+        folder = cls.project_folder(mother, record)
+        folders = [str(name) for name in (record.get("folders") or [])]
+        years = [str(year) for year in (record.get("years") or [])]
+        data = {
+            "os": str(record.get("os", "") or ""),
+            "nome": str(record.get("name", "") or ""),
+            "cliente": str(record.get("client", "") or ""),
+            "nome_comercial": str(record.get("commercial_name", "") or ""),
+            "cnpj": str(record.get("cnpj", "") or ""),
+            "pasta": str(record.get("path", "") or ""),
+            "pasta_completa": str(folder) if folder is not None else "",
+            "pastas_criadas": str(len(folders)),
+            "lista_pastas": ", ".join(folders) or "—",
+            "anos_criados": ", ".join(years) or "—",
+            "atualizado_em": cls.format_when(
+                str(record.get("updated_at", "") or ""), tool_key
+            ),
+            "gerado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        }
+        for key, token in cls.REPORT_ASSETS:
+            data.update(cls._report_asset(record, key, token, tool_key))
+        return data
+
+    @classmethod
+    def _report_asset(
+        cls,
+        record: Dict[str, Any],
+        key: str,
+        token: str,
+        tool_key: str,
+    ) -> Dict[str, str]:
+        """Campos do relatório de UMA base (limites/zonas) gravada na OS."""
+        info = cls.asset_info(record, key)
+        if not info["has"]:
+            return {
+                f"{token}_feicoes": "—",
+                f"{token}_area": "—",
+                f"{token}_arquivo": "—",
+                f"{token}_origem": "—",
+                f"{token}_registrado": "—",
+            }
+        file_name = Path(str(info["file"])).name if info["file"] else "—"
+        return {
+            f"{token}_feicoes": FormatUtils.format_int(info["features"], tool_key),
+            f"{token}_area": FormatUtils.format_decimal(info["area_ha"], tool_key=tool_key),
+            f"{token}_arquivo": file_name,
+            f"{token}_origem": str(info["source"]) or "—",
+            f"{token}_registrado": cls.format_when(str(info["inserted_at"]), tool_key) or "—",
+        }
+
     @staticmethod
     def _as_int(value: Any) -> int:
         """Converte um valor do banco em inteiro (fallback ``0``)."""
@@ -286,6 +365,29 @@ class OsTrackerService(BaseUtil):
             record, mother=str(mother) if mother else "", tool_key=tool_key
         )
         return record
+
+    @classmethod
+    def update_order(
+        cls,
+        mother: Optional[Path],
+        record: Dict[str, Any],
+        values: Dict[str, Any],
+        tool_key: str = ToolKey.OS_TRACKER.value,
+    ) -> Dict[str, Any]:
+        """Atualiza os campos EDITÁVEIS da OS (nome/cliente/comercial/CNPJ).
+
+        Só os campos de ``EDITABLE_FIELDS`` são alterados — a chave da OS, a pasta
+        e as bases (limites/zonas) são derivadas e não entram na edição. Grava na
+        fonte oficial (Firestore) via ``CloudProjectDatabase``.
+        """
+        updated = dict(record or {})
+        for field, _label in cls.EDITABLE_FIELDS:
+            if field in values:
+                updated[field] = str(values.get(field, "") or "").strip()
+        CloudProjectDatabase.save_order(
+            updated, mother=str(mother) if mother else "", tool_key=tool_key
+        )
+        return updated
 
     @classmethod
     def add_folders(

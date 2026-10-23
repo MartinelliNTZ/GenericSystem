@@ -38,6 +38,7 @@ venv/
 .venv
 env/
 ~$TURAS_AETHERIS.docx
+~$DELO_RELATORIO_OS.docx
 
 # Cache Python
 __pycache__/

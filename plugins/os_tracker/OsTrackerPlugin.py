@@ -9,6 +9,8 @@ filtrado pela chave da OS). Permite também:
 - **CRIAR OS** — pede os dados básicos (só a CHAVE é obrigatória) e lança a OS
   DIRETO no Firebase. A chave é TEXTO e pode conter LETRA (ex.: ``169A``), que é
   o que diferencia as OS de um mesmo projeto.
+- **EDITAR OS** — abre um formulário pré-preenchido com os dados EDITÁVEIS do
+  banco (nome, cliente, nome comercial e CNPJ) e grava a alteração na OS.
 - **ADICIONAR PASTA** — abre um checklist com as pastas da estrutura do projeto
   e cria as selecionadas (com as subpastas), EXCETO os anos do
   ``03_ENVIO_DE_DOCUMENTOS``, na pasta da OS.
@@ -21,8 +23,11 @@ base do banco (``limites`` e ``zonas_manejo``: feições e área em hectares).
 
 O painel **Atalhos** abre, com um clique, a pasta da OS, a pasta do arquivo de
 cada base obtida (``LIMITES`` e ``ZONAS DE MANEJO`` — um botão por link registrado
-no banco, escondido quando a OS não tem o registro) e o changelog Word da OS
-(``11_AGROROBOTICA/OS_<chave>_CHANGELOG.DOCX``).
+no banco, escondido quando a OS não tem o registro), o changelog Word da OS
+(``11_AGROROBOTICA/OS_<chave>_CHANGELOG.DOCX``) e **BAIXAR RELATÓRIO**, que gera o
+relatório da OS a partir do template Word (``core/template/MODELO_RELATORIO_OS.docx``)
+dentro de ``14_RELATORIOS/<TIPO>/`` — com data/hora no nome — e abre a pasta do
+relatório.
 """
 
 from __future__ import annotations
@@ -46,13 +51,15 @@ from resources.widgets.grid.GridLabel import GridLabel
 from resources.widgets.GroupPainel import GroupPainel
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from resources.widgets.simple.SimpleSelector import SimpleSelector
+from utils.FormatUtils import FormatUtils
 from utils.MessageBox import MessageBox
+from utils.OsReportGenerator import OsReportGenerator
 from utils.Preferences import Preferences
 from utils.ProjectStructureUtil import DEFAULT_PROJECT_FOLDERS
 
 
 class OsTrackerPlugin(BasePlugin):
-    """Ferramenta CENTRAL: escolhe a OS, cria OS e adiciona pastas."""
+    """Ferramenta CENTRAL: escolhe a OS, cria/edita OS, baixa o relatório e adiciona pastas."""
 
     # Bases gravadas na OS pelo banco: (chave, label, prefixo das chaves do GridLabel)
     _ASSETS = (
@@ -70,6 +77,11 @@ class OsTrackerPlugin(BasePlugin):
             "Abre a pasta do arquivo de zonas de manejo da OS",
         ),
         ("changelog", "CHANGELOG (WORD)", "Abre o changelog Word da OS"),
+        (
+            "relatorio",
+            "BAIXAR RELATÓRIO",
+            "Gera o relatório da OS em 14_RELATORIOS e abre a pasta do relatório",
+        ),
     )
 
     def __init__(self, parent=None) -> None:
@@ -90,6 +102,12 @@ class OsTrackerPlugin(BasePlugin):
                     "callback": self._on_create_os,
                     "type": "secondary",
                     "description": "Cria uma OS (chave obrigatória — pode conter letra)",
+                },
+                "editar_os": {
+                    "text": "EDITAR OS",
+                    "callback": self._on_edit_os,
+                    "type": "secondary",
+                    "description": "Edita os dados da OS selecionada (cliente, nome, CNPJ...)",
                 },
                 "adicionar_pasta": {
                     "text": "ADICIONAR PASTA",
@@ -344,8 +362,12 @@ class OsTrackerPlugin(BasePlugin):
         info = OsTrackerService.asset_info(record, key)
         tooltip = self._asset_tooltip(info)
         values = {
-            f"{prefix}_features": self._format_int(info.get("features", 0)),
-            f"{prefix}_area": self._format_number(info.get("area_ha", 0.0)),
+            f"{prefix}_features": FormatUtils.format_int(
+                info.get("features", 0), self.tool_key
+            ),
+            f"{prefix}_area": FormatUtils.format_decimal(
+                info.get("area_ha", 0.0), tool_key=self.tool_key
+            ),
         }
         for field, value in values.items():
             self._general.set(field, value)
@@ -431,7 +453,10 @@ class OsTrackerPlugin(BasePlugin):
     # ── Abrir caminhos ──────────────────────────────────────────────
 
     def _on_shortcut(self, key: str) -> None:
-        """Abre o alvo do atalho clicado (pasta da OS, limites/zonas ou Word)."""
+        """Executa o atalho clicado (gera o relatório ou abre um caminho)."""
+        if key == "relatorio":
+            self._on_generate_report()
+            return
         path = self._shortcut_paths.get(key, "")
         if not path:
             MessageBox.show_warning(
@@ -523,6 +548,48 @@ class OsTrackerPlugin(BasePlugin):
         self._reload(os_key)
         MessageBox.show_toast(f"OS {os_key} criada.", parent=self)
 
+    def _on_edit_os(self) -> None:
+        """Edita os dados da OS selecionada (nome, cliente, nome comercial, CNPJ)."""
+        record = self._current_record()
+        if record is None:
+            MessageBox.show_warning(
+                "Selecione uma OS primeiro.",
+                title="Acompanhamento de OS", parent=self,
+            )
+            return
+        os_key = str(record.get("os", ""))
+        dialog = FormLineEditDialog(
+            config=self._edit_config(record),
+            title=f"Editar OS {os_key}",
+            ok_text="Salvar",
+            min_size=(440, 320),
+            parent=self,
+        )
+        if not dialog.exec():
+            return
+        try:
+            OsTrackerService.update_order(
+                self._mother_folder, record, dialog.values, tool_key=self.tool_key
+            )
+        except Exception as e:
+            self.logger.error("Falha ao editar OS", code="OST_EDIT_ERR", error=str(e))
+            MessageBox.show_error(f"Falha ao editar a OS: {e}", parent=self)
+            return
+        self._reload(os_key)
+        MessageBox.show_toast(f"OS {os_key} atualizada.", parent=self)
+
+    @staticmethod
+    def _edit_config(record: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """Config do formulário de edição, pré-preenchida com os dados do banco."""
+        return {
+            field: {
+                "label": label,
+                "placeholder": "opcional",
+                "default": str(record.get(field, "") or ""),
+            }
+            for field, label in OsTrackerService.EDITABLE_FIELDS
+        }
+
     def _on_add_folder(self) -> None:
         """Abre o checklist de pastas da estrutura e cria as selecionadas."""
         record = self._current_record()
@@ -567,24 +634,43 @@ class OsTrackerPlugin(BasePlugin):
             parent=self,
         )
 
+    def _on_generate_report(self) -> None:
+        """Gera o relatório da OS em ``14_RELATORIOS`` e abre a pasta do relatório."""
+        record = self._current_record()
+        if record is None:
+            MessageBox.show_warning(
+                "Selecione uma OS primeiro.",
+                title="Acompanhamento de OS", parent=self,
+            )
+            return
+        os_folder = OsTrackerService.project_folder(self._mother_folder, record)
+        if os_folder is None:
+            MessageBox.show_warning(
+                "A OS não tem pasta em disco (defina a pasta-mãe no Gerenciador "
+                "de Estrutura ou crie a OS).",
+                title="Acompanhamento de OS", parent=self,
+            )
+            return
+        try:
+            values = OsTrackerService.report_data(
+                self._mother_folder, record, tool_key=self.tool_key
+            )
+            path = OsReportGenerator.generate(
+                values,
+                os_folder=os_folder,
+                os_key=str(record.get("os", "")),
+                tool_key=self.tool_key,
+            )
+        except Exception as e:
+            self.logger.error(
+                "Falha ao gerar o relatório da OS", code="OST_REPORT_ERR", error=str(e)
+            )
+            MessageBox.show_error(f"Falha ao gerar o relatório: {e}", parent=self)
+            return
+        MessageBox.show_toast(f"Relatório gerado: {Path(path).name}", parent=self)
+        self._open_path(path)
+
     def _reload(self, os_key: str) -> None:
         """Recarrega a base do Firebase e restaura a seleção informada."""
         self.preferences["selected_os"] = os_key
         self._load_from_disk()
-
-    # ── Formatação ──────────────────────────────────────────────────
-
-    @staticmethod
-    def _format_int(value: Any) -> str:
-        """Formata inteiro com separador de milhar brasileiro."""
-        if not isinstance(value, (int, float)):
-            return "0"
-        return f"{int(value):,}".replace(",", ".")
-
-    @staticmethod
-    def _format_number(value: Any, decimals: int = 2) -> str:
-        """Formata número decimal no padrão brasileiro."""
-        if not isinstance(value, (int, float)):
-            value = 0.0
-        text = f"{float(value):,.{decimals}f}"
-        return text.replace(",", "X").replace(".", ",").replace("X", ".")

@@ -2,7 +2,7 @@
 """
 FormatUtils — Utilitários de formatação de dados
 ===================================================
-Fornece formatação de tamanho de arquivo e datas de forma
+Fornece formatação de tamanho de arquivo, datas e números de forma
 centralizada para todo o sistema.
 
 Uso:
@@ -11,11 +11,14 @@ Uso:
     size_str = FormatUtils.format_size(1024)
     date_str = FormatUtils.format_date(1234567890.0)
     brasilia = FormatUtils.format_brasilia_date("2026-07-07T00:00:00+00:00")
+    inteiro = FormatUtils.format_int(1234)          # "1.234"
+    decimal = FormatUtils.format_decimal(1234.567)  # "1.234,57"
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from core.enum.ToolKey import ToolKey
@@ -64,6 +67,50 @@ class FormatUtils(BaseUtil):
         logger = BaseUtil._get_logger(tool_key, "FormatUtils")
         result = datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %H:%M:%S")
         logger.debug("Data formatada", code="FMT_DATE", timestamp=timestamp, result=result)
+        return result
+
+    @staticmethod
+    def format_int(
+        value: Any,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """Formata um inteiro com o separador de milhar brasileiro (``1.234``).
+
+        Valores não numéricos viram ``"0"``.
+
+        Args:
+            value: Número (int/float) a formatar.
+            tool_key: Chave da ferramenta para logging.
+        """
+        logger = BaseUtil._get_logger(tool_key, "FormatUtils")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            logger.debug("Inteiro formatado (valor inválido)", code="FMT_INT", value=value, result="0")
+            return "0"
+        result = f"{int(value):,}".replace(",", ".")
+        logger.debug("Inteiro formatado", code="FMT_INT", value=value, result=result)
+        return result
+
+    @staticmethod
+    def format_decimal(
+        value: Any,
+        decimals: int = 2,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> str:
+        """Formata um número decimal no padrão brasileiro (``1.234,57``).
+
+        Valores não numéricos viram ``0`` com as casas decimais pedidas.
+
+        Args:
+            value: Número (int/float) a formatar.
+            decimals: Quantidade de casas decimais (padrão: 2).
+            tool_key: Chave da ferramenta para logging.
+        """
+        logger = BaseUtil._get_logger(tool_key, "FormatUtils")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            value = 0.0
+        text = f"{float(value):,.{decimals}f}"
+        result = text.replace(",", "X").replace(".", ",").replace("X", ".")
+        logger.debug("Decimal formatado", code="FMT_DECIMAL", value=value, result=result)
         return result
 
     @staticmethod
