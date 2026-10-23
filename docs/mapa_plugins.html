@@ -76,16 +76,17 @@ h2{font-size:clamp(28px,4vw,42px);margin-bottom:12px}
 .arrow i{display:block;width:100%;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);background-size:200% 100%;animation:flow 1.8s linear infinite}
 @keyframes flow{from{background-position:200% 0}to{background-position:-200% 0}}
 
-/* explorador */
-.rail{display:flex;gap:0;overflow-x:auto;padding:14px 4px 22px;scrollbar-width:thin}
-.node{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;position:relative;padding:0 14px;min-width:96px}
-.node::after{content:"";position:absolute;top:26px;left:calc(50% + 28px);width:calc(100% - 56px);height:2px;background:var(--line)}
-.node:last-child::after{display:none}
-.node .dot{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font:700 16px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c);transition:.25s;opacity:.6}
-.node small{font-size:12px;text-align:center}
+/* grade de plugins (sem ordem) */
+.grid-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:26px}
+.node{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:1/1;overflow:hidden;background:var(--glass);border:1px solid var(--line);border-radius:18px;color:var(--muted);cursor:pointer;font:inherit;padding:10px;text-align:center;transition:.2s}
+.node .dot{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font:700 15px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c);opacity:.75;transition:.25s}
+.node small{font-size:12px;line-height:1.22;color:var(--muted);max-width:100%}
+.node .tag{font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.node:hover{border-color:var(--c);transform:translateY(-2px)}
 .node:hover .dot{opacity:1}
-.node.on{color:var(--ink)}
-.node.on .dot{opacity:1;transform:scale(1.14);box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--c),0 14px 34px -6px var(--c)}
+.node.on{border-color:var(--c);box-shadow:0 14px 34px -14px var(--c)}
+.node.on .dot{opacity:1}
+.node.on small{color:var(--ink)}
 .panel{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:30px;border-top:4px solid var(--c);transition:border-color .3s}
 .panel header{all:unset;display:block}
 .ptitle{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-bottom:6px}
@@ -96,19 +97,6 @@ h2{font-size:clamp(28px,4vw,42px);margin-bottom:12px}
 .col ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
 .col li{margin:4px 0}
 .col p{margin:0;font-size:14.5px;color:var(--muted)}
-.ctl{display:flex;gap:10px;margin-top:24px}
-.ctl button{border:1px solid var(--line);background:var(--glass2);color:var(--ink);padding:9px 18px;border-radius:10px;cursor:pointer;font:600 14px inherit;font-family:inherit}
-.ctl button:hover{border-color:var(--cyan)}
-
-/* rotas */
-.routes{display:grid;gap:12px}
-.route{display:grid;grid-template-columns:230px 1fr 1fr;gap:18px;align-items:center;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:16px 20px;transition:.2s}
-.route:hover{background:var(--glass2);transform:translateX(4px)}
-.chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.chip{min-width:30px;height:26px;padding:0 7px;border-radius:7px;display:inline-grid;place-items:center;font:700 12px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c)}
-.chain em{font-style:normal;color:var(--muted);font-size:12px}
-.route p{margin:0;font-size:14px;color:var(--muted)}
-.route b{display:block;color:var(--ink);font-size:14px}
 
 /* padroes */
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
@@ -154,7 +142,7 @@ footer.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:
   .stats{grid-template-columns:repeat(2,1fr)}
   .flow3{grid-template-columns:1fr}.arrow{height:36px}.arrow i{width:3px;height:100%}
   .cols,.grid2,.rules,.outs{grid-template-columns:1fr}
-  .route{grid-template-columns:1fr;gap:8px}
+  .grid-tools{grid-template-columns:repeat(auto-fill,minmax(122px,1fr))}
   .brand span.t{display:none}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
@@ -165,7 +153,7 @@ footer.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:
   <a class="brand" href="#inicio"><span class="logo">At</span><span class="t">Aetheris ToolBox</span></a>
   <nav id="nav">
     <a href="#inicio">Início</a><a href="#visao">Visão geral</a><a href="#sistema">Sistema</a>
-    <a href="#fluxo">Ferramentas</a><a href="#rotas">Rotas</a><a href="#padroes">Padrões</a><a href="#saidas">Saídas</a>
+    <a href="#fluxo">Ferramentas</a><a href="#padroes">Padrões</a><a href="#saidas">Saídas</a>
   </nav>
   <button class="theme" id="theme" aria-label="Alternar tema claro e escuro">◐</button>
 </div></header>
@@ -238,15 +226,9 @@ footer.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:
 
 <section id="fluxo"><div class="wrap">
   <h2 class="rv">Cada plugin, um por um</h2>
-  <p class="lead rv">Clique em um número para ver o que ele precisa, o que entrega e as <b>subdivisões internas</b> — <b>N.0</b> é o próprio plugin (entry point / UI) e <b>N.1</b>, <b>N.2</b>… são as partes internas; a <b>00</b> mostra o próprio sistema. A ordem aqui é a do uso: do projeto e da estrutura até as ferramentas de arquivo.</p>
-  <div class="rail rv" id="rail" role="tablist"></div>
+  <p class="lead rv">Os plugins <b>não têm ordem</b>: clique em qualquer quadrado para ver o que ele precisa, o que entrega e as <b>subdivisões internas</b> — <b>N.0</b> é o próprio plugin (entry point / UI) e <b>N.1</b>, <b>N.2</b>… são as partes internas; a <b>00</b> mostra o próprio sistema. Cada quadrado traz o número, o nome, o grupo na toolbar (<code>ToolType</code>) e onde a ferramenta abre (<code>CategoryTool</code>).</p>
+  <div class="grid-tools rv" id="rail" role="tablist"></div>
   <div class="panel rv" id="panel" aria-live="polite"></div>
-</div></section>
-
-<section id="rotas"><div class="wrap">
-  <h2 class="rv">Rotas: quem alimenta quem</h2>
-  <p class="lead rv">Cada linha é um caminho real entre ferramentas. O <b>SISTEMA (00)</b> é a origem de tudo; o resto se comunica por <b>sinais</b> ou pela <b>classe de banco</b> — nunca por import direto.</p>
-  <div class="routes" id="routes"></div>
 </div></section>
 
 <section id="padroes"><div class="wrap">
@@ -542,23 +524,8 @@ s:[
 ],
 sn:"O tema é do SISTEMA (17.1/17.2), não da ferramenta: o plugin só escolhe qual usar e persiste a preferência."}
 };
+var G={"00":"Núcleo","01":"System · Central","02":"System · Instant","03":"Folder · Left","04":"Verra · Central","05":"Verra · Central","06":"Verra · Central","07":"Vector · Central","08":"System · Right","09":"System · Both","10":"Folder · Central","11":"Raster · Central","12":"Raster · Central","13":"Folder · Central","14":"Folder · Central","15":"System · Central","16":"System · Menu","17":"System · Menu"};
 var ORD=["00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17"],cur=0;
-var R=[
-[["00","01"],"Sistema → Inicial","A primeira ferramenta a abrir; dispara as pipelines de futebol e clima em background."],
-[["00","02"],"Sistema → Projeto","Ferramenta INSTANT: o clique grava o .mtl e o widget se auto-destrói."],
-[["02","03"],"Projeto → Explorador","project_changed faz a árvore recarregar na nova raiz (root_folder)."],
-[["02","00"],"Projeto → AppBar","O SISTEMA reage ao sinal e atualiza o status do projeto na barra de título."],
-[["04","05"],"Estrutura → Acompanhamento","A pasta-mãe e o changelog Word alimentam os painéis do Acompanhamento de OS."],
-[["05","06"],"Acompanhamento → Banco","CRIAR OS lança a OS no Firebase; o Banco re-escaneia e atualiza folders/years."],
-[["07","05"],"Limites → Acompanhamento","O import grava limites/zonas no registro da OS; o painel mostra feições e área."],
-[["07","06"],"Limites → Banco","A gravação passa pela classe de banco — nunca direto no JSON (Contrato 28)."],
-[["00","08"],"Sistema → Console","Todo plugin emite console_message; o Console é quem escreve na tela."],
-[["00","09"],"Sistema → LogViewer","O LogUtils (00.7) grava o JSON; o LogViewer só lê e exibe."],
-[["10","08"],"Docling → Console","A conversão roda no pipeline e reporta o progresso por sinais."],
-[["16","00"],"Preferências → Sistema","Lê e edita o preferences.json de todos os ToolKeys."],
-[["17","00"],"Configuração → Sistema","O tema escolhido é aplicado no QSS global (AppStyles)."],
-[["15","00"],"Mapas → Sistema","Restaura a posição/zoom das preferências; é só visualizador."]
-];
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
 function li(a){return a.map(function(t){return "<li>"+esc(t)+"</li>"}).join("")}
 function q(s){return esc(s).replace(/"/g,"&quot;")}
@@ -569,28 +536,21 @@ function draw(){
   document.querySelectorAll(".node").forEach(function(n,i){n.classList.toggle("on",i===cur);n.setAttribute("aria-selected",i===cur)});
   var p=document.getElementById("panel");
   p.style.setProperty("--c",a.c);
-  var etapa=id==="00"?"o próprio sistema":"ferramenta "+(cur)+" de "+(ORD.length-1);
   var rotulo=id==="00"?"SISTEMA 00":"PLUGIN "+id;
-  p.innerHTML='<div class="ptitle"><h3>'+a.n+'</h3><span class="kind">'+rotulo+' · '+a.k+' · '+etapa+'</span></div>'+
+  p.innerHTML='<div class="ptitle"><h3>'+a.n+'</h3><span class="kind">'+rotulo+' · '+G[id]+' · '+a.k+'</span></div>'+
   '<div class="cols"><div class="col"><h4>Precisa (entrada)</h4><ul>'+li(a.i)+'</ul></div>'+
   '<div class="col"><h4>Gera (saída)</h4><ul>'+li(a.o)+'</ul></div>'+
   '<div class="col"><h4>Depois</h4><p>'+esc(a.x)+'</p></div></div>'+
-  '<h4 class="sh4">Subdivisões internas · '+a.s.length+'</h4>'+(a.sn?'<p class="note">'+esc(a.sn)+'</p>':'')+subList(a)+
-  '<div class="ctl"><button id="pv">Anterior</button><button id="nx">Próxima</button></div>';
-  document.getElementById("pv").onclick=function(){go(cur-1)};
-  document.getElementById("nx").onclick=function(){go(cur+1)};
+  '<h4 class="sh4">Subdivisões internas · '+a.s.length+'</h4>'+(a.sn?'<p class="note">'+esc(a.sn)+'</p>':'')+subList(a);
 }
-function go(i){cur=(i+ORD.length)%ORD.length;draw();var n=document.querySelectorAll(".node")[cur];if(n&&n.scrollIntoView)n.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"})}
+function go(i){cur=i;draw()}
 var rail=document.getElementById("rail");
 ORD.forEach(function(id,i){
-  var b=document.createElement("button");b.className="node";b.setAttribute("role","tab");b.style.setProperty("--c",A[id].c);
-  b.innerHTML='<span class="dot">'+id+'</span><small>'+A[id].n+'</small>';
+  var b=document.createElement("button");b.className="node";b.setAttribute("role","tab");
+  b.setAttribute("aria-label",id+" · "+A[id].n+" · "+G[id]);b.style.setProperty("--c",A[id].c);
+  b.innerHTML='<span class="dot">'+id+'</span><small>'+A[id].n+'</small><span class="tag">'+G[id]+'</span>';
   b.onclick=function(){go(i)};rail.appendChild(b);
 });
-document.getElementById("routes").innerHTML=R.map(function(r){
-  var chain=r[0].map(function(id){return '<span class="chip" style="--c:'+A[id].c+'">'+id+'</span>'}).join("<em>→</em>");
-  return '<div class="route rv"><div class="chain">'+chain+'</div><p><b>'+r[1]+'</b></p><p>'+r[2]+'</p></div>';
-}).join("");
 draw();
 
 /* tema */
