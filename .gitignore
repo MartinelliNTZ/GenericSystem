@@ -1,6 +1,5 @@
 *.pyc
 *.keras
-*.html
 *.csv
 *.log
 __pycache__/
@@ -22,8 +21,6 @@ __pycache__/
 Simulador Habitacional CAIXA_files
 *.pyc
 *.keras
-*.html
-*.csv
 *.log
 __pycache__/
 *.pth
