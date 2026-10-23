@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""
+PanelFazendas — Painel 3 · Fazendas e talhões
+=============================================
+Resumo das fazendas e a lista de talhões de cada uma.
+
+O painel é dividido em dois pedaços (subpainéis) que consomem o MESMO dado:
+``3.1`` resumo/agrupamento das fazendas e ``3.2`` a tabela de talhões com área.
+
+A fonte é o SHAPE de limites já convertido em GeoJSON (``FAZENDA``,
+``TALHAO`` e ``AREA_HA``) — exatamente o mesmo dado que alimenta o Painel 4.
+Sem o shape, a lista sai vazia (o template mostra o próprio estado vazio).
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+from plugins.os_tracker.report.ReportContext import ReportContext
+from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
+
+
+class PanelFazendas(PanelBuilder):
+    """Painel 3 — Fazendas e talhões (subpainéis 3.1 e 3.2)."""
+
+    PANEL_ID = "3"
+    PANEL_TITLE = "Fazendas e talhões"
+    # Subpainéis do painel 3 (mesmo dado, dois pedaços do template).
+    SUB_PANELS = {"3.1": "Resumo das fazendas", "3.2": "Talhões por fazenda"}
+    LIMITES_KEY = "limites"
+    UNKNOWN_FARM = "—"
+
+    @classmethod
+    def build(cls, context: ReportContext) -> Dict[str, Any]:
+        """Agrupa os talhões do shape de limites por fazenda."""
+        farms: Dict[str, List[Dict[str, Any]]] = {}
+        for feature in cls._features(context):
+            props = feature.get("properties") or {}
+            name = str(props.get("fazenda") or "").strip() or cls.UNKNOWN_FARM
+            farms.setdefault(name, []).append(
+                {
+                    "nome": str(props.get("talhao") or "").strip(),
+                    "area_ha": props.get("area_ha"),
+                }
+            )
+        return {
+            "fazendas": [
+                {
+                    "nome": name,
+                    "talhoes": sorted(items, key=lambda item: item["nome"]),
+                }
+                for name, items in sorted(farms.items())
+            ]
+        }
+
+    @classmethod
+    def _features(cls, context: ReportContext) -> List[Dict[str, Any]]:
+        """Feições do shape de limites (lista vazia quando não houver shape)."""
+        collection = context.shape(cls.LIMITES_KEY) or {}
+        return list(collection.get("features") or [])

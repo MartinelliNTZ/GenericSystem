@@ -24,16 +24,22 @@ base do banco (``limites`` e ``zonas_manejo``: feições e área em hectares).
 O painel **Atalhos** abre, com um clique, a pasta da OS, a pasta do arquivo de
 cada base obtida (``LIMITES`` e ``ZONAS DE MANEJO`` — um botão por link registrado
 no banco, escondido quando a OS não tem o registro), o changelog Word da OS
-(``11_AGROROBOTICA/OS_<chave>_CHANGELOG.DOCX``) e **BAIXAR RELATÓRIO**, que gera o
-relatório da OS a partir do template Word (``core/template/MODELO_RELATORIO_OS.docx``)
-dentro de ``14_RELATORIOS/<TIPO>/`` — com data/hora no nome — e abre a pasta do
-relatório.
+(``11_AGROROBOTICA/OS_<chave>_CHANGELOG.DOCX``) e os relatórios:
+
+- **BAIXAR RELATÓRIO** — gera o relatório da OS a partir do template Word
+  (``core/template/MODELO_RELATORIO_OS.docx``) dentro de
+  ``14_RELATORIOS/<TIPO>/`` (com data/hora no nome) e abre a pasta do relatório.
+- **RELATÓRIO HTML** — gera o **relatório geral do projeto** em HTML a partir do
+  template ``core/template/relatorio_geral_projeto.html``, preenchido com os
+  dados do banco e com os SHAPES das bases (``limites``/``zonas_manejo``)
+  convertidos em GeoJSON para os mapas do relatório — submódulo
+  ``plugins.os_tracker.report`` (ver ``OsReportHtmlService``).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -42,6 +48,7 @@ from core.enum.ToolKey import ToolKey
 from core.firebase.FirebaseWorker import FirebaseWorker
 from plugins.BasePlugin import BasePlugin
 from plugins.os_tracker.OsTrackerService import OsTrackerService
+from plugins.os_tracker.report.OsReportHtmlService import OsReportHtmlService
 from resources.widgets.dialogs.CheckBoxSelectDialog import CheckBoxSelectDialog
 from resources.widgets.dialogs.FormLineEditDialog import FormLineEditDialog
 from resources.widgets.grid.GridButtonPanel import GridButtonPanel
@@ -81,6 +88,11 @@ class OsTrackerPlugin(BasePlugin):
             "relatorio",
             "BAIXAR RELATÓRIO",
             "Gera o relatório da OS em 14_RELATORIOS e abre a pasta do relatório",
+        ),
+        (
+            "relatorio_html",
+            "RELATÓRIO HTML",
+            "Gera o relatório geral do projeto (HTML, com os mapas) e abre a pasta do relatório",
         ),
     )
 
@@ -453,9 +465,12 @@ class OsTrackerPlugin(BasePlugin):
     # ── Abrir caminhos ──────────────────────────────────────────────
 
     def _on_shortcut(self, key: str) -> None:
-        """Executa o atalho clicado (gera o relatório ou abre um caminho)."""
+        """Executa o atalho clicado (gera um relatório ou abre um caminho)."""
         if key == "relatorio":
             self._on_generate_report()
+            return
+        if key == "relatorio_html":
+            self._on_generate_html_report()
             return
         path = self._shortcut_paths.get(key, "")
         if not path:
@@ -635,7 +650,37 @@ class OsTrackerPlugin(BasePlugin):
         )
 
     def _on_generate_report(self) -> None:
-        """Gera o relatório da OS em ``14_RELATORIOS`` e abre a pasta do relatório."""
+        """Gera o relatório Word da OS em ``14_RELATORIOS`` e abre a pasta."""
+
+        def build(record: Dict[str, Any], os_folder: Path) -> str:
+            values = OsTrackerService.report_data(
+                self._mother_folder, record, tool_key=self.tool_key
+            )
+            return OsReportGenerator.generate(
+                values,
+                os_folder=os_folder,
+                os_key=str(record.get("os", "")),
+                tool_key=self.tool_key,
+            )
+
+        self._generate_report(build, "Relatório")
+
+    def _on_generate_html_report(self) -> None:
+        """Gera o relatório geral do projeto (HTML, com mapas) e abre a pasta."""
+
+        def build(record: Dict[str, Any], _os_folder: Path) -> str:
+            return OsReportHtmlService.generate(
+                self._mother_folder, record, tool_key=self.tool_key
+            )
+
+        self._generate_report(build, "Relatório HTML")
+
+    def _generate_report(
+        self,
+        build: Callable[[Dict[str, Any], Path], str],
+        label: str,
+    ) -> None:
+        """Gera um relatório da OS (via ``build``) e abre a pasta do relatório."""
         record = self._current_record()
         if record is None:
             MessageBox.show_warning(
@@ -652,22 +697,17 @@ class OsTrackerPlugin(BasePlugin):
             )
             return
         try:
-            values = OsTrackerService.report_data(
-                self._mother_folder, record, tool_key=self.tool_key
-            )
-            path = OsReportGenerator.generate(
-                values,
-                os_folder=os_folder,
-                os_key=str(record.get("os", "")),
-                tool_key=self.tool_key,
-            )
+            path = build(record, os_folder)
         except Exception as e:
             self.logger.error(
-                "Falha ao gerar o relatório da OS", code="OST_REPORT_ERR", error=str(e)
+                "Falha ao gerar o relatório da OS",
+                code="OST_REPORT_ERR",
+                label=label,
+                error=str(e),
             )
-            MessageBox.show_error(f"Falha ao gerar o relatório: {e}", parent=self)
+            MessageBox.show_error(f"Falha ao gerar o {label.lower()}: {e}", parent=self)
             return
-        MessageBox.show_toast(f"Relatório gerado: {Path(path).name}", parent=self)
+        MessageBox.show_toast(f"{label} gerado: {Path(path).name}", parent=self)
         self._open_path(path)
 
     def _reload(self, os_key: str) -> None:

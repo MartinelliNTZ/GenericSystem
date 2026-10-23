@@ -28,6 +28,9 @@ __pycache__/
 *.geojson
 *.json
 report
+# Exceção: submódulo do Relatório Geral do Projeto (Acompanhamento de OS)
+!plugins/os_tracker/report/
+!plugins/os_tracker/report/**
 *.bin
 *.las
 *.laz

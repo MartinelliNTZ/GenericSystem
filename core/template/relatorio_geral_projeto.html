@@ -167,14 +167,20 @@ main{padding:8px 16px 24px}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!--{{DADOS_PROJETO}}-->
 <script>
 /* ============================================================
-   DADOS DO PROJETO — é só este bloco que a IA precisa preencher.
+   DADOS DO PROJETO — preenchido pelo Acompanhamento de OS
+   (Relatório geral do projeto). Ao gerar o relatório, o token acima é
+   trocado por um <script> que define window.DADOS_PROJETO.
+   O objeto abaixo é apenas o PADRÃO: abrir o template direto mostra o
+   layout com os campos vazios. As chaves que o banco ainda não fornece
+   permanecem vazias de propósito (nada é adaptado/inventado).
    limites / zonas: GeoJSON FeatureCollection (EPSG:4326).
      limites → properties: { fazenda, talhao, area_ha }
      zonas   → properties: { zona }
    ============================================================ */
-window.DADOS_PROJETO = {
+window.DADOS_PROJETO = window.DADOS_PROJETO || {
   os: "",                    // número da OS (ID interno)
   nome_comercial: "",
   tipos_manejo: [],          // ex.: ["Lavoura", "Pasto", "ETF"]

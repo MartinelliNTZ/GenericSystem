@@ -477,6 +477,34 @@ alteradas.
   `14_RELATORIOS/Relatorio Geral Projeto/OS_220_Relatorio Geral Projeto_20261023134420.DOCX`).
   O TIPO é `OsReportGenerator.REPORT_TYPE` (`"Relatorio Geral Projeto"`) e a pasta
   raiz é `OsReportGenerator.REPORTS_FOLDER` (`"14_RELATORIOS"`).
+- O **relatório geral do projeto (HTML)** é o SEGUNDO relatório da OS e tem
+  submódulo próprio — `plugins/os_tracker/report/` — com classes desacopladas:
+  `OsReportHtmlService` (fachada), `ReportSource` (única que fala com
+  `OsTrackerService`), `ReportDataBuilder` (schema + painéis), `ReportContext`,
+  `ShapeGeoJsonReader` (vetor da base → GeoJSON EPSG:4326) e
+  `OsReportHtmlGenerator` (template + dados → `.HTML`). O atalho **RELATÓRIO
+  HTML** (painel Atalhos) gera o arquivo e **abre a pasta** do relatório.
+- O **template** do relatório HTML é `core/template/relatorio_geral_projeto.html`
+  (editável — é a fonte do layout) e traz o token `<!--{{DADOS_PROJETO}}-->`, que
+  o gerador troca por um `<script>` com `window.DADOS_PROJETO`. O bloco de dados
+  que já existe no template é apenas o PADRÃO (`window.DADOS_PROJETO || {…}`):
+  abrir o template direto mostra o layout com os campos vazios.
+- O template é dividido em **PAINÉIS numerados** (`Painel 1` … `Painel 5`) e um
+  painel pode ser dividido em **subpainéis** (`3.1`, `3.2` …). Cada painel é
+  preenchido por um builder desacoplado em `plugins/os_tracker/report/panels/`
+  (`PanelBuilder` + um arquivo por painel), registrado em
+  `ReportDataBuilder.PANELS` na ORDEM do template — para dividir um painel, basta
+  registrar outro builder com subnúmero (ex.: `PANEL_ID = "3.1"`).
+- Os **shapes** entram nos painéis 4 (`limites`) e 5 (`zonas_manejo`) como
+  `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo gravado na OS pelo
+  `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` → `fazenda`/`talhao`/
+  `area_ha`; `ZONA` → `zona`) e desenhados no navegador pelo Leaflet. O painel 3
+  (fazendas e talhões) é derivado do MESMO shape de limites.
+- Chaves que o banco **ainda não fornece** (tipos de manejo, culturas, área
+  contratada, CARs, data de início e cenário base) permanecem **vazias** — nada é
+  adaptado/inventado; o template já sabe exibir o estado vazio.
+- O destino do HTML é o MESMO do relatório Word (mesma pasta por TIPO), mudando
+  só a extensão: `14_RELATORIOS/<TIPO>/OS_<chave>_<TIPO>_<AAAAMMDDHHMMSS>.HTML`.
 - O botão **EDITAR OS** (ExecutionButtons) abre um formulário
   (`FormLineEditDialog`) pré-preenchido com os campos EDITÁVEIS do registro —
   **nome, cliente, nome comercial e CNPJ** (`OsTrackerService.EDITABLE_FIELDS`) —

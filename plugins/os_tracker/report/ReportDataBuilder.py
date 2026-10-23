@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+"""
+ReportDataBuilder — Schema do template + builders de painel
+==========================================================
+Monta o objeto ``window.DADOS_PROJETO`` do template: parte do SCHEMA (todas as
+chaves com valor neutro — o mesmo estado vazio do template) e aplica, na
+ORDEM do template, o resultado de cada builder de painel.
+
+Chave que nenhum painel preenche permanece vazia — nada é adaptado/inventado.
+
+Uso:
+    from plugins.os_tracker.report.ReportDataBuilder import ReportDataBuilder
+
+    data = ReportDataBuilder.build(context)
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, Tuple, Type
+
+from utils.BaseUtil import BaseUtil
+
+from plugins.os_tracker.report.ReportContext import ReportContext
+from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
+from plugins.os_tracker.report.panels.PanelCulturas import PanelCulturas
+from plugins.os_tracker.report.panels.PanelFazendas import PanelFazendas
+from plugins.os_tracker.report.panels.PanelLimites import PanelLimites
+from plugins.os_tracker.report.panels.PanelVisaoGeral import PanelVisaoGeral
+from plugins.os_tracker.report.panels.PanelZonas import PanelZonas
+
+
+class ReportDataBuilder(BaseUtil):
+    """Junta o schema do template com os builders de painel."""
+
+    # Schema do template (chave → valor neutro). O que não for preenchido por
+    # um painel continua exatamente assim — o template já sabe exibir o vazio.
+    SCHEMA: Dict[str, Any] = {
+        "os": "",
+        "nome_comercial": "",
+        "tipos_manejo": [],
+        "culturas": [],
+        "area_contratada_ha": None,
+        "n_cars": None,
+        "data_inicio": "",
+        "ano_cenario_base": None,
+        "gerado_em": "",
+        "versao_data": "",
+        "fazendas": [],
+        "limites": None,
+        "zonas": None,
+    }
+    # Painéis na ORDEM do template (um painel pode ter vários builders).
+    PANELS: Tuple[Type[PanelBuilder], ...] = (
+        PanelVisaoGeral,
+        PanelCulturas,
+        PanelFazendas,
+        PanelLimites,
+        PanelZonas,
+    )
+
+    @classmethod
+    def build(cls, context: ReportContext) -> Dict[str, Any]:
+        """Dados completos do relatório (schema + todos os painéis)."""
+        logger = cls._get_logger(context.tool_key, "ReportDataBuilder")
+        data = dict(cls.SCHEMA)
+        data["gerado_em"] = context.generated_at
+        data["versao_data"] = context.data_version or cls.SCHEMA["versao_data"]
+        for panel in cls.PANELS:
+            data.update(panel.build(context))
+            logger.info("Painel do relatório preenchido", code="OSREP_PANEL", panel=panel.label())
+        logger.info(
+            "Dados do relatório montados",
+            code="OSREP_DATA_DONE",
+            panels=len(cls.PANELS),
+        )
+        return data
