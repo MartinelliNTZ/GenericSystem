@@ -11,12 +11,13 @@ Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
 
 **Zonas de Manejo** (``MODE_ZONAS``):
     <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp         → completão de zonas
-    <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_zonas_manejo.shp   → um arquivo por OS
+    <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp        → um arquivo por OS
     <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 
 ``VERRA_DATA`` é a pasta de BACKUP GERAL da base (dentro de ``BASE_DADOS``): os
 completões de todos os modos ficam agrupados na subpasta ``Consolidado`` e cada OS
-tem a sua própria pasta (``<OS>/Limites``) com os arquivos do modo.
+tem as suas próprias subpastas — ``Limites`` para os limites e ``ZM`` para as zonas
+de manejo (``MODE_SETTINGS[mode]["base_folder"]``).
 
 A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra já
 diferencia as OS de um mesmo projeto, então cada OS tem o seu próprio arquivo e a
@@ -89,7 +90,8 @@ BASE_ROOT = (
     r"Agroambientais\BASE_DADOS\VERRA_DATA"
 )
 CONSOLIDATED_FOLDER = "Consolidado"
-OS_LIMITS_FOLDER = "Limites"
+BASE_LIMITES_FOLDER = "Limites"
+BASE_ZONAS_FOLDER = "ZM"
 CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
 DEFAULT_TOLERANCE_PCT = 1.0
@@ -145,6 +147,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "label": "Limites",
         "consolidated": CONSOLIDATED_FILENAME,
         "os_suffix": OS_FILE_SUFFIX,
+        "base_folder": BASE_LIMITES_FOLDER,
         "project_folder": LIMITES_FOLDER,
         "project_subfolder": TALHOES_FOLDER,
         "db_key": "limites",
@@ -156,6 +159,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "label": "Zonas de Manejo",
         "consolidated": "zonas_manejo.shp",
         "os_suffix": "_zonas_manejo",
+        "base_folder": BASE_ZONAS_FOLDER,
         "project_folder": ZONAS_FOLDER,
         "project_subfolder": "",
         "db_key": "zonas_manejo",
@@ -575,12 +579,12 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def _os_file_path(cls, config: LimitesImportConfig, os_key: str) -> str:
-        """Caminho do arquivo do modo dentro da pasta ``Limites`` da OS na base."""
+        """Caminho do arquivo do modo na subpasta da OS (``Limites`` ou ``ZM``)."""
         settings = cls.settings(config.mode)
         return os.path.join(
             config.output_root,
             os_key,
-            OS_LIMITS_FOLDER,
+            settings["base_folder"],
             f"{os_key}{settings['os_suffix']}.shp",
         )
 

@@ -13,12 +13,13 @@ Ambos gravam:
     <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp              → completão de limites
     <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp        → arquivo da OS
     <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp         → completão de zonas
-    <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_zonas_manejo.shp   → arquivo da OS
+    <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp        → arquivo da OS
     <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp
     <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 
 ``VERRA_DATA`` é a pasta de BACKUP GERAL da base: os completões ficam agrupados na
-subpasta ``Consolidado`` e cada OS tem a sua própria pasta (``<OS>/Limites``).
+subpasta ``Consolidado`` e cada OS tem as suas subpastas — ``Limites`` para os
+limites e ``ZM`` para as zonas de manejo.
 
 Fluxo: escolhe o modo → seleciona o vetor → mapeia os campos → informa
 manualmente o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a

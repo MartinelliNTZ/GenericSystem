@@ -396,7 +396,7 @@ sn:"Regra de negócio (Contrato 28): a leitura é EXCLUSIVAMENTE do Firestore. C
 
 "07":{n:"Base de Limites",k:"Limites e Zonas de Manejo",c:"#10b981",
 i:["Um vetor: SHP, GPKG, KML, KMZ ou GeoJSON","O mapeamento dos campos e os valores manuais (fazenda, OS, área, tolerância)"],
-o:["VERRA_DATA/Consolidado: limites.shp / zonas_manejo.shp (completão) e VERRA_DATA/<OS>/Limites/<OS>_<tipo>.shp (um por OS)","A cópia no projeto: 08_LIMITES/TALHOES ou 13_ZONAS_DE_MANEJO","O registro limites/zonas_manejo no banco, na OS"],
+o:["VERRA_DATA/Consolidado: limites.shp / zonas_manejo.shp (completão) e VERRA_DATA/<OS>/Limites/<OS>_limites.shp + VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp (um por OS)","A cópia no projeto: 08_LIMITES/TALHOES ou 13_ZONAS_DE_MANEJO","O registro limites/zonas_manejo no banco, na OS"],
 x:"Dois modos: Limites (talhão obrigatório, duplicidade bloqueada) e Zonas de Manejo (zona obrigatória, talhão opcional, sem duplicidade). A área é sempre calculada em hectares.",
 s:[
 ["7.0","Plugin","plugins/limites_db/LimitesPlugin.py","modos Limites/Zonas, mapeamento de campos, VALIDAR (não grava), IMPORTAR (grava) e ATUALIZAR (troca as feições das OS do vetor)"],
