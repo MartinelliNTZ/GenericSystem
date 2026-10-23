@@ -2,15 +2,20 @@
 """
 OsReportHtmlGenerator — Template HTML + dados → relatório
 =========================================================
-Preenche o TEMPLATE HTML (``core/template/relatorio_geral_projeto.html``) com
-os dados do projeto e salva o relatório na pasta da OS.
+Preenche o TEMPLATE HTML do relatório geral do projeto com os dados da OS e
+salva o arquivo na pasta da OS.
 
-O template é a FONTE do layout: ele fica com o token
-``<!--{{DADOS_PROJETO}}-->`` e o gerador troca esse token por um ``<script>``
-que define ``window.DADOS_PROJETO``. O bloco de dados que já existe no
-template é apenas o PADRÃO (abrir o template direto mostra o layout vazio).
-Para mudar o relatório (textos, ordem, painéis), basta editar o HTML do
-template — nenhuma alteração de código é necessária.
+O template (``core/template/relatorio_geral_projeto.html``) é a FONTE do layout
+e vive SEPARADO dos seus assets — a folha de estilo
+(``relatorio_geral_projeto.css``) e o comportamento
+(``relatorio_geral_projeto.js``). Quem UNE os três num só documento é o
+``OsReportAssets``: ele embute o CSS e o JS no HTML, de modo que o ``.HTML``
+gerado é autossuficiente (só depende das CDNs do Leaflet).
+
+O template fica com o token ``<!--{{DADOS_PROJETO}}-->`` e o gerador troca esse
+token por um ``<script>`` que define ``window.DADOS_PROJETO``. Para mudar o
+relatório (textos, ordem, painéis), basta editar os arquivos do template —
+nenhuma alteração de código é necessária.
 
 O DESTINO é o mesmo do relatório da OS (``OsReportGenerator``):
 ``<pasta da OS>/14_RELATORIOS/<TIPO>/OS_<chave>_<TIPO>_<AAAAMMDDHHMMSS>.HTML``
@@ -32,15 +37,12 @@ from typing import Any, Dict
 from core.enum.ToolKey import ToolKey
 from utils.OsReportGenerator import OsReportGenerator
 
+from plugins.os_tracker.report.OsReportAssets import OsReportAssets
+
 
 class OsReportHtmlGenerator(OsReportGenerator):
     """Gera o relatório geral do projeto em HTML a partir do template."""
 
-    # Template HTML com o token de dados (editável — é a fonte do layout).
-    TEMPLATE_PATH: Path = (
-        Path(__file__).resolve().parents[3]
-        / "core" / "template" / "relatorio_geral_projeto.html"
-    )
     # Extensão do relatório (mesma pasta/tipo do relatório Word).
     OUTPUT_SUFFIX = ".HTML"
     # Token do template que recebe o script com os dados do projeto.
@@ -75,21 +77,11 @@ class OsReportHtmlGenerator(OsReportGenerator):
             ValueError: se o template não tiver o token de dados.
         """
         logger = cls._get_logger(tool_key, "OsReportHtmlGenerator")
-        template = Path(cls.TEMPLATE_PATH)
-        if not template.exists():
-            logger.error(
-                "Template do relatório HTML não encontrado",
-                code="OSREP_HTML_TEMPLATE_MISSING",
-                path=str(template),
-            )
-            raise FileNotFoundError(f"Template do relatório não encontrado: {template}")
-
-        html = template.read_text(encoding="utf-8")
+        html = OsReportAssets.html(tool_key)
         if cls.TOKEN not in html:
             logger.error(
                 "Token de dados ausente no template HTML",
                 code="OSREP_HTML_TOKEN_MISSING",
-                path=str(template),
                 token=cls.TOKEN,
             )
             raise ValueError(f"Template sem o token de dados: {cls.TOKEN}")

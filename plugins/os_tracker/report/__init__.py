@@ -7,8 +7,14 @@ Gera o relatório HTML da OS a partir do template
 layout) preenchido com os dados do banco e com os SHAPES das bases
 (``limites`` e ``zonas_manejo``) convertidos para GeoJSON (EPSG:4326).
 
-O template é dividido em PAINÉIS numerados (``Painel 1`` … ``Painel 5``) e um
-painel pode ser dividido em VÁRIOS pedaços (``Painel 3.1``, ``3.2`` …). Cada
+O template vive SEPARADO dos seus assets — a folha de estilo
+(``relatorio_geral_projeto.css``) e o comportamento
+(``relatorio_geral_projeto.js``), os três na mesma pasta — e o
+``OsReportAssets`` une os três num só documento (CSS e JS EMBUTIDOS), de modo
+que o ``.HTML`` gerado não dependa de arquivos ao lado.
+
+O template é dividido em PAINÉIS numerados (``Painel 1`` … ``Painel 4``) e um
+painel pode ser dividido em VÁRIOS pedaços (``Painel 2.1``, ``2.2`` …). Cada
 painel é preenchido por um BUILDER desacoplado (``panels/``) e o resultado
 final é o objeto ``window.DADOS_PROJETO`` do template.
 
@@ -19,7 +25,8 @@ final é o objeto ``window.DADOS_PROJETO`` do template.
 | ``ReportDataBuilder`` | Junta o schema do template com os builders de painel |
 | ``ReportContext`` | Contexto imutável entregue aos builders |
 | ``ShapeGeoJsonReader`` | Vetor da base → GeoJSON EPSG:4326 |
-| ``OsReportHtmlGenerator`` | Template + dados → ``.HTML`` |
+| ``OsReportAssets`` | Une HTML + CSS + JS num só documento (assets embutidos) |
+| ``OsReportHtmlGenerator`` | Documento + dados → ``.HTML`` |
 | ``panels.PanelBuilder`` | Contrato dos builders de painel |
 
 Uso:

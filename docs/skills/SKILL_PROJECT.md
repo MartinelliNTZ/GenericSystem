@@ -481,9 +481,10 @@ alteradas.
   submódulo próprio — `plugins/os_tracker/report/` — com classes desacopladas:
   `OsReportHtmlService` (fachada), `ReportSource` (única que fala com
   `OsTrackerService`), `ReportDataBuilder` (schema + painéis), `ReportContext`,
-  `ShapeGeoJsonReader` (vetor da base → GeoJSON EPSG:4326) e
-  `OsReportHtmlGenerator` (template + dados → `.HTML`). O atalho **RELATÓRIO
-  HTML** (painel Atalhos) gera o arquivo e **abre a pasta** do relatório.
+  `ShapeGeoJsonReader` (vetor da base → GeoJSON EPSG:4326), `OsReportAssets`
+  (une HTML + CSS + JS num só documento) e `OsReportHtmlGenerator` (documento +
+  dados → `.HTML`). O atalho **RELATÓRIO HTML** (painel Atalhos) gera o arquivo
+  e **abre a pasta** do relatório.
 - O relatório HTML tem **4 painéis numerados** e um painel pode ser dividido em
   **subpainéis** (o template marca cada pedaço com `Painel N.M`):
 
@@ -504,11 +505,25 @@ alteradas.
   de Zonas de Manejo": feições, área em ha, arquivo, origem e data de registro) e
   **4** (pastas criadas e anos) replicam os campos de
   `OsTrackerService.report_data` usados no `MODELO_RELATORIO_OS.docx`.
-- O **template** do relatório HTML é `core/template/relatorio_geral_projeto.html`
-  (editável — é a fonte do layout) e traz o token `<!--{{DADOS_PROJETO}}-->`, que
-  o gerador troca por um `<script>` com `window.DADOS_PROJETO`. O bloco de dados
-  que já existe no template é apenas o PADRÃO (`window.DADOS_PROJETO || {…}`):
-  abrir o template direto mostra o layout com os campos vazios.
+- O **template** do relatório HTML vive em TRÊS arquivos separados, os três em
+  `core/template/` (editáveis — são a fonte do layout): a **estrutura**
+  (`relatorio_geral_projeto.html`), a **folha de estilo**
+  (`relatorio_geral_projeto.css`) e o **comportamento**
+  (`relatorio_geral_projeto.js`). O HTML aponta para os irmãos por `<link>` e
+  `<script src>` (abrir o template direto no navegador mostra o layout) e o
+  `OsReportAssets` **embute** o CSS e o JS no documento, de modo que o `.HTML`
+  gerado é autossuficiente (só depende das CDNs do Leaflet). O HTML traz o token
+  `<!--{{DADOS_PROJETO}}-->`, que o `OsReportHtmlGenerator` troca por um
+  `<script>` com `window.DADOS_PROJETO`; o objeto PADRÃO de
+  `DADOS_PROJETO` (campos vazios) fica no topo do `.js` — abrir o template direto
+  mostra o layout com os campos vazios.
+- O layout segue o **padrão visual do sistema** (tema escuro azul): menu lateral
+  com a marca da Agrorobótica, cabeçalho fixo com a marca e a data de geração,
+  painéis numerados (`01`, `02`, `2.1` …) tingidos pela cor do módulo, cartões,
+  chips/pills, tabelas, **descrição em tooltip** (o "i" do cabeçalho do painel,
+  movido para a área de ações pelo próprio JS) e o botão de **expandir/recolher**
+  de cada painel. No celular o menu vira gaveta, a legenda dos mapas encolhe e
+  aparece o botão "voltar ao topo".
 - Os **shapes** entram nos subpainéis **2.2** (`limites`) e **2.3**
   (`zonas_manejo`) como `FeatureCollection` GeoJSON (EPSG:4326), lidos do arquivo
   gravado na OS pelo `ShapeGeoJsonReader` (campos `FAZENDA`/`TALHAO`/`AREA_HA` →

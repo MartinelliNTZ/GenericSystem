@@ -2,124 +2,45 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0c1234">
 <title>Relatório geral do projeto</title>
+<!-- Leaflet: usado pelos mapas dos subpainéis 2.2 e 2.3. -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<style>
-:root{--bg:#0a0e28;--surface:#101538;--surface-2:#182050;--borda:#2c3568;--texto:#e7ecff;--suave:#8d99c8;--acento:#5b6cff;--acento-2:#7d8cff;--side:264px}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:84px}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--texto);line-height:1.5}
-a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-.sidebar{position:fixed;inset:0 auto 0 0;width:var(--side);background:rgba(22,29,68,.96);border-right:1px solid var(--borda);padding:20px 14px;display:flex;flex-direction:column;gap:18px;z-index:1000;transition:transform .25s}
-.marca{display:flex;align-items:center;gap:12px;padding:4px 8px 16px;border-bottom:1px solid var(--borda)}
-.logo{width:52px;height:52px;border-radius:12px;flex:none;background:#fff;display:grid;place-items:center;font-weight:800;color:#0a0e28;border:1px solid var(--borda)}
-.marca-nome{font-weight:700;font-size:15px;line-height:1.2}
-.marca-sub{font-size:12px;color:var(--suave)}
-.menu{display:flex;flex-direction:column;gap:4px;overflow-y:auto}
-.menu-titulo{font-size:12px;color:var(--suave);padding:0 10px 6px}
-.menu a{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 12px;border-radius:10px;color:var(--suave);text-decoration:none;font-weight:600;font-size:14px;border-left:3px solid transparent;transition:background .15s,color .15s}
-.menu a svg{width:20px;height:20px;flex:none}
-.menu a:hover{background:var(--surface-2);color:var(--texto)}
-.menu a.ativo{background:var(--surface-2);color:var(--acento);border-left-color:var(--acento)}
-.side-info{margin-top:auto;font-size:12px;color:var(--suave);padding:0 10px}
-.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900}
-.conteudo{margin-left:var(--side);min-height:100vh;display:flex;flex-direction:column}
-.cabecalho{position:sticky;top:0;z-index:800;display:flex;align-items:center;gap:14px;padding:14px 32px;background:rgba(18,24,60,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--borda)}
-.btn-menu{display:none;width:44px;height:44px;border-radius:10px;flex:none;border:1px solid var(--borda);background:var(--surface);color:var(--texto);cursor:pointer;align-items:center;justify-content:center}
-.btn-menu svg{width:22px;height:22px}
-.cab-logo{width:44px;height:44px;border-radius:10px;flex:none;border:1px dashed var(--borda);display:grid;place-items:center;font-size:10px;color:var(--suave);text-align:center;line-height:1.1}
-.cab-texto{min-width:0;flex:1}
-.cabecalho h1{margin:0;font-size:20px;line-height:1.25}
-.cabecalho p{margin:2px 0 0;font-size:13px;color:var(--suave)}
-.gerado{margin:0;flex:none;font-size:12px;color:var(--suave);border:1px solid var(--borda);background:var(--surface);border-radius:999px;padding:6px 12px}
-main{padding:8px 32px 32px;flex:1}
-.painel{margin-top:24px;background:linear-gradient(180deg,var(--surface),rgba(24,32,74,.9));border:1px solid var(--borda);border-radius:18px;overflow:hidden}
-.painel-topo{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--borda);background:rgba(32,41,92,.7)}
-.painel-icone{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(91,108,255,.12);color:var(--acento);flex:none}
-.painel-icone svg{width:20px;height:20px}
-.painel-topo h2{margin:0;font-size:17px}
-.painel-topo p{margin:0;font-size:12px;color:var(--suave)}
-.painel-numero{display:inline-block;margin-right:8px;padding:1px 8px;border-radius:6px;background:rgba(91,108,255,.18);color:var(--acento-2);font-size:13px;font-weight:700}
-.painel-corpo{padding:20px 22px 24px}
-.cartoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.cartao{background:var(--surface-2);border:1px solid var(--borda);border-left:4px solid var(--acento);border-radius:12px;padding:14px 16px;min-width:0}
-.cartao-valor{display:block;font-size:22px;font-weight:700;overflow-wrap:anywhere}
-.cartao-valor.vazio-v{color:var(--suave);font-weight:400}
-.cartao-rotulo{display:block;margin-top:4px;font-size:12px;color:var(--suave)}
-.sub{margin:22px 0 10px;font-size:15px;padding-bottom:8px;border-bottom:1px solid var(--borda)}
-.pills{display:flex;flex-wrap:wrap;gap:6px}
-.pill{background:rgba(91,108,255,.14);color:var(--acento-2);border-radius:999px;padding:3px 12px;font-size:13px;font-weight:600}
-.pill.fantasma{background:none;border:1px dashed var(--borda);color:var(--suave);font-weight:400}
-.vazio{margin:0;padding:14px 16px;border:1px dashed var(--borda);border-radius:12px;color:var(--suave);font-size:13px}
-.caminho{margin:0;padding:10px 14px;border:1px solid var(--borda);border-radius:10px;background:var(--surface-2);font-family:Consolas,monospace;font-size:12px;color:var(--suave);overflow-wrap:anywhere}
-.sub .painel-numero{margin-right:6px}
-.resumo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.chip{background:var(--surface-2);border:1px solid var(--borda);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--suave)}
-.chip strong{color:var(--texto)}
-.itens{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.item{background:var(--surface-2);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px}
-details.faz{border:1px solid var(--borda);border-radius:10px;background:var(--surface-2);overflow:hidden;margin-top:8px}
-details.faz summary{cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:600;min-height:44px;list-style:none}
-details.faz summary::-webkit-details-marker{display:none}
-details.faz summary::after{content:"▸";margin-left:auto;color:var(--acento);transition:transform .15s}
-details.faz[open] summary::after{transform:rotate(90deg)}
-details.faz[open] summary{border-bottom:1px solid var(--borda)}
-summary small{color:var(--suave);font-weight:400;font-size:12px}
-.dot{width:14px;height:14px;border-radius:4px;flex:none;border:1px solid rgba(255,255,255,.4)}
-.tabela{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:8px 14px;text-align:left;border-bottom:1px solid var(--borda)}
-th{color:var(--suave);font-size:12px;font-weight:600;white-space:nowrap}
-td.n,th.n{text-align:right}
-.total{margin-top:8px;display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--acento);background:rgba(91,108,255,.1);border-radius:8px;font-weight:700}
-.base{margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
-.base .cartao{min-width:150px;padding:10px 14px}
-.base .cartao-valor{font-size:19px}
-.base .vazio{flex:1}
-.base-info{flex:1;min-width:240px;display:flex;flex-wrap:wrap;gap:8px 22px;align-content:center;background:var(--surface-2);border:1px solid var(--borda);border-radius:12px;padding:12px 16px;font-size:13px}
-.base-info b{display:block;color:var(--suave);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
-.base-info span{overflow-wrap:anywhere}
-.mapa-box{position:relative;border:1px solid var(--borda);border-radius:12px;overflow:hidden;min-height:480px}
-.mapa{height:100%;min-height:480px;background:#0d1230}
-.aviso{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:500;background:rgba(10,14,40,.88);border:1px solid var(--borda);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--suave);text-align:center;pointer-events:none;max-width:80%}
-.legenda{position:absolute;top:12px;right:12px;z-index:600;width:min(250px,62%);max-height:calc(100% - 24px);overflow:auto;background:rgba(16,21,56,.94);border:1px solid var(--borda);border-radius:12px;padding:14px;backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
-.legenda h4{margin:0 0 10px;font-size:14px}
-.leg-item{display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 0;min-width:0}
-.leg-item span:last-child{overflow-wrap:anywhere}
-.leg-item.fantasma{color:var(--suave)}
-.leg-item.fantasma .dot{background:none;border-style:dashed;border-color:var(--borda)}
-.opcao{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--borda);font-size:13px;color:var(--suave);cursor:pointer}
-.rotulo{background:rgba(10,14,40,.78);border:0;color:#fff;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;box-shadow:none}
-.rotulo::before{display:none}
-.sem-rotulos .rotulo{display:none}
-.leaflet-container{font-family:inherit}
-.rodape{padding:18px 32px;border-top:1px solid var(--borda);font-size:12px;color:var(--suave);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
-@media (max-width:980px){
-.sidebar{transform:translateX(-100%)}
-body.menu-aberto .sidebar{transform:none}
-body.menu-aberto .scrim{display:block}
-.conteudo{margin-left:0}
-.btn-menu{display:flex}
-.cabecalho{padding:12px 16px}
-.gerado{display:none}
-main{padding:8px 16px 24px}
-.mapa-box,.mapa{min-height:380px}
-.legenda{width:min(220px,72%)}
-}
-</style>
+<!-- ESTILOS: o `OsReportAssets` troca este <link> pelo CSS embutido no arquivo gerado. -->
+<link rel="stylesheet" href="relatorio_geral_projeto.css">
 </head>
 <body>
+
 <aside class="sidebar" id="sidebar" aria-label="Menu de painéis">
-<div class="marca"><div class="logo">AR</div><div><div class="marca-nome">Agrorobótica</div><div class="marca-sub">Relatório geral do projeto</div></div></div>
+<div class="marca">
+<div class="logo" id="logoLateral">
+<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEby-oJq0xHblxKGo3G3E4RDuOpaOEi9GGwjA7LfNkTw&amp;s=10" alt="Logo Agrorobótica" decoding="async" loading="lazy">
+<span>AR</span>
+</div>
+<div>
+<div class="marca-nome">Agrorobótica</div>
+<div class="marca-sub">Relatório geral do projeto</div>
+</div>
+</div>
 <nav class="menu">
 <div class="menu-titulo">Painéis</div>
-<a class="ativo" href="#visao-geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>1 · Visão geral</a>
-<a href="#distribuicao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>2 · Distribuição espacial</a>
-<a href="#atividades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg>3 · Atividades</a>
-<a href="#base-dados"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>4 · Base de Dados</a>
+<a class="ativo" href="#visao-geral">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+01 · Visão geral
+</a>
+<a href="#distribuicao">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+02 · Distribuição espacial
+</a>
+<a href="#atividades">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg>
+03 · Atividades
+</a>
+<a href="#base-dados">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+04 · Base de Dados
+</a>
 </nav>
 <div class="side-info">Versão V1<br><span id="verData">—</span></div>
 </aside>
@@ -128,14 +49,28 @@ main{padding:8px 16px 24px}
 <div class="conteudo">
 <header class="cabecalho">
 <button class="btn-menu" id="btnMenu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-<div class="cab-logo" title="Logo do cliente">logo do cliente</div>
-<div class="cab-texto"><h1 id="titulo">Relatório geral do projeto</h1><p id="subtitulo">Nome comercial não informado</p></div>
-<p class="gerado">Gerado em: <span id="gerado">—</span></p>
+<div class="cab-logo" id="logoCabecalho">
+<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEby-oJq0xHblxKGo3G3E4RDuOpaOEi9GGwjA7LfNkTw&amp;s=10" alt="Logo Agrorobótica" decoding="async" loading="lazy">
+<span>AR</span>
+</div>
+<div class="cab-texto">
+<h1 id="titulo">Relatório geral do projeto</h1>
+<p id="subtitulo">Nome comercial não informado</p>
+</div>
+<p class="gerado">Gerado em: <strong id="gerado">—</strong></p>
 </header>
 
 <main>
 <section class="painel" id="visao-geral" aria-labelledby="t1">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div><div><h2 id="t1"><span class="painel-numero">Painel 1</span>Visão geral</h2><p>Identificação do projeto, dados contratuais e dados da OS</p></div></div>
+<div class="painel-topo">
+<div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+<div class="painel-identidade">
+<h2 id="t1"><span class="painel-numero">01</span>Visão geral
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Identificação do projeto e dados cadastrais da OS — nome, cliente, nome comercial, CNPJ, pasta e última atualização. Os campos contratuais (tipos de manejo, área contratada, CARs, data de início e cenário base) só aparecem quando o banco os fornece.</span></span>
+</h2>
+<p>Identificação do projeto, dados contratuais e dados da OS</p>
+</div>
+</div>
 <div class="painel-corpo">
 <div class="cartoes" id="cartoes"></div>
 <h3 class="sub">Tipos de manejo</h3>
@@ -146,7 +81,15 @@ main{padding:8px 16px 24px}
 </section>
 
 <section class="painel" id="distribuicao" aria-labelledby="t2">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div><div><h2 id="t2"><span class="painel-numero">Painel 2</span>Distribuição espacial</h2><p>Fazendas, talhões, limites e zonas de manejo</p></div></div>
+<div class="painel-topo">
+<div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div>
+<div class="painel-identidade">
+<h2 id="t2"><span class="painel-numero">02</span>Distribuição espacial
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Fazendas e talhões, limites e zonas de manejo da propriedade. Os mapas usam as bases gravadas na OS (shape de limites e shape de zonas de manejo) convertidas em GeoJSON; a legenda fica sobre o mapa.</span></span>
+</h2>
+<p>Fazendas, talhões, limites e zonas de manejo</p>
+</div>
+</div>
 <div class="painel-corpo">
 <h3 class="sub"><span class="painel-numero">2.1</span>Fazendas e talhões</h3>
 <div class="resumo" id="resumoFaz"></div>
@@ -171,13 +114,29 @@ main{padding:8px 16px 24px}
 </div>
 </section>
 
-<section class="painel" id="atividades" aria-labelledby="t6">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg></div><div><h2 id="t6"><span class="painel-numero">Painel 3</span>Atividades</h2><p>Atividades da propriedade</p></div></div>
+<section class="painel" id="atividades" aria-labelledby="t3">
+<div class="painel-topo">
+<div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg></div>
+<div class="painel-identidade">
+<h2 id="t3"><span class="painel-numero">03</span>Atividades
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Atividades da propriedade (lavoura, pasto, integração etc.). O banco ainda não fornece a lista, então o painel mostra o estado vazio até a fonte existir.</span></span>
+</h2>
+<p>Atividades da propriedade</p>
+</div>
+</div>
 <div class="painel-corpo"><div class="itens" id="listaAtividades"></div></div>
 </section>
 
-<section class="painel" id="base-dados" aria-labelledby="t7">
-<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div><div><h2 id="t7"><span class="painel-numero">Painel 4</span>Base de Dados</h2><p>O que já existe na base da OS</p></div></div>
+<section class="painel" id="base-dados" aria-labelledby="t4">
+<div class="painel-topo">
+<div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div>
+<div class="painel-identidade">
+<h2 id="t4"><span class="painel-numero">04</span>Base de Dados
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">O que já existe na base da OS: as pastas criadas pela ferramenta e os anos com dados registrados no banco.</span></span>
+</h2>
+<p>O que já existe na base da OS</p>
+</div>
+</div>
 <div class="painel-corpo">
 <h3 class="sub"><span class="painel-numero">4.1</span>Pastas criadas</h3>
 <div class="resumo" id="resumoPastas"></div>
@@ -188,227 +147,23 @@ main{padding:8px 16px 24px}
 </div>
 </section>
 </main>
-<footer class="rodape"><span>© 2026 Agrorobótica · Fotônica em Certificações Agroambientais</span><span>Relatório geral · V1</span></footer>
+
+<footer class="rodape">
+<span>© 2026 Agrorobótica · Fotônica em Certificações Agroambientais</span>
+<span class="rodape-fim">Relatório geral do projeto · V1</span>
+</footer>
 </div>
 
+<button class="btn-topo" id="btnTopo" type="button" aria-label="Voltar ao topo do relatório">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+</button>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- DADOS: o `OsReportHtmlGenerator` troca este token pelo script que define `window.DADOS_PROJETO`. -->
 <!--{{DADOS_PROJETO}}-->
-<script>
-/* ============================================================
-   DADOS DO PROJETO — preenchido pelo Acompanhamento de OS
-   (Relatório geral do projeto). Ao gerar o relatório, o token acima é
-   trocado por um <script> que define window.DADOS_PROJETO.
-   O objeto abaixo é apenas o PADRÃO: abrir o template direto mostra o
-   layout com os campos vazios. As chaves que o banco ainda não fornece
-   permanecem vazias de propósito (nada é adaptado/inventado).
-   limites / zonas: GeoJSON FeatureCollection (EPSG:4326).
-     limites → properties: { fazenda, talhao, area_ha }
-     zonas   → properties: { zona }
-   ============================================================ */
-window.DADOS_PROJETO = window.DADOS_PROJETO || {
-  os: "",                    // número da OS (ID interno)
-  nome_comercial: "",
-  tipos_manejo: [],          // ex.: ["Lavoura", "Pasto", "ETF"]
-  area_contratada_ha: null,
-  n_cars: null,
-  data_inicio: "",           // ex.: "01/01/2025"
-  ano_cenario_base: null,
-  gerado_em: "",
-  versao_data: "",
-  /* Painel 1 — dados da OS (as mesmas infos do relatório emitido em PDF) */
-  nome: "",
-  cliente: "",
-  cnpj: "",
-  pasta: "",
-  pasta_completa: "",
-  atualizado_em: "",         // ISO (ex.: "2026-10-23T13:44:20")
-  /* Painel 2 — distribuição espacial */
-  fazendas: [],              // ex.: [{ nome: "Fazenda A", talhoes: [{ nome: "T-01", area_ha: 30.5 }] }]
-  limites: null,
-  zonas: null,
-  base_limites: null,        // { tem, contagem, area_ha, arquivo, origem, registrado }
-  base_zonas: null,          // contagem = talhões (2.2) ou zonas (2.3)
-  /* Painel 3 — atividades */
-  atividades: [],            // ex.: ["Amostragem de solo", "Colheita"]
-  /* Painel 4 — base de dados */
-  pastas_criadas: null,
-  lista_pastas: [],
-  anos_criados: []
-};
-</script>
-<script>
-(function(){
-var D = window.DADOS_PROJETO;
-var PALETA = ['#38bdf8','#fb923c','#a3e635','#f472b6','#facc15','#a78bfa','#2dd4bf','#ef4444','#e879f9','#4ade80','#22d3ee','#cbd5e1'];
-var $ = function(id){ return document.getElementById(id); };
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-function vazio(v){ return v == null || v === ''; }
-function num(v, c){ c = c == null ? 2 : c; return (vazio(v) || isNaN(v)) ? '—' : Number(v).toLocaleString('pt-BR', {minimumFractionDigits:c, maximumFractionDigits:c}); }
-function features(fc){ return (fc && fc.features) ? fc.features : []; }
-function cartoesHtml(lista){
-  return (lista || []).map(function(c){
-    var v = vazio(c[1]) ? '' : c[1];
-    return '<div class="cartao"><span class="cartao-valor' + (vazio(v) ? ' vazio-v' : '') + '">' + (vazio(v) ? '—' : esc(v)) + '</span><span class="cartao-rotulo">' + c[0] + '</span></div>';
-  }).join('');
-}
-function pillsHtml(el, itens, textoVazio){
-  el.innerHTML = (itens || []).length
-    ? itens.map(function(i){ return '<span class="pill">' + esc(i) + '</span>'; }).join('')
-    : '<p class="vazio" style="border:0;padding:3px 8px">' + esc(textoVazio) + '</p>';
-}
-function quando(v){
-  if (vazio(v)) return '';
-  var d = new Date(v);
-  if (isNaN(d.getTime())) return String(v);
-  return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
-}
-function nomeArquivo(p){ var t = String(vazio(p) ? '' : p); return t ? t.split(/[\\/]/).pop() : ''; }
-function baseHtml(el, base, rotulo){
-  if (!base || !base.tem) { el.innerHTML = '<p class="vazio">Base não registrada nesta OS.</p>'; return; }
-  el.innerHTML =
-    '<div class="cartao"><span class="cartao-valor">' + num(base.contagem, 0) + '</span><span class="cartao-rotulo">' + esc(rotulo) + '</span></div>' +
-    '<div class="cartao"><span class="cartao-valor">' + num(base.area_ha) + '</span><span class="cartao-rotulo">Área (ha)</span></div>' +
-    '<div class="base-info">' +
-      '<span><b>Arquivo</b>' + esc(nomeArquivo(base.arquivo) || '—') + '</span>' +
-      '<span><b>Origem</b>' + esc(base.origem || '—') + '</span>' +
-      '<span><b>Registrado em</b>' + esc(quando(base.registrado) || '—') + '</span>' +
-    '</div>';
-}
-
-/* Cabeçalho */
-$('verData').textContent = D.versao_data || '—';
-$('gerado').textContent = D.gerado_em || '—';
-if (D.os) $('titulo').textContent = 'Relatório geral — OS ' + D.os;
-if (D.nome_comercial) $('subtitulo').textContent = D.nome_comercial;
-
-/* Painel 1 — visão geral (projeto + dados da OS) */
-var cartoes = [
-  ['OS (ID interno)', D.os],
-  ['Nome', D.nome],
-  ['Cliente', D.cliente],
-  ['Nome comercial', D.nome_comercial],
-  ['CNPJ', D.cnpj],
-  ['Pasta', D.pasta],
-  ['Área contratada', vazio(D.area_contratada_ha) ? '' : num(D.area_contratada_ha) + ' ha'],
-  ['Nº de CARs', vazio(D.n_cars) ? '' : num(D.n_cars, 0)],
-  ['Data de início', D.data_inicio],
-  ['Ano do cenário base', D.ano_cenario_base],
-  ['Última atualização', quando(D.atualizado_em)]
-];
-$('cartoes').innerHTML = cartoesHtml(cartoes);
-$('pastaCompleta').textContent = D.pasta_completa || '—';
-$('manejos').innerHTML = (D.tipos_manejo || []).length
-  ? D.tipos_manejo.map(function(t){ return '<span class="pill">' + esc(t) + '</span>'; }).join('')
-  : ['Lavoura','Pasto','ETF'].map(function(t){ return '<span class="pill fantasma">' + t + '</span>'; }).join('') + '<span class="vazio" style="border:0;padding:3px 8px">exemplos — preencher tipos_manejo</span>';
-
-/* Painel 3 — atividades */
-$('listaAtividades').innerHTML = (D.atividades || []).length
-  ? D.atividades.map(function(a){ return '<div class="item">' + esc(a) + '</div>'; }).join('')
-  : '<p class="vazio" style="grid-column:1/-1">Nenhuma atividade informada.</p>';
-
-/* Cores por fazenda: ordem de D.fazendas; depois as que só aparecem nos limites */
-var fazNomes = (D.fazendas || []).map(function(f){ return f.nome; });
-features(D.limites).forEach(function(f){
-  var n = (f.properties || {}).fazenda;
-  if (n && fazNomes.indexOf(n) < 0) fazNomes.push(n);
-});
-function corFaz(n){ var i = fazNomes.indexOf(n); return PALETA[(i < 0 ? 0 : i) % PALETA.length]; }
-
-/* Painel 2.1 — fazendas e talhões */
-var fazs = D.fazendas || [], totTal = 0, totArea = 0;
-$('listaFazendas').innerHTML = fazs.length ? fazs.map(function(f){
-  var ts = f.talhoes || [], a = 0;
-  ts.forEach(function(t){ if (!vazio(t.area_ha)) a += Number(t.area_ha); });
-  totTal += ts.length; totArea += a;
-  return '<details class="faz"><summary><span class="dot" style="background:' + corFaz(f.nome) + '"></span>' + esc(f.nome) +
-    ' <small>' + ts.length + ' talhões · ' + num(a) + ' ha</small></summary><div class="tabela"><table><thead><tr><th>Talhão</th><th class="n">Área (ha)</th></tr></thead><tbody>' +
-    ts.map(function(t){ return '<tr><td>' + esc(t.nome) + '</td><td class="n">' + num(t.area_ha) + '</td></tr>'; }).join('') +
-    '</tbody></table></div></details>';
-}).join('') + '<div class="total"><span>Total geral</span><span>' + totTal + ' talhões · ' + num(totArea) + ' ha</span></div>'
-  : '<p class="vazio">Nenhuma fazenda informada. Preencha fazendas (com seus talhões) em DADOS_PROJETO.</p>';
-$('resumoFaz').innerHTML = '<span class="chip"><strong>' + fazs.length + '</strong> fazendas</span><span class="chip"><strong>' + totTal + '</strong> talhões</span><span class="chip"><strong>' + num(totArea) + '</strong> ha somados</span>';
-
-/* Mapas — satélite híbrido (Esri imagery + nomes de cidades e estradas) */
-function criarMapa(id){
-  if (!window.L) { $(id).innerHTML = '<p class="vazio" style="margin:16px">Não foi possível carregar o mapa. Abra o arquivo com acesso à internet.</p>'; return null; }
-  var m = L.map(id).setView([-15.8, -52], 4);
-  var esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-  L.tileLayer(esri + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'Imagens © Esri, Maxar, Earthstar Geographics'}).addTo(m);
-  m.createPane('referencia'); m.getPane('referencia').style.zIndex = 450; m.getPane('referencia').style.pointerEvents = 'none';
-  ['Reference/World_Transportation', 'Reference/World_Boundaries_and_Places'].forEach(function(p){
-    L.tileLayer(esri + p + '/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, pane:'referencia'}).addTo(m);
-  });
-  return m;
-}
-function legenda(el, itens, fantasmas){
-  el.innerHTML = itens.length
-    ? itens.map(function(i){ return '<div class="leg-item"><span class="dot" style="background:' + i.cor + '"></span><span>' + esc(i.nome) + (i.n ? ' <small style="color:var(--suave)">(' + i.n + ')</small>' : '') + '</span></div>'; }).join('')
-    : fantasmas.map(function(n){ return '<div class="leg-item fantasma"><span class="dot"></span><span>' + n + '</span></div>'; }).join('');
-}
-
-/* Painel 2.2 — limites */
-var mL = criarMapa('mapaLimites'), contFaz = {};
-var fl = features(D.limites);
-fl.forEach(function(f){ var n = (f.properties || {}).fazenda || '—'; contFaz[n] = (contFaz[n] || 0) + 1; });
-if (mL && fl.length) {
-  var gL = L.geoJSON(D.limites, {
-    style: function(f){ var c = corFaz((f.properties || {}).fazenda); return {color:c, weight:2, fillColor:c, fillOpacity:.25}; },
-    onEachFeature: function(f, l){
-      var p = f.properties || {};
-      l.bindTooltip(esc(p.talhao), {permanent:true, direction:'center', className:'rotulo'});
-      l.bindPopup('<strong>' + esc(p.talhao) + '</strong><br>' + esc(p.fazenda) + (vazio(p.area_ha) ? '' : '<br>' + num(p.area_ha) + ' ha'));
-    }
-  }).addTo(mL);
-  mL.fitBounds(gL.getBounds(), {padding:[20, 20]});
-  $('avisoLimites').hidden = true;
-}
-legenda($('legLimites'), Object.keys(contFaz).length
-  ? Object.keys(contFaz).map(function(n){ return {nome:n, cor:corFaz(n), n:contFaz[n]}; })
-  : fazNomes.map(function(n){ return {nome:n, cor:corFaz(n)}; }),
-  ['Fazenda A', 'Fazenda B', 'Fazenda C']);
-$('chkRotulos').addEventListener('change', function(){ $('caixaLimites').classList.toggle('sem-rotulos', !this.checked); });
-baseHtml($('baseLimites'), D.base_limites, 'Talhões');
-
-/* Painel 2.3 — zonas de manejo (só legenda, sem nome de talhão) */
-var mZ = criarMapa('mapaZonas'), zonas = [];
-var fz = features(D.zonas);
-fz.forEach(function(f){ var n = (f.properties || {}).zona || '—'; if (zonas.indexOf(n) < 0) zonas.push(n); });
-function corZona(n){ return PALETA[(zonas.indexOf(n) + 3) % PALETA.length]; }
-if (mZ && fz.length) {
-  var gZ = L.geoJSON(D.zonas, {
-    style: function(f){ var c = corZona((f.properties || {}).zona); return {color:c, weight:1.5, fillColor:c, fillOpacity:.45}; },
-    onEachFeature: function(f, l){ l.bindPopup('<strong>' + esc((f.properties || {}).zona) + '</strong>'); }
-  }).addTo(mZ);
-  mZ.fitBounds(gZ.getBounds(), {padding:[20, 20]});
-  $('avisoZonas').hidden = true;
-}
-legenda($('legZonas'), zonas.map(function(n){ return {nome:n, cor:corZona(n)}; }), ['Zona 1', 'Zona 2', 'Zona 3']);
-baseHtml($('baseZonas'), D.base_zonas, 'Zonas');
-
-/* Painel 4 — base de dados (pastas criadas e anos com dados) */
-var pastas = D.lista_pastas || [], anos = D.anos_criados || [];
-$('resumoPastas').innerHTML = '<span class="chip"><strong>' + num(pastas.length, 0) + '</strong> pastas criadas</span>';
-pillsHtml($('listaPastas'), pastas, 'Nenhuma pasta criada.');
-$('resumoAnos').innerHTML = '<span class="chip"><strong>' + num(anos.length, 0) + '</strong> anos com dados</span>';
-pillsHtml($('listaAnos'), anos, 'Nenhum ano com dados.');
-
-/* Menu: celular e destaque do painel visível */
-var corpo = document.body, btn = $('btnMenu');
-function menu(abrir){ corpo.classList.toggle('menu-aberto', abrir); btn.setAttribute('aria-expanded', abrir ? 'true' : 'false'); }
-btn.addEventListener('click', function(){ menu(!corpo.classList.contains('menu-aberto')); });
-$('scrim').addEventListener('click', function(){ menu(false); });
-document.addEventListener('keydown', function(e){ if (e.key === 'Escape') menu(false); });
-var links = document.querySelectorAll('.menu a');
-links.forEach(function(a){ a.addEventListener('click', function(){ menu(false); }); });
-if ('IntersectionObserver' in window) {
-  var obs = new IntersectionObserver(function(es){
-    es.forEach(function(e){
-      if (e.isIntersecting) links.forEach(function(a){ a.classList.toggle('ativo', a.getAttribute('href') === '#' + e.target.id); });
-    });
-  }, {rootMargin:'-30% 0px -60% 0px'});
-  document.querySelectorAll('main .painel').forEach(function(s){ obs.observe(s); });
-}
-})();
-</script>
+<!-- COMPORTAMENTO: o `OsReportAssets` troca este <script src> pelo JS embutido no arquivo gerado. -->
+<script src="relatorio_geral_projeto.js"></script>
 </body>
 </html>
+
+
