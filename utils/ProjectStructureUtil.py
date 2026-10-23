@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-ProjectStructureUtil — Estrutura padrão dos projetos (OS) compartilhada
-======================================================================
-FONTE ÚNICA (single source of truth) da estrutura de pastas dos projetos (OS).
+ProjectStructureUtil — Estrutura PADRÃO dos projetos (VERRA_Farmer) — PÚBLICA
+=============================================================================
+Especificação da estrutura PÚBLICA (pasta-mãe ``VERRA_Farmer``), montada sobre o
+engine compartilhado ``utils.FolderStructureUtil`` — o MESMO sistema usado pela
+estrutura PRIVADA ``utils.VeraDataStructureUtil`` (Contrato 7).
 
-Toda a estrutura — pastas, futuros ARQUIVOS BASE e a pasta de anos — é descrita
-por UM único dicionário: ``ProjectStructureUtil.PROJECT_STRUCTURE``. Alimente e
-edite apenas ele; os valores derivados (``DEFAULT_PROJECT_FOLDERS``,
-``PROJECT_FOLDER_TEMPLATES``, ``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e
-``DOCUMENT_TEMPLATE``) são calculados a partir dele e consumidos pelo
-Gerenciador de Estrutura, pelo Banco de Dados e pelas cores das pastas.
+FONTE ÚNICA (single source of truth): ``ProjectStructureUtil.PROJECT_STRUCTURE``
+(o ``STRUCTURE`` do engine). Alimente e edite apenas ele; os valores derivados
+(``DEFAULT_PROJECT_FOLDERS``, ``PROJECT_FOLDER_TEMPLATES``,
+``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e ``DOCUMENT_TEMPLATE``) são
+calculados a partir dele e consumidos pelo Gerenciador de Estrutura, pelo Banco
+de Dados e pelas cores das pastas.
 
-Tipos de nó do dicionário (recursivo):
+Tipos de nó do dicionário (ver ``utils.FolderStructureUtil``):
     None            → pasta vazia (folha)
     { ... }         → pasta contendo os itens do dicionário
     "arquivo.ext"   → ARQUIVO BASE copiado de ``BASE_FILES_DIR``
@@ -27,79 +29,38 @@ Uso:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.enum.ToolKey import ToolKey
-from utils.BaseUtil import BaseUtil
+from utils.FolderStructureUtil import (
+    BaseFile,
+    FolderStructureUtil,
+    Years,
+    file_spec,
+    is_file_node,
+    is_years_node,
+)
 
 
-# ── Tipos de nó do PROJECT_STRUCTURE ────────────────────────────────
-# Cada item do dicionário é um NOME mapeado para um NÓ:
-#   None          → pasta vazia (folha)
-#   { ... }       → pasta com itens filhos (recursivo)
-#   "arquivo.ext" → ARQUIVO BASE copiado de ProjectStructureUtil.BASE_FILES_DIR
-#   BaseFile(...) → ARQUIVO BASE com opções (origem/conteúdo/sobrescrever)
-#   Years(...)    → pasta que se expande em uma subpasta por ano
+class ProjectStructureUtil(FolderStructureUtil):
+    """FONTE ÚNICA da estrutura PÚBLICA dos projetos (pasta-mãe ``VERRA_Farmer``).
 
-
-@dataclass(frozen=True)
-class BaseFile:
-    """Arquivo base criado dentro da estrutura do projeto.
-
-    ``source``: caminho relativo dentro de ``BASE_FILES_DIR`` (copiado de lá);
-    ``content``: conteúdo inline (usado quando ``source`` está vazio);
-    ``overwrite``: se ``False``, não sobrescreve um arquivo já existente.
+    Toda a estrutura é descrita por ``PROJECT_STRUCTURE``. Alimente/edite apenas
+    ele: os valores derivados (``DEFAULT_PROJECT_FOLDERS``,
+    ``PROJECT_FOLDER_TEMPLATES``, ``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e
+    ``DOCUMENT_TEMPLATE``) são calculados a partir dele e consumidos pelo
+    Gerenciador de Estrutura, pelo Banco de Dados e pelas cores das pastas.
     """
 
-    source: str = ""
-    content: str = ""
-    overwrite: bool = True
+    # Pasta raiz desta estrutura (informação PÚBLICA).
+    ROOT_NAME = "VERRA_Farmer"
 
+    # Prefixo das pastas-chave (projetos) dentro da pasta-mãe.
+    KEY_PREFIX = "OS_"
 
-@dataclass
-class Years:
-    """Pasta especial que se expande em uma subpasta por ano selecionado.
-
-    ``years``: anos oferecidos por padrão (diálogo de criação);
-    ``template``: estrutura criada (e validada) DENTRO de cada ano.
-    """
-
-    years: List[int] = field(default_factory=list)
-    template: Dict[str, Any] = field(default_factory=dict)
-
-
-def is_file_node(node: Any) -> bool:
-    """Indica se ``node`` representa um ARQUIVO base (``str`` ou ``BaseFile``)."""
-    return isinstance(node, (str, BaseFile))
-
-
-def is_years_node(node: Any) -> bool:
-    """Indica se ``node`` é a pasta especial de ANOS (``Years``)."""
-    return isinstance(node, Years)
-
-
-def file_spec(node: Any) -> BaseFile:
-    """Normaliza um nó de arquivo (``str`` | ``BaseFile``) em ``BaseFile``."""
-    if isinstance(node, BaseFile):
-        return node
-    return BaseFile(source=str(node))
-
-
-class ProjectStructureUtil(BaseUtil):
-    """FONTE ÚNICA da estrutura de pastas padrão dos projetos (OS).
-
-    Toda a estrutura — pastas, arquivos base e a pasta de anos — é descrita
-    pelo dicionário ``PROJECT_STRUCTURE``. Alimente/edite apenas ele: os valores
-    derivados (``DEFAULT_PROJECT_FOLDERS``, ``PROJECT_FOLDER_TEMPLATES``,
-    ``DOCUMENT_YEARS_FOLDER``, ``DEFAULT_YEARS`` e ``DOCUMENT_TEMPLATE``) são
-    calculados a partir dele e consumidos pelo Gerenciador de Estrutura, pelo
-    Banco de Dados e pelas cores das pastas.
-    """
-
-    # Prefixo das pastas de projeto dentro da pasta-mãe.
-    PROJECT_PREFIX = "OS_"
+    # Compatibilidade: a API histórica usa o nome PROJECT_PREFIX.
+    PROJECT_PREFIX = KEY_PREFIX
 
     # ══════════════════════════════════════════════════════════════════
     # ESTRUTURA — FONTE ÚNICA (alimente apenas este dicionário)
@@ -161,15 +122,10 @@ class ProjectStructureUtil(BaseUtil):
         },
     }
 
-    # Origem dos ARQUIVOS BASE (``BaseFile.source`` é relativo a esta pasta).
-    BASE_FILES_DIR: Path = (
-        Path(__file__).resolve().parent.parent
-        / "resources"
-        / "project_templates"
-    )
+    # A estrutura consumida pelo engine é o próprio PROJECT_STRUCTURE.
+    STRUCTURE = PROJECT_STRUCTURE
 
-
-    # ── Descoberta ──────────────────────────────────────────────────
+    # ── API pública histórica (delega para o engine) ────────────────
 
     @classmethod
     def discover_projects(
@@ -178,37 +134,12 @@ class ProjectStructureUtil(BaseUtil):
         tool_key: str = ToolKey.UNTRACEABLE.value,
     ) -> List[Path]:
         """Retorna as pastas de projeto (prefixo ``OS_``) ordenadas por nome."""
-        logger = cls._get_logger(tool_key, "ProjectStructureUtil")
-        try:
-            projects = [
-                path
-                for path in mother.iterdir()
-                if path.is_dir() and path.name.upper().startswith(cls.PROJECT_PREFIX)
-            ]
-        except (PermissionError, FileNotFoundError, OSError) as e:
-            logger.error(
-                "Falha ao ler a pasta-mãe",
-                code="PSU_DISCOVER_ERR",
-                error=str(e),
-                path=str(mother),
-            )
-            return []
-        projects.sort(key=lambda path: path.name.lower())
-        return projects
+        return cls.discover(mother, tool_key=tool_key)
 
     @staticmethod
     def is_year_folder(name: str) -> bool:
         """Indica se ``name`` é uma pasta de ano (4 dígitos numéricos)."""
-        return name.isdigit() and len(name) == 4
-
-    # ── Chave da OS ─────────────────────────────────────────────────
-
-    @classmethod
-    def _strip_prefix(cls, name: str) -> str:
-        """Remove o prefixo ``OS_`` do nome da pasta (se presente)."""
-        if name.upper().startswith(cls.PROJECT_PREFIX.upper()):
-            return name[len(cls.PROJECT_PREFIX):]
-        return name
+        return FolderStructureUtil.is_special_entry(name)
 
     @classmethod
     def extract_os(cls, name: str) -> str:
@@ -223,9 +154,7 @@ class ProjectStructureUtil(BaseUtil):
             "OS_169A_AGUA_VIVA" → "169A"
             "OS_181C_RENNER..." → "181C"
         """
-        core = cls._strip_prefix(name)
-        parts = core.split("_")
-        return cls.normalize_os(parts[0] if parts else core)
+        return cls.extract_key(name)
 
     @staticmethod
     def normalize_os(os_key: str) -> str:
@@ -234,7 +163,7 @@ class ProjectStructureUtil(BaseUtil):
         ``"039"`` continua ``"039"`` (a OS é texto — nunca inteiro) e ``"169a"``
         vira ``"169A"``.
         """
-        return str(os_key).strip().upper()
+        return FolderStructureUtil.normalize_key(os_key)
 
     @classmethod
     def project_folder(
@@ -248,51 +177,7 @@ class ProjectStructureUtil(BaseUtil):
         Localiza a pasta ``OS_<chave>...`` cuja chave bate com ``os_key``
         (ex.: ``169A`` → ``OS_169A_AGUA_VIVA``).
         """
-        if mother is None:
-            return None
-        key = cls.normalize_os(os_key)
-        if not key:
-            return None
-        for project in cls.discover_projects(Path(mother), tool_key=tool_key):
-            if cls.extract_os(project.name) == key:
-                return project
-        return None
-
-    # ── Caminhos (relativo à pasta-mãe — portável entre computadores) ──
-
-    @classmethod
-    def to_relative_path(
-        cls, mother: Optional[Path], path: str | Path
-    ) -> str:
-        """Converte ``path`` em caminho RELATIVO à pasta-mãe (portável).
-
-        Grava sempre com separador ``/`` para funcionar em qualquer computador.
-        Se ``path`` não estiver sob ``mother`` (ou ``mother`` for vazio),
-        retorna apenas o nome final da pasta/arquivo.
-        """
-        target = Path(path)
-        if mother is not None:
-            try:
-                return target.relative_to(Path(mother)).as_posix()
-            except ValueError:
-                pass
-        return target.name
-
-    @classmethod
-    def resolve_path(cls, mother: Optional[Path], rel_path: str | Path) -> Path:
-        """Resolve um caminho RELATIVO à pasta-mãe (ou devolve o absoluto).
-
-        Caminhos absolutos são retornados como estão (compatibilidade com o
-        legado). Caminhos relativos são combinados com ``mother``.
-        """
-        raw = str(rel_path or "").replace("\\", "/").strip()
-        candidate = Path(raw)
-        if candidate.is_absolute():
-            return candidate
-        base = Path(mother) if mother is not None else Path("")
-        return (base / raw) if raw else base
-
-    # ── Dados já criados (adaptador para o Banco de Dados) ──────────
+        return cls.folder(mother, os_key, tool_key=tool_key)
 
     @classmethod
     def collect_created_data(
@@ -308,69 +193,19 @@ class ProjectStructureUtil(BaseUtil):
         pastas de ano (4 dígitos) presentes dentro de
         ``03_ENVIO_DE_DOCUMENTOS``.
         """
-        logger = cls._get_logger(tool_key, "ProjectStructureUtil")
-        folders: List[str] = []
-        years: List[str] = []
-        try:
-            existing = {
-                path.name for path in project.iterdir() if path.is_dir()
-            }
-        except (PermissionError, FileNotFoundError, OSError) as e:
-            logger.error(
-                "Falha ao ler projeto",
-                code="PSU_COLLECT_ERR",
-                error=str(e),
-                path=str(project),
-            )
-            return {"folders": folders, "years": years}
-
-        folders = [
-            name for name in cls.DEFAULT_PROJECT_FOLDERS if name in existing
-        ]
-
-        envio = project / cls.DOCUMENT_YEARS_FOLDER
-        if envio.is_dir():
-            try:
-                years = sorted(
-                    path.name
-                    for path in envio.iterdir()
-                    if path.is_dir() and cls.is_year_folder(path.name)
-                )
-            except (PermissionError, FileNotFoundError, OSError) as e:
-                logger.error(
-                    "Falha ao listar pastas de ano",
-                    code="PSU_YEARS_ERR",
-                    error=str(e),
-                    path=str(envio),
-                )
-
-        return {"folders": folders, "years": years}
-
-    # ── Registro da OS (pastas/anos vivem no próprio registro) ──────
+        data = cls.collect_created(project, tool_key=tool_key)
+        return {"folders": data["folders"], "years": data["entries"]}
 
 
 # ── Derivados de PROJECT_STRUCTURE (NÃO edite — calculados a partir dele) ──
-def _derive_from_structure() -> None:
-    """Calcula os acessores derivados a partir de ``PROJECT_STRUCTURE``."""
-    structure = ProjectStructureUtil.PROJECT_STRUCTURE
-    years_name = next(
-        (name for name, node in structure.items() if is_years_node(node)), ""
-    )
-    years_node = structure.get(years_name) if years_name else None
-    ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS = list(structure)
-    ProjectStructureUtil.DOCUMENT_YEARS_FOLDER = years_name
-    ProjectStructureUtil.DEFAULT_YEARS = (
-        list(years_node.years) if years_node else []
-    )
-    ProjectStructureUtil.DOCUMENT_TEMPLATE = (
-        dict(years_node.template) if years_node else {}
-    )
-    ProjectStructureUtil.PROJECT_FOLDER_TEMPLATES = {
-        name: node for name, node in structure.items() if isinstance(node, dict)
-    }
+ProjectStructureUtil.derive()
 
-
-_derive_from_structure()
+# Compatibilidade: os nomes históricos apontam para os derivados do engine.
+ProjectStructureUtil.DEFAULT_PROJECT_FOLDERS = ProjectStructureUtil.FOLDER_NAMES
+ProjectStructureUtil.PROJECT_FOLDER_TEMPLATES = ProjectStructureUtil.FOLDER_TEMPLATES
+ProjectStructureUtil.DOCUMENT_YEARS_FOLDER = ProjectStructureUtil.SPECIAL_FOLDER
+ProjectStructureUtil.DEFAULT_YEARS = ProjectStructureUtil.SPECIAL_ENTRIES
+ProjectStructureUtil.DOCUMENT_TEMPLATE = ProjectStructureUtil.SPECIAL_TEMPLATE
 
 
 # ── Atalhos de módulo (apontam para a classe — fonte única) ─────────
@@ -404,3 +239,5 @@ def collect_created_data(
 ) -> Dict[str, List[str]]:
     """Atalho de módulo para ``ProjectStructureUtil.collect_created_data``."""
     return ProjectStructureUtil.collect_created_data(project, tool_key=tool_key)
+
+

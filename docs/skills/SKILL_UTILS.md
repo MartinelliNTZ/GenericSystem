@@ -383,10 +383,30 @@ Também reúne catálogos de extensões (`LAS_EXTENSIONS`, `VECTOR_EXTENSIONS`,
 `RASTER_EXTENSIONS`, `DOCUMENT_EXTENSIONS`) e os helpers `get_extensions_list()`
 e `get_extensions_filter()`.
 
-### `utils.ProjectStructureUtil`
+### `utils.FolderStructureUtil` — engine das estruturas de pastas
 
-**FONTE ÚNICA da estrutura dos projetos (OS)**. Toda a estrutura é descrita por
-UM dicionário — `PROJECT_STRUCTURE` — que você alimenta; os acessores
+**Engine reutilizável** (Contrato 7) que descreve, valida e materializa estruturas
+de pastas em disco. O **mesmo sistema** serve às DUAS raízes do projeto, cada uma
+com a **sua própria** estrutura declarada em uma subclasse:
+
+| Raiz | Subclasse | Estrutura |
+|---|---|---|
+| `VERRA_Farmer` — informação **PÚBLICA** | `utils.ProjectStructureUtil` | `01_...`/`14_RELATORIOS` + anos |
+| `VERRA_DATA` — informação **PRIVADA** | `utils.VeraDataStructureUtil` | `Consolidado/` + `<OS>/Limites` + `<OS>/ZM` |
+
+Cada subclasse declara apenas `ROOT_NAME`, `STRUCTURE` (fonte única do conteúdo
+de UMA pasta-chave), `KEY_PREFIX` (`OS_` na pública, `""` na privada),
+`RESERVED_FOLDERS` (pastas da raiz que NÃO são pastas-chave) e `BASE_FILES_DIR`.
+O engine deriva `FOLDER_NAMES`, `FOLDER_TEMPLATES`, `SPECIAL_FOLDER`,
+`SPECIAL_ENTRIES` e `SPECIAL_TEMPLATE` (`derive()`) e oferece `discover`,
+`is_reserved`, `extract_key`, `normalize_key`, `folder`, `to_relative_path`,
+`resolve_path`, `collect_created` e `ensure_folder`.
+
+### `utils.ProjectStructureUtil` — estrutura PÚBLICA (VERRA_Farmer)
+
+**FONTE ÚNICA da estrutura dos projetos (OS)** — a pasta-mãe `VERRA_Farmer` —,
+montada sobre o engine acima. Toda a estrutura é descrita por UM dicionário —
+`PROJECT_STRUCTURE` — que você alimenta; os acessores
 (`DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`,
 `DEFAULT_YEARS`, `DOCUMENT_TEMPLATE`) são **derivados** dele e consumidos pelo
 scanner, pelo plugin, pelo banco de dados e pelas cores:
@@ -417,6 +437,38 @@ Tipos de nó (recursivo):
 projects = ProjectStructureUtil.discover_projects(mother)
 data = ProjectStructureUtil.collect_created_data(project)
 ```
+
+### `utils.VeraDataStructureUtil` — estrutura PRIVADA (VERRA_DATA)
+
+**FONTE ÚNICA da estrutura PRIVADA** — a pasta de BACKUP GERAL da base
+(`<BASE_DADOS>/VERRA_DATA`) —, montada sobre o MESMO engine. A raiz é resolvida
+por `root()` nesta ordem: variável de ambiente `AETHERIS_VERRA_DATA` →
+preferência `ProjectStructure.verra_data_folder` →
+`<pai da pasta-mãe>/BASE_DADOS/VERRA_DATA` → `DEFAULT_ROOT`.
+
+```
+<BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp           → completão de limites
+<BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp      → completão de zonas
+<BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp     → limites da OS
+<BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp     → zonas de manejo da OS
+```
+
+As pastas de OS são nomeadas apenas pela CHAVE (`220`) e `Consolidado` é
+**reservada** (não entra na descoberta):
+
+```python
+from utils.VeraDataStructureUtil import VeraDataStructureUtil
+
+root = VeraDataStructureUtil.root()          # raiz resolvida
+VeraDataStructureUtil.discover(root)         # pastas de OS (sem o Consolidado)
+VeraDataStructureUtil.folder(root, "220")    # pasta de UMA OS
+VeraDataStructureUtil.consolidated_folder(root)
+VeraDataStructureUtil.mode_folder(root, "220", VeraDataStructureUtil.ZONAS_FOLDER)
+VeraDataStructureUtil.ensure_mode_folder(root, "220", VeraDataStructureUtil.LIMITES_FOLDER)
+```
+
+Constantes: `LIMITES_FOLDER` (`Limites`), `ZONAS_FOLDER` (`ZM`),
+`CONSOLIDATED_FOLDER` (`Consolidado`).
 
 ### `utils.ProjectStructureSnapshot`
 

@@ -17,7 +17,9 @@ Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
 ``VERRA_DATA`` é a pasta de BACKUP GERAL da base (dentro de ``BASE_DADOS``): os
 completões de todos os modos ficam agrupados na subpasta ``Consolidado`` e cada OS
 tem as suas próprias subpastas — ``Limites`` para os limites e ``ZM`` para as zonas
-de manejo (``MODE_SETTINGS[mode]["base_folder"]``).
+de manejo (``MODE_SETTINGS[mode]["base_folder"]``). A raiz e a estrutura são
+definidas em ``utils.VeraDataStructureUtil`` (engine ``utils.FolderStructureUtil``,
+o mesmo da estrutura pública ``utils.ProjectStructureUtil`` — Contrato 7).
 
 A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra já
 diferencia as OS de um mesmo projeto, então cada OS tem o seu próprio arquivo e a
@@ -80,18 +82,12 @@ from core.firebase.CloudProjectDatabase import CloudProjectDatabase
 from utils.BaseUtil import BaseUtil
 from utils.Preferences import Preferences
 from utils.ProjectStructureUtil import ProjectStructureUtil
+from utils.VeraDataStructureUtil import VeraDataStructureUtil
 from utils.vector.VectorLayerMetrics import VectorLayerMetrics
 from utils.vector.VectorLayerSource import VectorLayerSource
 
 _TOOL_KEY = ToolKey.LIMITES_DB.value
 
-BASE_ROOT = (
-    r"C:\Users\MatheusMartinelli\OneDrive - Agrorobotica Fotonica Em Certificacoes "
-    r"Agroambientais\BASE_DADOS\VERRA_DATA"
-)
-CONSOLIDATED_FOLDER = "Consolidado"
-BASE_LIMITES_FOLDER = "Limites"
-BASE_ZONAS_FOLDER = "ZM"
 CONSOLIDATED_FILENAME = "limites.shp"
 OS_FILE_SUFFIX = "_limites"
 DEFAULT_TOLERANCE_PCT = 1.0
@@ -147,7 +143,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "label": "Limites",
         "consolidated": CONSOLIDATED_FILENAME,
         "os_suffix": OS_FILE_SUFFIX,
-        "base_folder": BASE_LIMITES_FOLDER,
+        "base_folder": VeraDataStructureUtil.LIMITES_FOLDER,
         "project_folder": LIMITES_FOLDER,
         "project_subfolder": TALHOES_FOLDER,
         "db_key": "limites",
@@ -159,7 +155,7 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "label": "Zonas de Manejo",
         "consolidated": "zonas_manejo.shp",
         "os_suffix": "_zonas_manejo",
-        "base_folder": BASE_ZONAS_FOLDER,
+        "base_folder": VeraDataStructureUtil.ZONAS_FOLDER,
         "project_folder": ZONAS_FOLDER,
         "project_subfolder": "",
         "db_key": "zonas_manejo",
@@ -188,7 +184,7 @@ class LimitesImportConfig:
     field_map: Dict[str, str] = field(default_factory=dict)
     manual: Dict[str, str] = field(default_factory=dict)
     tolerance_pct: float = DEFAULT_TOLERANCE_PCT
-    output_root: str = BASE_ROOT
+    output_root: str = field(default_factory=VeraDataStructureUtil.root_str)
     mode: str = MODE_LIMITES
     update: bool = False
 
@@ -525,11 +521,18 @@ class LimitesService(BaseUtil):
             85,
             "Atualizando base..." if config.update else "Gravando base...",
         )
+        base_root = VeraDataStructureUtil.ensure_root_folders(
+            Path(config.output_root), tool_key=_TOOL_KEY
+        )
         replaced = cls._write_target(consolidated, prepared, fields, config.update)
 
         os_files: List[str] = []
         for os_key, group in prepared.groupby(FIELD_OS, sort=True):
-            target = cls._os_file_path(config, str(os_key))
+            key = str(os_key)
+            VeraDataStructureUtil.ensure_mode_folder(
+                base_root, key, settings["base_folder"], tool_key=_TOOL_KEY
+            )
+            target = cls._os_file_path(config, key)
             replaced += cls._write_target(target, group, fields, config.update)
             os_files.append(target)
 
@@ -571,22 +574,17 @@ class LimitesService(BaseUtil):
     @classmethod
     def _consolidated_path(cls, config: LimitesImportConfig) -> str:
         """Caminho do completão do modo (pasta ``Consolidado`` da base)."""
-        return os.path.join(
-            config.output_root,
-            CONSOLIDATED_FOLDER,
-            cls.settings(config.mode)["consolidated"],
-        )
+        folder = VeraDataStructureUtil.consolidated_folder(Path(config.output_root))
+        return str(folder / cls.settings(config.mode)["consolidated"])
 
     @classmethod
     def _os_file_path(cls, config: LimitesImportConfig, os_key: str) -> str:
         """Caminho do arquivo do modo na subpasta da OS (``Limites`` ou ``ZM``)."""
         settings = cls.settings(config.mode)
-        return os.path.join(
-            config.output_root,
-            os_key,
-            settings["base_folder"],
-            f"{os_key}{settings['os_suffix']}.shp",
+        folder = VeraDataStructureUtil.mode_folder(
+            Path(config.output_root), os_key, settings["base_folder"]
         )
+        return str(folder / f"{os_key}{settings['os_suffix']}.shp")
 
     @classmethod
     def _project_copy_path(

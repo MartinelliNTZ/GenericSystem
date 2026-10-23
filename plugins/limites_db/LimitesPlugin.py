@@ -53,7 +53,6 @@ from core.enum.ToolKey import ToolKey
 from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.limites_db.LimitesService import (
-    BASE_ROOT,
     DEFAULT_TOLERANCE_PCT,
     MODE_LIMITES,
     MODE_SETTINGS,
@@ -75,6 +74,7 @@ from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
+from utils.VeraDataStructureUtil import VeraDataStructureUtil
 
 
 class LimitesPlugin(BasePlugin):
@@ -298,7 +298,7 @@ class LimitesPlugin(BasePlugin):
             "validacao": {"label": "Validação", "value": "—"},
             "campos": {"label": "Campos", "value": "—"},
             "os_caminho": {"label": "OS no caminho", "value": "—"},
-            "base": {"label": "Base", "value": BASE_ROOT},
+            "base": {"label": "Base", "value": str(VeraDataStructureUtil.root())},
         }, columns=2)
         painel_resumo = GroupPainel("Resumo da Origem")
         painel_resumo.group_layout.addWidget(self._resumo)
@@ -758,7 +758,7 @@ class LimitesPlugin(BasePlugin):
                 detail=detail,
                 parent=self,
             )
-            self.output_message(BASE_ROOT, label="Base de Limites")
+            self.output_message(str(VeraDataStructureUtil.root()), label="Base de Limites")
             console = f"{operation} concluída"
 
         if not payload.get("dry_run"):
