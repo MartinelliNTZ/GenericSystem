@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aetheris ToolBox · mapa de plugins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#030a2b;--bg2:#071a6b;--glass:rgba(255,255,255,.06);--glass2:rgba(255,255,255,.11);
+  --line:rgba(130,175,255,.2);--ink:#f1f5ff;--muted:#a3b5e3;--cyan:#41c9ff;--blue:#1f5bff;
+  --pink:#ff1f8e;--pink2:#c9006b;--nav:rgba(3,10,43,.78);--code:#9fe3ff;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){--bg:#eef3ff;--bg2:#cfdcff;--glass:rgba(255,255,255,.75);--glass2:rgba(255,255,255,.95);
+  --line:rgba(25,70,170,.16);--ink:#091848;--muted:#4a5d93;--nav:rgba(238,243,255,.85);--code:#0b4ea8}
+}
+:root[data-theme="light"]{--bg:#eef3ff;--bg2:#cfdcff;--glass:rgba(255,255,255,.75);--glass2:rgba(255,255,255,.95);
+  --line:rgba(25,70,170,.16);--ink:#091848;--muted:#4a5d93;--nav:rgba(238,243,255,.85);--code:#0b4ea8}
+*{box-sizing:border-box}
+html{height:auto;scroll-behavior:smooth;scroll-padding-top:calc(78px + env(safe-area-inset-top,0px))}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 "Montserrat",system-ui,"Segoe UI",sans-serif;
+  background-image:radial-gradient(1000px 600px at 85% -5%,var(--bg2),transparent 70%);background-repeat:no-repeat;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--nav);z-index:30}
+code,.mono{font-family:"Cascadia Mono",Consolas,"Courier New",monospace;font-size:.84em;color:var(--code)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:8px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.bar{max-width:1180px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:22px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;white-space:nowrap}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--pink),var(--pink2));display:grid;place-items:center;font-size:12px;color:#fff}
+nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+nav a{padding:7px 14px;border-radius:99px;text-decoration:none;font-size:14px;color:var(--muted);white-space:nowrap;transition:.2s}
+nav a:hover{color:var(--ink)}
+nav a.on{background:var(--glass2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.theme{border:1px solid var(--line);background:var(--glass);color:var(--ink);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:15px;flex:none}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+section{padding:84px 0 20px}
+h1,h2,h3{font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0}
+h2{font-size:clamp(28px,4vw,42px);margin-bottom:12px}
+.lead{color:var(--muted);max-width:62ch;margin:0 0 34px;font-size:17px}
+
+/* hero */
+.hero{position:relative;padding:92px 0 150px;overflow:hidden}
+.hero h1{font-size:clamp(44px,8vw,92px);max-width:12ch;animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.hero h1 span{display:block;font-weight:400;font-size:.36em;letter-spacing:.34em;color:var(--cyan);margin-top:18px}
+.hero p{max-width:54ch;color:var(--muted);font-size:18px;margin:26px 0 34px;animation:rise .9s .15s both}
+.btns{display:flex;flex-wrap:wrap;gap:14px;animation:rise .9s .3s both}
+.btn{display:inline-block;padding:15px 30px;border-radius:12px;font-weight:600;text-decoration:none;font-size:15px;transition:.25s}
+.btn.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;box-shadow:0 12px 34px -10px var(--pink)}
+.btn.pri:hover{transform:translateY(-3px);box-shadow:0 18px 40px -10px var(--pink)}
+.btn.sec{border:1px solid var(--line);background:var(--glass)}
+.btn.sec:hover{background:var(--glass2)}
+.waves{position:absolute;left:0;right:0;bottom:0;height:60%;pointer-events:none;z-index:-1}
+.waves svg{position:absolute;bottom:0;width:200%;height:100%;animation:drift 22s linear infinite}
+.waves svg+svg{animation-duration:34s;animation-direction:reverse;opacity:.7}
+@keyframes drift{to{transform:translateX(-50%)}}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:-70px;position:relative}
+.stat{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(12px);border-radius:18px;padding:22px}
+.stat b{display:block;font-size:40px;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{color:var(--muted);font-size:14px}
+
+/* 3 passos */
+.flow3{display:grid;grid-template-columns:1fr 60px 1fr 60px 1fr;align-items:stretch}
+.box{background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:26px}
+.box h3{font-size:22px;margin-bottom:10px}
+.box ul{margin:0;padding-left:18px;color:var(--muted);font-size:15px}
+.box.mid{background:linear-gradient(160deg,rgba(31,91,255,.35),rgba(65,201,255,.12));border-color:rgba(65,201,255,.5)}
+.arrow{display:grid;place-items:center}
+.arrow i{display:block;width:100%;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);background-size:200% 100%;animation:flow 1.8s linear infinite}
+@keyframes flow{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* explorador */
+.rail{display:flex;gap:0;overflow-x:auto;padding:14px 4px 22px;scrollbar-width:thin}
+.node{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;position:relative;padding:0 14px;min-width:96px}
+.node::after{content:"";position:absolute;top:26px;left:calc(50% + 28px);width:calc(100% - 56px);height:2px;background:var(--line)}
+.node:last-child::after{display:none}
+.node .dot{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font:700 16px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c);transition:.25s;opacity:.6}
+.node small{font-size:12px;text-align:center}
+.node:hover .dot{opacity:1}
+.node.on{color:var(--ink)}
+.node.on .dot{opacity:1;transform:scale(1.14);box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--c),0 14px 34px -6px var(--c)}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:30px;border-top:4px solid var(--c);transition:border-color .3s}
+.panel header{all:unset;display:block}
+.ptitle{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-bottom:6px}
+.ptitle h3{font-size:28px}
+.kind{font-size:13px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:22px}
+.col h4{margin:0 0 8px;font-size:14px;color:var(--c)}
+.col ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+.col li{margin:4px 0}
+.col p{margin:0;font-size:14.5px;color:var(--muted)}
+.ctl{display:flex;gap:10px;margin-top:24px}
+.ctl button{border:1px solid var(--line);background:var(--glass2);color:var(--ink);padding:9px 18px;border-radius:10px;cursor:pointer;font:600 14px inherit;font-family:inherit}
+.ctl button:hover{border-color:var(--cyan)}
+
+/* rotas */
+.routes{display:grid;gap:12px}
+.route{display:grid;grid-template-columns:230px 1fr 1fr;gap:18px;align-items:center;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:16px 20px;transition:.2s}
+.route:hover{background:var(--glass2);transform:translateX(4px)}
+.chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chip{min-width:30px;height:26px;padding:0 7px;border-radius:7px;display:inline-grid;place-items:center;font:700 12px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c)}
+.chain em{font-style:normal;color:var(--muted);font-size:12px}
+.route p{margin:0;font-size:14px;color:var(--muted)}
+.route b{display:block;color:var(--ink);font-size:14px}
+
+/* padroes */
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:26px}
+.card h3{font-size:20px;margin-bottom:10px}
+.card p,.card li{color:var(--muted);font-size:15px}
+.card ul{padding-left:18px;margin:8px 0 0}
+.tree{font:13.5px/1.9 "Cascadia Mono",Consolas,monospace;color:var(--muted);margin-top:12px}
+.tree div{padding-left:calc(var(--d)*22px);position:relative}
+.tree div::before{content:"";position:absolute;left:calc(var(--d)*22px - 14px);top:50%;width:9px;height:1px;background:var(--cyan);display:var(--show,block)}
+.tree b{color:var(--cyan);font-weight:600}
+.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+.rule{display:flex;gap:14px;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:18px}
+.rule i{flex:none;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:grid;place-items:center;color:#fff;font-style:normal;font-weight:800}
+.rule b{display:block;font-size:15px}.rule span{color:var(--muted);font-size:14px}
+.nut{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.nut span{padding:3px 10px;border-radius:99px;background:var(--glass2);border:1px solid var(--line);font:12px "Cascadia Mono",Consolas,monospace;color:var(--code)}
+
+/* subdivisoes */
+.subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px}
+.sub{display:flex;flex-direction:column;gap:6px;aspect-ratio:1/1;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:14px;overflow:auto;scrollbar-width:thin;transition:.2s}
+.sub:hover{border-color:var(--c);transform:translateY(-2px)}
+.sub>b{align-self:flex-start;font:700 12px "Cascadia Mono",Consolas,monospace;color:#fff;background:var(--c);border-radius:99px;padding:3px 9px}
+.sub h4{margin:0;font-size:14px;line-height:1.25}
+.sub p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
+.sub p code{font-size:11.5px}
+.note{margin:12px 0 0;padding:11px 14px;border-radius:12px;background:var(--glass2);border:1px dashed var(--line);color:var(--muted);font-size:13.5px}
+.sh4{margin:24px 0 0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* saidas */
+.outs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.out{background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:22px;border-left:4px solid var(--c)}
+.out h3{font-size:18px;margin-bottom:4px}
+.out p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.out code{display:block;margin-top:4px;word-break:break-all}
+
+footer.foot{margin-top:90px;padding:34px 0 44px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
+.rv{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+
+@media(max-width:900px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .flow3{grid-template-columns:1fr}.arrow{height:36px}.arrow i{width:3px;height:100%}
+  .cols,.grid2,.rules,.outs{grid-template-columns:1fr}
+  .route{grid-template-columns:1fr;gap:8px}
+  .brand span.t{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <a class="brand" href="#inicio"><span class="logo">At</span><span class="t">Aetheris ToolBox</span></a>
+  <nav id="nav">
+    <a href="#inicio">Início</a><a href="#visao">Visão geral</a><a href="#sistema">Sistema</a>
+    <a href="#fluxo">Ferramentas</a><a href="#rotas">Rotas</a><a href="#padroes">Padrões</a><a href="#saidas">Saídas</a>
+  </nav>
+  <button class="theme" id="theme" aria-label="Alternar tema claro e escuro">◐</button>
+</div></header>
+
+<main>
+<section class="hero" id="inicio" style="padding-top:92px">
+  <div class="waves" aria-hidden="true">
+    <svg viewBox="0 0 2400 400" preserveAspectRatio="none"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f5bff" stop-opacity=".85"/><stop offset="1" stop-color="#0a1f9c" stop-opacity=".9"/></linearGradient></defs>
+      <path fill="url(#g1)" d="M0 220C150 120 300 120 450 200S750 320 900 230 1050 110 1200 220C1350 120 1500 120 1650 200S1950 320 2100 230 2250 110 2400 220V400H0Z"/></svg>
+    <svg viewBox="0 0 2400 400" preserveAspectRatio="none"><defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#41c9ff" stop-opacity=".55"/><stop offset="1" stop-color="#1f5bff" stop-opacity=".25"/></linearGradient></defs>
+      <path fill="url(#g2)" d="M0 280C200 190 380 200 600 270S1000 340 1200 280C1400 190 1580 200 1800 270S2200 340 2400 280V400H0Z"/></svg>
+  </div>
+  <div class="wrap">
+    <h1>Um núcleo, dezessete plugins<span>AETHERIS TOOLBOX</span></h1>
+    <p>O <b>SISTEMA (00)</b> é o esqueleto: ele cria a aplicação, registra as ferramentas no <b>ToolRegistry</b> e abre cada uma no workspace certo. Cada <b>plugin</b> é uma caixa fechada: recebe os dados que o usuário informa, roda a sua tarefa e devolve um resultado (arquivo, mapa, base ou documento). Por dentro, cada plugin tem as suas <b>subdivisões numeradas</b> (00.1, 01.1, …): <b>N.0</b> é o plugin em si (a UI) e <b>N.1, N.2…</b> são os módulos internos — service, workers, modelo.</p>
+    <div class="btns"><a class="btn pri" href="#sistema">Conhecer o sistema</a><a class="btn sec" href="#fluxo">Explorar os plugins</a></div>
+  </div>
+</section>
+
+<div class="wrap"><div class="stats rv">
+  <div class="stat"><b>17</b><span>plugins registrados</span></div>
+  <div class="stat"><b>8</b><span>grupos (ToolType) na toolbar</span></div>
+  <div class="stat"><b>1</b><span>registry com lazy loading</span></div>
+  <div class="stat"><b>0</b><span>imports entre plugins</span></div>
+</div></div>
+
+<section id="visao"><div class="wrap">
+  <h2 class="rv">Entra o que você escolhe, sai o resultado</h2>
+  <p class="lead rv">Todo plugin cabe no mesmo movimento. O SISTEMA entrega a ferramenta já montada (página, logger, preferências); o plugin só cuida da sua tarefa e devolve algo para o usuário.</p>
+  <div class="flow3 rv">
+    <div class="box"><h3>Entradas</h3><ul><li>Arquivos que o usuário seleciona (planilhas, PDFs, imagens, vetores, LAS/KML)</li><li>A pasta-mãe e a OS (estrutura de projetos)</li><li>As preferências salvas por <code>ToolKey</code></li><li>O projeto ativo (<code>.mtl</code>) e a base de OS (Firebase)</li></ul></div>
+    <div class="arrow"><i></i></div>
+    <div class="box mid"><h3>O plugin</h3><ul><li>Herdado de <code>BasePlugin</code>: <code>self.logger</code>, <code>self.preferences</code>, <code>self.page</code></li><li>UI montada em <code>_build_ui()</code> com widgets de <code>resources/widgets/</code></li><li>Lógica no <b>service</b> e trabalho pesado em <b>workers</b> (QThread)</li><li>Comunica-se só por <b>sinais</b> do <code>SignalManager</code> — nunca importa outro plugin</li></ul></div>
+    <div class="arrow"><i></i></div>
+    <div class="box"><h3>Saídas</h3><ul><li>Arquivos convertidos / renomeados / ícones</li><li>Shapes de limites e zonas na base e no projeto</li><li>Estrutura de pastas padronizada + changelog Word</li><li>Base de OS atualizada (Firebase + backup JSON)</li><li>Mapa navegável, logs e console</li></ul></div>
+  </div>
+</div></section>
+
+<section id="sistema"><div class="wrap">
+  <h2 class="rv">O SISTEMA (00): o esqueleto que sustenta tudo</h2>
+  <p class="lead rv">Antes de qualquer plugin existir, o núcleo precisa estar de pé. Ele cria a aplicação, registra as ferramentas, monta menus e workspaces, e oferece os serviços que todo plugin usa de graça. Nada de regra de negócio mora aqui — só o alicerce.</p>
+  <div class="grid2">
+    <div class="card rv"><h3>Como um plugin nasce</h3><p>Um plugin existe em quatro passos, todos fora dele:</p>
+      <div class="tree">
+        <div style="--d:0;--show:none"><b>1. ToolKey</b> · a chave única (<code>core/enum/ToolKey.py</code>)</div>
+        <div style="--d:1"><b>2. Plugin</b> · classe em <code>plugins/&lt;pasta&gt;/&lt;Nome&gt;Plugin.py</code></div>
+        <div style="--d:1"><b>3. ToolRegistry</b> · entrada em <code>_TOOLS</code> com <code>_make_factory</code></div>
+        <div style="--d:2"><b>4. ToolType / CategoryTool</b> · onde aparece na toolbar</div>
+      </div>
+      <p style="margin-top:14px">O registro é <b>lazy</b>: o widget só é instanciado quando a ferramenta é aberta.</p></div>
+    <div class="card rv"><h3>Três áreas de trabalho</h3><ul>
+      <li><b>CENTRAL</b> — abas no topo (a maioria das ferramentas)</li>
+      <li><b>LEFT_SIDE</b> — painel esquerdo fixo (Explorador)</li>
+      <li><b>RIGHT_SIDE</b> — painel direito fixo (Console)</li>
+      <li><b>BOTH</b> — pode ir para o central ou qualquer lado</li>
+      <li><b>INSTANT</b> — não abre aba: executa e se auto-destrói</li></ul>
+      <p style="margin-top:12px">O <code>WorkspaceManager</code> decide onde cada uma abre; a <code>MainWindow</code> nunca mexe nos workspaces direto (Contratos 14 e 16).</p></div>
+    <div class="card rv"><h3>O que o BasePlugin entrega</h3><ul>
+      <li><code>self.logger</code> — <code>LogUtils</code> já com <code>tool_key</code> e classe</li>
+      <li><code>self.preferences</code> — preferências do plugin carregadas do disco</li>
+      <li><code>self.sys_preferences</code> — seção <code>System</code> (opcional via <code>sys_prefs=True</code>)</li>
+      <li><code>self.page</code> — <code>PluginPage</code> com título, badge e <code>buttons_config</code></li>
+      <li><code>self.main_layout</code> — layout pronto para <code>addWidget</code></li>
+      <li><code>self.statistics</code> — monitor de tempo/ETA</li></ul></div>
+    <div class="card rv"><h3>Sinais em vez de imports</h3><p>Nenhum plugin conhece outro (Contrato 7). Tudo passa pelo <code>SignalManager</code>:</p>
+      <div class="nut"><span>tool_opened</span><span>project_changed</span><span>console_message</span><span>execution_started</span><span>execution_finished</span><span>progress</span><span>hud_show</span><span>hud_hide</span></div>
+      <p style="margin-top:12px">É assim que o Explorador sabe que o projeto mudou, e o Console sabe o que escrever.</p></div>
+  </div>
+</div></section>
+
+<section id="fluxo"><div class="wrap">
+  <h2 class="rv">Cada plugin, um por um</h2>
+  <p class="lead rv">Clique em um número para ver o que ele precisa, o que entrega e as <b>subdivisões internas</b> — <b>N.0</b> é o próprio plugin (entry point / UI) e <b>N.1</b>, <b>N.2</b>… são as partes internas; a <b>00</b> mostra o próprio sistema. A ordem aqui é a do uso: do projeto e da estrutura até as ferramentas de arquivo.</p>
+  <div class="rail rv" id="rail" role="tablist"></div>
+  <div class="panel rv" id="panel" aria-live="polite"></div>
+</div></section>
+
+<section id="rotas"><div class="wrap">
+  <h2 class="rv">Rotas: quem alimenta quem</h2>
+  <p class="lead rv">Cada linha é um caminho real entre ferramentas. O <b>SISTEMA (00)</b> é a origem de tudo; o resto se comunica por <b>sinais</b> ou pela <b>classe de banco</b> — nunca por import direto.</p>
+  <div class="routes" id="routes"></div>
+</div></section>
+
+<section id="padroes"><div class="wrap">
+  <h2 class="rv">Padronizações que mantêm tudo coerente</h2>
+  <p class="lead rv">Poucas regras, aplicadas sempre. É por isso que dá para criar, trocar ou testar qualquer plugin isoladamente.</p>
+  <div class="grid2">
+    <div class="card rv"><h3>Anatomia de uma pasta de plugin</h3><p>Um plugin é uma pasta em <code>plugins/</code> com o plugin e, quando cresce, os seus módulos.</p>
+      <div class="tree">
+        <div style="--d:0;--show:none"><b>plugins/&lt;nome&gt;/</b></div>
+        <div style="--d:1"><b>&lt;Nome&gt;Plugin.py</b> · o entry point (UI + orquestração)</div>
+        <div style="--d:2"><b>&lt;Nome&gt;Service.py</b> · lógica pura, sem widgets</div>
+        <div style="--d:2"><b>*Worker.py</b> · trabalho pesado em QThread</div>
+        <div style="--d:2"><b>model/ · renderers/</b> · partes específicas</div>
+        <div style="--d:1"><b>__init__.py</b> · marca o pacote</div>
+      </div>
+      <p style="margin-top:14px">Ferramentas pequenas são só o plugin — um arquivo.</p></div>
+    <div class="card rv"><h3>Widgets reutilizáveis (Contrato 11)</h3><p>Nada de montar <code>label + campo + botão</code> à mão. Existe um widget para cada peça:</p><ul>
+      <li><code>PluginPage</code> · a página padrão com título, badge e botões</li>
+      <li><code>GroupPainel</code> / <code>SectionPanel</code> · painéis com título</li>
+      <li><code>Grid*</code> · grades (LineEdit, CheckBox, Selector, CardView, Tree…)</li>
+      <li><code>Simple*</code> · botões, labels, combos e seletores</li>
+      <li><code>FileListView</code> / <code>FileTreeWidget</code> · arquivos e árvore</li></ul></div>
+    <div class="card rv"><h3>Preferências por ferramenta</h3><ul>
+      <li>Cada plugin tem a sua seção no <code>config/&lt;APP&gt;_preferences.json</code></li>
+      <li>Chave = <code>ToolKey</code> da ferramenta (Contrato 26)</li>
+      <li><code>load_prefs()</code> / <code>save_prefs()</code> são obrigatórios (Contrato 6)</li>
+      <li>Nunca instancie <code>Preferences</code> à mão: use <code>self.preferences</code></li>
+      <li>O <code>closeEvent</code> persiste automaticamente</li></ul></div>
+    <div class="card rv"><h3>Grupos na toolbar (ToolType)</h3><p>A toolbar agrupa os botões por tipo visual — a cor e o agrupamento vêm daqui:</p>
+      <div class="nut"><span>System</span><span>Layouts</span><span>Folder</span><span>Vector</span><span>Agriculture</span><span>Raster</span><span>Image</span><span>Points</span><span>Verra</span></div>
+      <p style="margin-top:12px">O <code>MenuManager</code> lê o <code>ToolRegistry</code> e monta um <code>ToolGroup</code> por tipo.</p></div>
+    <div class="card rv"><h3>Subdivisões numeradas</h3><p>Cada plugin é uma caixa fechada por fora e <b>numerada por dentro</b>: <code>N.0</code> é o plugin (entry point), <code>N.1</code>, <code>N.2</code>… são as partes internas.</p><ul>
+      <li><code>N.0</code> monta a UI, lê as preferências e chama o service</li>
+      <li>A regra de negócio mora no <b>service</b>, não no plugin</li>
+      <li>Trabalho pesado vai para <b>workers</b> — a UI nunca trava</li>
+      <li>Parte comum a dois plugins sobe para <code>utils/</code> ou <code>core/</code></li></ul></div>
+    <div class="card rv"><h3>Feedback padronizado</h3><ul>
+      <li>Progresso no <b>Console</b> e na <b>ProgressBar central</b> via sinais</li>
+      <li>HUD (<code>HudCircularRingsLoader</code>) para operações longas</li>
+      <li><code>MessageBox</code> de <code>utils.MessageBox</code> — nunca <code>QMessageBox</code> (Contrato 1)</li>
+      <li>Sucesso com <code>stats_message()</code> / <code>output_message()</code></li></ul></div>
+  </div>
+  <div class="rules">
+    <div class="rule rv"><i>1</i><div><b>Um plugin, uma pasta</b><span>O entry point vive em <code>plugins/&lt;nome&gt;/</code> e herda de <code>BasePlugin</code>.</span></div></div>
+    <div class="rule rv"><i>2</i><div><b>Registro só no ToolRegistry</b><span>Nunca importe um plugin direto no core (Contrato 5).</span></div></div>
+    <div class="rule rv"><i>3</i><div><b>Plugin não conhece plugin</b><span>Comunicação só por sinais do <code>SignalManager</code> (Contrato 7).</span></div></div>
+    <div class="rule rv"><i>4</i><div><b>UI não trava</b><span>O pesado roda em worker; a UI só reflete o estado.</span></div></div>
+    <div class="rule rv"><i>5</i><div><b>Nada de JSON na mão</b><span>Quem fala com a base é a <code>CloudProjectDatabase</code> (Contrato 28).</span></div></div>
+    <div class="rule rv"><i>6</i><div><b>Widget pronto antes de criar</b><span>Consulte <code>resources/widgets/</code> antes de montar UI nova (Contrato 11).</span></div></div>
+  </div>
+</div></section>
+
+<section id="saidas"><div class="wrap">
+  <h2 class="rv">O que cada família de plugin entrega</h2>
+  <p class="lead rv">No fim, todo plugin devolve algo concreto: um arquivo, uma base, uma estrutura ou uma tela. Abaixo, as famílias de saída — e o <b>SISTEMA (00)</b> deixa o log da sessão e a janela de trabalho.</p>
+  <div class="outs">
+    <div class="out rv" style="--c:#e879f9"><h3>Estrutura e projeto</h3><p>Projeto ativo e estrutura de pastas padronizada, com changelog.</p><code>&lt;projeto&gt;.mtl</code><code>OS_&lt;chave&gt;/… · OS_&lt;chave&gt;_CHANGELOG.DOCX</code></div>
+    <div class="out rv" style="--c:#38bdf8"><h3>Base de OS</h3><p>Registros de OS no Firebase, espelhados em backup JSON.</p><code>Firestore · coleção banco_dados</code><code>&lt;pasta-mãe&gt;/.BancoDados/*.json</code></div>
+    <div class="out rv" style="--c:#f472b6"><h3>Limites e zonas</h3><p>Shapes calculados em hectares, na base e copiados para o projeto.</p><code>&lt;BASE&gt;/limites/&lt;OS&gt;/&lt;OS&gt;_limites.shp</code><code>…/13_ZONAS_DE_MANEJO/&lt;OS&gt;_zonas_manejo.shp</code></div>
+    <div class="out rv" style="--c:#a78bfa"><h3>Documentos e mídia</h3><p>Markdown, imagens convertidas, ícones ICO e arquivos renomeados.</p><code>&lt;documento&gt;.md</code><code>&lt;imagem&gt;.ico · &lt;imagem&gt;.webp</code></div>
+    <div class="out rv" style="--c:#fbbf24"><h3>Telas e diagnóstico</h3><p>Mapa navegável, console de execução e visualizador de logs.</p><code>mapa (satélite + LAS/SHP/KML)</code><code>log/&lt;data&gt;_AetherisToolBox.json</code></div>
+    <div class="out rv" style="--c:#94a3b8"><h3>Sistema</h3><p>Janela montada, tema aplicado e preferências persistidas.</p><code>config/&lt;APP&gt;_preferences.json</code><code>log/ · resources/styles/</code></div>
+  </div>
+</div></section>
+</main>
+
+<footer class="foot"><div class="wrap"><span>Aetheris ToolBox · mapa de plugins</span><span>Regra de ouro: nenhum plugin importa outro; só os sinais conectam. O SISTEMA (00) registra, abre, mede e loga.</span></div></footer>
+
+<script>
+var A={
+"00":{n:"SISTEMA",k:"O esqueleto da aplicação",c:"#e879f9",
+i:["O comando do usuário: python main.py","As preferências do usuário: config/AetherisToolBox_preferences.json","O tema escolhido e os ícones do projeto"],
+o:["A janela montada (MainWindow) com AppBar, toolbar e ProgressBar central","As 17 ferramentas registradas e prontas para abrir","O log da sessão: log/<data>_AetherisToolBox.json"],
+x:"Sustenta TODOS os plugins. Cria a aplicação, registra as ferramentas (lazy), monta menus e workspaces e oferece logger, preferências, sinais, estilos e widgets. Nenhuma regra de negócio mora aqui.",
+s:[
+["00.1","BOOTSTRAP","main.py, core/config/BootStrap.py","cria a QApplication, configura ambiente e tema, registra as ferramentas e abre a MainWindow; ainda captura exceções não tratadas"],
+["00.2","REGISTRO","core/config/ToolRegistry.py, core/model/Tool.py","o dicionário _TOOLS com as 17 ferramentas e o lazy loading via _make_factory; get_all/get/count/names"],
+["00.3","MENUS","core/config/MenuManager.py, core/menus/","lê o registry e monta a toolbar (um ToolGroup por ToolType) e a MenuBar (Arquivo, Sistema, Ajuda)"],
+["00.4","WORKSPACES","core/config/WorkspaceManager.py, core/ui/CentralWorkspace.py, core/ui/SideWorkspace.py","as três áreas de trabalho: painel esquerdo fixo, central (abas) e direito fixo; decide onde cada ferramenta abre"],
+["00.5","JANELA","core/ui/ui_main.py, resources/widgets/app_bar.py, resources/widgets/ToolBar.py","a MainWindow frameless: AppBar, toolbar de grupos, área de trabalho e a ProgressBar central"],
+["00.6","SINAIS","core/manager/SignalManager.py, core/manager/SignalCatalog.py","o barramento global: tool_opened, project_changed, console_message, progress, hud_show/hud_hide…"],
+["00.7","LOG","core/config/LogUtils.py, core/config/LogFilter.py, core/config/LogCleanup.py","logger JSON por canal: o canal main vai para log/ e canais nomeados (ex.: database) para subpastas próprias"],
+["00.8","PREFERÊNCIAS","utils/Preferences.py, config/AetherisToolBox_preferences.json","load_tool_prefs/save_tool_prefs por ToolKey, com merge e gravação atômica; arquivo ausente nunca derruba a execução"],
+["00.9","ESTILOS","resources/styles/AppStyles.py, resources/styles/ThemeManager.py, resources/IconManager.py","o QSS centralizado, os temas (THEMES) e os ícones do sistema e por ferramenta"],
+["00.10","WIDGETS","resources/widgets/","o catálogo de widgets reutilizáveis (PluginPage, GroupPainel, Grid*, Simple*, FileListView, ExecutionButtons…) — Contrato 11"],
+["00.11","UTILS","utils/","os helpers compartilhados: MessageBox, ExplorerUtils, ProjectUtil, ProjectStructureUtil, ColorProvider, StringUtils…"],
+["00.12","MODELOS","core/model/","a estrutura do domínio: Tool, WorkOrder, Farm, Field, Culture, BaseModel, FootballModel, WeatherModel"],
+["00.13","FIREBASE","core/firebase/","a base oficial (Cloud Firestore): CloudProjectDatabase, CloudStructureDatabase, CloudDatabaseSync, FirebaseWorker, auth"],
+["00.14","PIPELINE","core/papeline/","o motor assíncrono: PipelineRunner, BaseStep, BaseTask, AsyncPipelineEngine, ParallelStep e os steps (Docling, fetch, LAS…)"]
+],
+sn:"No SISTEMA 00 a numeração é a BASE que sustenta tudo: 00.1 a 00.5 são o ciclo de vida (boot, registro, menus, workspaces, janela) e 00.6 a 00.14 são os serviços que qualquer plugin usa de graça."},
+
+"01":{n:"Inicial",k:"Página de abertura",c:"#3b82f6",
+i:["O comando do usuário (abre por padrão)","APIs externas de futebol e clima (via steps do pipeline)","O projeto ativo, para o botão de seed (DEV)"],
+o:["Painéis lado a lado: partidas do dia e dados climáticos","Um botão DEV que semeia a base de OS (add_data/seed_os.py)"],
+x:"É a primeira tela ao abrir o software. Dispara as duas pipelines de fetch em background e mostra os dados quando chegam — a UI nunca espera.",
+s:[
+["1.0","Página","plugins/home/HomePlugin.py","monta as boas-vindas e dispara as duas pipelines em background; cada painel aparece quando o seu fetch termina"],
+["1.1","Futebol","core/papeline/step/FootballFetchStep.py, core/model/FootballModel.py, resources/widgets/FootballMatchWidget.py","as partidas do dia, renderizadas em painel com scroll"],
+["1.2","Clima","core/papeline/step/WeatherFetchStep.py, core/model/WeatherModel.py, resources/widgets/grid/GridCardView.py","os dados climáticos em cards, lado a lado com o futebol"],
+["1.3","Seed (DEV)","core/firebase/FirebaseWorker.py, add_data/seed_os.py","o botão que cria a base de OS no Firebase (Firestore + backup JSON), rodando em worker"]
+],
+sn:"A Inicial não tem regra de negócio: ela só ORQUESTRA duas pipelines independentes (futebol e clima) e exibe o resultado. O seed é ferramenta de desenvolvimento."},
+
+"02":{n:"Gerenciar Projeto",k:"Ferramenta INSTANT (.mtl)",c:"#6366f1",
+i:["O clique na toolbar","current_project e root_folder das preferências do Sistema"],
+o:["O arquivo de projeto <nome>.mtl (JSON com metadados)","O sinal project_changed","O status do projeto ativo na AppBar"],
+x:"Não abre aba: executa e se auto-destrói (INSTANT). Se já existe projeto, atualiza; se não, abre o diálogo nativo 'Salvar como'.",
+s:[
+["2.0","Instant","plugins/project_manager/SaveProjectPlugin.py","QTimer.singleShot(0) executa o fluxo e deleteLater() limpa o widget ao final"],
+["2.1","Salvar/Criar","utils/ProjectUtil.py","create_project_safe (com validação de substituição) e update_last_modified gravam o .mtl"],
+["2.2","Sinal","core/manager/SignalManager.py, resources/widgets/app_bar.py","project_changed faz a AppBar atualizar o status e o Explorador recarregar a nova raiz"]
+],
+sn:"O plugin é um disparador: a lógica do .mtl vive em utils/ProjectUtil.py e a reação é por sinal — nenhum plugin chama o outro (Contrato 7)."},
+
+"03":{n:"Explorador",k:"Painel lateral esquerdo",c:"#0ea5e9",
+i:["root_folder das sys_preferences (definida pelo projeto ativo)","O sinal project_changed"],
+o:["A árvore de diretórios do projeto, com ícones do Windows","Arquivos criados/excluídos e abertura no Explorer do sistema"],
+x:"Fica fixo à esquerda (LEFT_SIDE). Reage ao projeto: quando o projeto muda, a árvore aponta para a nova raiz.",
+s:[
+["3.0","Árvore","plugins/file_manager/FileManagerPlugin.py, resources/widgets/FileTreeWidget.py","QFileSystemModel com ícones nativos; renomear por F2 e excluir por Del"],
+["3.1","Reage ao projeto","core/manager/SignalManager.py","project_changed recarrega a raiz sem que o Explorador conheça o plugin de projeto"],
+["3.2","Ações","core/dialogs/FilePreviewDialog.py, core/dialogs/FileContextMenu.py, utils/ExplorerUtils.py","criar arquivo, excluir, pré-visualizar e abrir a pasta no Explorer"]
+],
+sn:"O Explorador não sabe de onde vem a raiz: ele só escuta project_changed e lê root_folder das preferências do Sistema."},
+
+"04":{n:"Gerenciador de Estrutura",k:"Conferência e padronização das OS",c:"#22d3ee",
+i:["A pasta-mãe escolhida pelo usuário","As pastas OS_* existentes no disco"],
+o:["A árvore de projetos com status (correta / incoerente / ausente)","Pastas criadas, renomeadas e mescladas","O snapshot da estrutura e o changelog Word no banco"],
+x:"Confere e padroniza a estrutura de pastas dos projetos. A varredura completa roda uma vez em thread; depois só o projeto afetado é re-escaneado.",
+s:[
+["4.0","Plugin","plugins/project_structure_manager/ProjectStructurePlugin.py","árvore montada em lotes (UI responsiva), QFileSystemWatcher com debounce e progresso só na ProgressBar central"],
+["4.1","Scanner","plugins/project_structure_manager/ProjectStructureScanner.py","descoberta das pastas OS_*, validação recursiva (pastas de ano e templates) e estatísticas (StatisticsWorker)"],
+["4.2","Operações","plugins/project_structure_manager/FolderOperations.py, utils/ProjectStructureCreator.py","criar, renomear e mesclar pastas; a criação é delegada ao util compartilhado"],
+["4.3","Conferência","plugins/project_structure_manager/StructureSyncService.py, utils/ProjectStructureSnapshot.py, utils/ProjectStructureChangeDetector.py, utils/ProjectStructureChangelog.py","scan + diff + changelog Word + gravação no banco (estrutura_projetos e estrutura_changelog)"],
+["4.4","Modelo","utils/ProjectStructureUtil.py","o dicionário PROJECT_STRUCTURE — fonte única da estrutura (pastas, anos, arquivos base) e a chave da OS (extract_os)"]
+],
+sn:"Trocar a estrutura do projeto é mexer SÓ em utils/ProjectStructureUtil.py: o scanner, as operações e o changelog leem dali. A pasta-mãe é reaproveitada pelo Acompanhamento de OS."},
+
+"05":{n:"Acompanhamento de OS",k:"A OS por dentro",c:"#14b8a6",
+i:["A base de OS (Firebase) via CloudProjectDatabase","O changelog da estrutura (CloudStructureDatabase)","A pasta-mãe (vinda do Gerenciador de Estrutura)"],
+o:["Os painéis Origem, Seleção, Dados Gerais, Atalhos e Últimas alterações","Uma OS nova criada na base (CRIAR OS)","As pastas da estrutura criadas na OS (ADICIONAR PASTA)"],
+x:"A chave da OS é TEXTO e pode conter LETRA (ex.: 169A) — é o que diferencia as OS de um mesmo projeto. Zero contato com o JSON de dados (Contrato 28).",
+s:[
+["5.0","Plugin","plugins/os_tracker/OsTrackerPlugin.py","painéis e os botões CRIAR OS e ADICIONAR PASTA; a leitura do Firebase roda em FirebaseWorker"],
+["5.1","Service","plugins/os_tracker/OsTrackerService.py","load_orders, load_changes, create_order, add_folders e asset_info (feições/área de limites e zonas da OS)"],
+["5.2","Classe de banco","core/firebase/CloudProjectDatabase.py","a única porta de entrada dos registros de OS (load_orders/get_order/save_order) e quem GERA os backups JSON"],
+["5.3","Pastas","utils/ProjectStructureCreator.py, utils/ProjectStructureUtil.py","cria as pastas padrão selecionadas dentro da pasta da OS (exceto os anos do 03_ENVIO_DE_DOCUMENTOS)"],
+["5.4","Atalhos","PySide6.QtGui.QDesktopServices","abre a pasta da OS, a pasta do arquivo de limites/zonas e o changelog Word (OS_<chave>_CHANGELOG.DOCX)"]
+],
+sn:"O plugin nunca toca no JSON: a persistência é da CloudProjectDatabase (Contrato 28). O changelog exibido no painel vem do BANCO, não do Word."},
+
+"06":{n:"Banco de Dados",k:"Atualização da base de OS",c:"#2dd4bf",
+i:["A base de OS no Firebase (coleção banco_dados)","As pastas em disco de cada OS registrada"],
+o:["folders/years atualizados de cada OS (no Firebase)","Os backups JSON em <pasta-mãe>/.BancoDados","Um modal com o resumo da atualização"],
+x:"Não cria OS: consulta a fonte oficial, re-escaneia a pasta de cada OS existente e atualiza a base. O botão SINCRONIZAR NUVEM baixa a base e materializa os backups.",
+s:[
+["6.0","Plugin","plugins/project_database_manager/ProjectDatabasePlugin.py","cards e árvore OS/Cliente/Pastas/Anos; SINCRONIZAR NUVEM e ATUALIZAR DADOS, com login Firebase quando preciso"],
+["6.1","Service","plugins/project_database_manager/ProjectDatabaseService.py","re-escaneia as pastas das OS existentes e atualiza folders/years (ProjectDatabaseWorker em QThreadPool)"],
+["6.2","Classe de banco","core/firebase/CloudProjectDatabase.py","Contrato 28: load_orders/get_order/save_order/rebuild_consolidated — o plugin nunca manipula JSON"],
+["6.3","Backup","core/database/ProjectDatabaseStore.py","leitura/escrita atômica dos backups JSON em <pasta-mãe>/.BancoDados (usada só pela classe de banco)"],
+["6.4","Nuvem","core/firebase/CloudDatabaseSync.py, core/firebase/FirebaseWorker.py","espelha .BancoDados ↔ Firestore (push/pull) e roda as operações de rede fora da UI thread"]
+],
+sn:"Regra de negócio (Contrato 28): a leitura é EXCLUSIVAMENTE do Firestore. Com a base vazia/offline a ferramenta fica VAZIA — não há fallback para o JSON local."},
+
+"07":{n:"Base de Limites",k:"Limites e Zonas de Manejo",c:"#10b981",
+i:["Um vetor: SHP, GPKG, KML, KMZ ou GeoJSON","O mapeamento dos campos e os valores manuais (fazenda, OS, área, tolerância)"],
+o:["limites.shp / zonas_manejo.shp (completão) e <OS>_<tipo>.shp (um por OS)","A cópia no projeto: 08_LIMITES/TALHOES ou 13_ZONAS_DE_MANEJO","O registro limites/zonas_manejo no banco, na OS"],
+x:"Dois modos: Limites (talhão obrigatório, duplicidade bloqueada) e Zonas de Manejo (zona obrigatória, talhão opcional, sem duplicidade). A área é sempre calculada em hectares.",
+s:[
+["7.0","Plugin","plugins/limites_db/LimitesPlugin.py","modos Limites/Zonas, mapeamento de campos, VALIDAR (não grava), IMPORTAR (grava) e ATUALIZAR (troca as feições das OS do vetor)"],
+["7.1","Service","plugins/limites_db/LimitesService.py","regras por modo: normalização (TALHÃO/ZONA/CAMPO em maiúsculas), OS como texto (039, 169A), AREA_HA calculada + AREA_INF, chave OS-FAZENDA-TALHÃO única"],
+["7.2","Validação","plugins/limites_db/LimitesService.validate_vector","roda ANTES de gravar: shapefile completo (.shp/.shx/.dbf), CRS EPSG:4326, somente polígonos válidos e vetor não vazio"],
+["7.3","Vetor I/O","utils/vector/VectorLayerSource.py, utils/vector/VectorLayerMetrics.py","a leitura/escrita vetorial é delegada (Contrato 25) — o plugin nunca importa geopandas direto"],
+["7.4","Banco","core/firebase/CloudProjectDatabase.py","registra limites/zonas_manejo no registro da OS (arquivo gravado RELATIVO à pasta-mãe)"],
+["7.5","Workers","plugins/limites_db/LimitesService.py","LimitesInspectWorker, LimitesImportWorker e LimitesExistingWorker (QRunnable) mantêm a UI livre"]
+],
+sn:"O modelo do vetor é do SISTEMA, não da ferramenta: a validação (7.2) e o I/O (7.3) são compartilhados. O Acompanhamento de OS só LÊ o que a 7.4 gravou."},
+
+"08":{n:"Console",k:"Painel lateral direito",c:"#0d9488",
+i:["Os sinais do sistema: console_message, progress, execution_started/finished","As mensagens que qualquer plugin emite"],
+o:["O log formatado em HTML, com links clicáveis","Ações: selecionar tudo, copiar tudo e limpar"],
+x:"Fica fixo à direita (RIGHT_SIDE) e não aparece na toolbar. É o canal por onde o progresso e os avisos de todos os plugins passam.",
+s:[
+["8.0","Console","plugins/console/ConsolePlugin.py","ReadOnlyTextBrowser com ExecutionButtons (SELECIONAR TUDO, COPIAR TUDO, LIMPAR CONSOLE)"],
+["8.1","Escuta","core/manager/SignalManager.py","recebe console_message e escreve a linha formatada; a cor vem do ColorProvider"]
+],
+sn:"O Console é o ponto único de exibição: nenhum plugin escreve nele diretamente — todos emitem console_message no SignalManager (Contrato 7)."},
+
+"09":{n:"LogViewer",k:"Visualizador de logs",c:"#06b6d4",
+i:["Os arquivos de log do canal main: log/<data>_AetherisToolBox.json"],
+o:["Uma tabela filtrável de todos os eventos (timestamp, level, tool, class, message, code)","Cópia do filtro ou da seleção, e um diálogo de detalhes"],
+x:"Lê os logs JSON gravados pelo LogUtils. Pesquisa por texto, filtra por nível, ordena por coluna e abre os detalhes no duplo clique.",
+s:[
+["9.0","Tabela","plugins/log_viewer/LogViewerPlugin.py","as seis colunas de cada evento, com seleção múltipla (CTRL/SHIFT)"],
+["9.1","Filtro","plugins/log_viewer/LogViewerPlugin.py","busca por texto em tempo real e filtro por nível (DEBUG, INFO, WARNING, ERROR, CRITICAL)"],
+["9.2","Detalhes","core/dialogs/LogDetailDialog.py","o duplo clique abre o evento completo"],
+["9.3","Cores","utils/ColorProvider.py","cor de fonte por tool, classe e nível do log"]
+],
+sn:"O LogViewer só LÊ o que o LogUtils (00.7) escreveu: ele é o espelho do log, não a fonte."},
+
+"10":{n:"Docling",k:"Documentos para Markdown",c:"#8b5cf6",
+i:["Um documento: PDF, imagem, Office, HTML, TXT ou MD","As opções de colunas e o número de colunas"],
+o:["O Markdown gerado, exibido e salvo em .md"],
+x:"Converte documentos para Markdown via Docling, rodando em background pelo PipelineRunner — a UI nunca trava.",
+s:[
+["10.0","Plugin","plugins/docling/DoclingPlugin.py","seleção do documento, opções de colunas (GridCheckBox/GridDoubleSpinBox) e os botões CONVERTER e SALVAR MD"],
+["10.1","Engine","plugins/docling/DoclingEngine.py","a conversão em si, via biblioteca Docling"],
+["10.2","Step","core/papeline/step/DoclingSteps.py, core/papeline/PipelineRunner.py","a conversão como step do pipeline assíncrono, com progresso no Console"],
+["10.3","Export","utils/MdManager.py","exportação do DoclingDocument para Markdown multi-coluna (2-6 colunas ou detecção automática)"]
+],
+sn:"O plugin só monta a UI e dispara o step: a conversão é do core (papeline) e o export é do util — a regra de colunas não mora no plugin."},
+
+"11":{n:"Conversor ICO",k:"Imagens para ícones do Windows",c:"#f59e0b",
+i:["Imagens: PNG, JPG, BMP e outros formatos de imagem","Os tamanhos desejados (16 a 256 pixels)"],
+o:["Ícones .ico com múltiplos tamanhos embutidos"],
+x:"Converte uma lista de imagens para .ico do Windows. Os tamanhos são escolhidos por checkboxes e o progresso aparece no HUD e no Console.",
+s:[
+["11.0","Plugin","plugins/ico_converter/IcoConverterPlugin.py","FileListView + PreviewPanel para escolher e ver as imagens; HUD Loader durante a conversão"],
+["11.1","Tamanhos","plugins/ico_converter/IcoConverterPlugin.py (ICO_SIZES)","16, 32, 48, 64, 128 e 256 pixels, ligados por GridCheckBox"],
+["11.2","Conversão","Pillow (PIL), core/ui/HudCircularRingsLoader.py","gera o .ico multi-tamanho e reporta o progresso por sinais (Contrato 20)"]
+],
+sn:"A ferramenta é só UI + laço de conversão: o trabalho de imagem é do Pillow e o feedback é todo por sinal (Console/HUD), sem travar a interface."},
+
+"12":{n:"Conversor de Imagens",k:"Conversão universal + redimensionamento",c:"#f97316",
+i:["Imagens de entrada (FileListView, aceita pastas)","O formato de saída, a qualidade e as dimensões"],
+o:["As imagens convertidas no formato e no tamanho escolhidos"],
+x:"Converte entre PNG, JPG, WEBP, ICO, BMP, GIF e TIFF, com redimensionamento, qualidade para formatos lossy e ICO multi-tamanho.",
+s:[
+["12.0","Plugin","plugins/image_converter/ImageConverterPlugin.py","FileListView + PreviewPanel e o painel de opções; o botão CONVERTER vem por buttons_config"],
+["12.1","Formato e qualidade","resources/widgets/simple/SimpleComboBox.py, resources/widgets/grid/GridSlider.py","escolha do formato de saída e da qualidade (formatos lossy)"],
+["12.2","Redimensionamento","resources/widgets/grid/GridDoubleSpinBox.py","largura e altura de destino"],
+["12.3","Saída","resources/widgets/complex/GridComplexSelector.py, Pillow (PIL)","pasta de saída e a gravação das imagens convertidas"]
+],
+sn:"Tudo o que a 12 precisa é widget pronto (ComboBox, Slider, DoubleSpinBox, ComplexSelector): a ferramenta só liga as opções ao Pillow."},
+
+"13":{n:"Renomeador",k:"Renomeação em lote",c:"#eab308",
+i:["A pasta (ou arquivos) a renomear","O modo, o texto/quantidade e o filtro de extensões"],
+o:["Os arquivos renomeados conforme o modo escolhido","Uma pré-visualização antes de aplicar"],
+x:"Renomeia arquivos em lote com seis modos: prefixo, sufixo, remover do começo/final, substituir texto e limpar extensão.",
+s:[
+["13.0","Plugin","plugins/renamer/RenamerPlugin.py","os seis modos, o filtro de extensões e os botões PRÉ-VISUALIZAR, RESTAURAR PADRÃO e EXECUTAR RENOMEIO"],
+["13.1","Modos","plugins/renamer/RenamerPlugin.py","prefixo/sufixo, remover X do começo/final (ignorando a extensão), substituir texto e limpar extensão"],
+["13.2","Preview","core/dialogs/PreviewDialog.py","mostra o de/para de cada arquivo antes de aplicar"],
+["13.3","Filtro","utils/DictManager.py","o catálogo de extensões usado no filtro de arquivos"]
+],
+sn:"O Renomeador só calcula novos nomes: a pré-visualização (13.2) é o portão de segurança e as extensões vêm do util (13.3), não de strings soltas."},
+
+"14":{n:"Teclador",k:"Automação de teclado e mouse",c:"#ef4444",
+i:["O modo (teclar texto, teclar atalho, multi clique mouse)","O valor, os atrasos e a tecla/atalho de disparo"],
+o:["A digitação ou o atalho executado ao pressionar a tecla configurada","Configurações salvas/recarregadas em arquivo"],
+x:"Automação: ao pressionar a tecla configurada (padrão F) ele digita um texto, executa um atalho ou faz múltiplos cliques. Usa a biblioteca keyboard, que já gerencia as próprias threads.",
+s:[
+["14.0","Plugin","plugins/hotkey/HotkeyPlugin.py","modos, delays e a tecla; os botões SALVAR CONFIG, LER CONFIG, EXECUTAR e PARAR"],
+["14.1","Modos","plugins/hotkey/HotkeyPlugin.py","Teclar Texto, Teclar Atalho e Multi Clique Mouse, com visibilidade por modo"],
+["14.2","Captura","resources/widgets/HotkeyCaptureLine.py, resources/widgets/HotkeySequenceCapture.py, resources/widgets/MouseButtonCapture.py","captura a tecla, a sequência de atalhos e os cliques do mouse"],
+["14.3","Config","core/dialogs/ConfigSalvarDialog.py, core/dialogs/ConfigCarregarDialog.py, utils/ExplorerUtils.py","salvar e ler a configuração em disco"]
+],
+sn:"Sem QThread: o keyboard cria as próprias threads para os hooks globais. O plugin só configura e liga/desliga (EXECUTAR/PARAR)."},
+
+"15":{n:"Visualizador de Mapas",k:"Mapa com basemap de satélite",c:"#84cc16",
+i:["Arquivos arrastados: LAS/LAZ, SHP/GPKG e KML","O estado anterior do mapa (posição e zoom) das preferências"],
+o:["Um mapa navegável com tiles de satélite","A barra de infos: coordenadas, zoom, CRS e contagem de camadas"],
+x:"Ferramenta só visual: não executa nada. Arraste um LAS, SHP ou KML para o canvas e ele é desenhado sobre o satélite.",
+s:[
+["15.0","Plugin","plugins/map_viewer/MapViewerPlugin.py, resources/widgets/MapInfos.py","canvas + barra de infos; salva e restaura a posição/zoom do mapa"],
+["15.1","Canvas","plugins/map_viewer/MapCanvasWidget.py","navegação, zoom e o drag & drop de arquivos"],
+["15.2","Tiles","plugins/map_viewer/TileManager.py","baixa e cacheia os tiles do basemap de satélite"],
+["15.3","Camadas","plugins/map_viewer/LayerManager.py, plugins/map_viewer/model/MapLayer.py","gerencia as camadas carregadas e emite layers_changed"],
+["15.4","Renderers","plugins/map_viewer/renderers/LasLayerRenderer.py, renderers/VectorLayerRenderer.py, renderers/KmlLayerRenderer.py","um renderer por tipo: LAS, vetor e KML"]
+],
+sn:"Sem ExecutionButtons: a 15 é apenas visualizadora. Cada formato tem o seu renderer — acrescentar um formato é acrescentar um renderer, não mexer no canvas."},
+
+"16":{n:"Preferências",k:"Gerenciador de preferências (menu Sistema)",c:"#a3e635",
+i:["O config/AetherisToolBox_preferences.json de todo o sistema"],
+o:["As preferências editadas, resetadas ou removidas por seção (ToolKey)"],
+x:"Lê o JSON de preferências e infere o tipo de cada campo automaticamente — não precisa de configuração manual. Não aparece na toolbar; abre pelo menu Sistema.",
+s:[
+["16.0","Plugin","plugins/preferences_manager/PreferencesPlugin.py","seletor de seção (SimpleComboBox) + GridPreferenceItem para editar cada campo"],
+["16.1","Config dinâmica","plugins/preferences_manager/PreferencesPlugin.py, utils/Preferences.py","monta o formulário a partir do JSON real e infere o tipo (infer_type)"],
+["16.2","Ações","utils/Preferences.py","RESETAR PADRÃO (recarrega do disco) e APAGAR TUDO (remove_tool_prefs)"]
+],
+sn:"A ferramenta não tem lista fixa de campos: ela lê o próprio preferences.json e se monta sozinha — o mesmo gerenciador serve a qualquer ToolKey."},
+
+"17":{n:"Configuração",k:"Configurações gerais (menu Sistema)",c:"#c084fc",
+i:["Os temas disponíveis (THEMES)","As preferências do Sistema"],
+o:["O tema aplicado em todo o sistema","As configurações salvas em disco"],
+x:"Escolhe o tema visual e salva as configurações globais. Não aparece na toolbar; abre pelo menu Sistema > Configuração.",
+s:[
+["17.0","Plugin","plugins/configuration_manager/ConfigurationPlugin.py","seletor de tema e o botão SALVAR CONFIG; carrega sys_preferences"],
+["17.1","Temas","resources/styles/ThemeManager.py","o catálogo THEMES com os temas disponíveis"],
+["17.2","Aplicação","resources/styles/AppStyles.py","aplica o QSS do tema escolhido em todos os widgets"]
+],
+sn:"O tema é do SISTEMA (17.1/17.2), não da ferramenta: o plugin só escolhe qual usar e persiste a preferência."}
+};
+var ORD=["00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17"],cur=0;
+var R=[
+[["00","01"],"Sistema → Inicial","A primeira ferramenta a abrir; dispara as pipelines de futebol e clima em background."],
+[["00","02"],"Sistema → Projeto","Ferramenta INSTANT: o clique grava o .mtl e o widget se auto-destrói."],
+[["02","03"],"Projeto → Explorador","project_changed faz a árvore recarregar na nova raiz (root_folder)."],
+[["02","00"],"Projeto → AppBar","O SISTEMA reage ao sinal e atualiza o status do projeto na barra de título."],
+[["04","05"],"Estrutura → Acompanhamento","A pasta-mãe e o changelog Word alimentam os painéis do Acompanhamento de OS."],
+[["05","06"],"Acompanhamento → Banco","CRIAR OS lança a OS no Firebase; o Banco re-escaneia e atualiza folders/years."],
+[["07","05"],"Limites → Acompanhamento","O import grava limites/zonas no registro da OS; o painel mostra feições e área."],
+[["07","06"],"Limites → Banco","A gravação passa pela classe de banco — nunca direto no JSON (Contrato 28)."],
+[["00","08"],"Sistema → Console","Todo plugin emite console_message; o Console é quem escreve na tela."],
+[["00","09"],"Sistema → LogViewer","O LogUtils (00.7) grava o JSON; o LogViewer só lê e exibe."],
+[["10","08"],"Docling → Console","A conversão roda no pipeline e reporta o progresso por sinais."],
+[["16","00"],"Preferências → Sistema","Lê e edita o preferences.json de todos os ToolKeys."],
+[["17","00"],"Configuração → Sistema","O tema escolhido é aplicado no QSS global (AppStyles)."],
+[["15","00"],"Mapas → Sistema","Restaura a posição/zoom das preferências; é só visualizador."]
+];
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function li(a){return a.map(function(t){return "<li>"+esc(t)+"</li>"}).join("")}
+function q(s){return esc(s).replace(/"/g,"&quot;")}
+function subHtml(s,c){return '<div class="sub" style="--c:'+c+'" title="'+q(s[0]+' · '+s[1]+' — '+s[2]+': '+s[3])+'"><b>'+esc(s[0])+'</b><h4>'+esc(s[1])+'</h4><p><code>'+esc(s[2])+'</code> — '+esc(s[3])+'</p></div>'}
+function subList(a){return '<div class="subs">'+a.s.map(function(s){return subHtml(s,a.c)}).join("")+'</div>'}
+function draw(){
+  var id=ORD[cur],a=A[id];
+  document.querySelectorAll(".node").forEach(function(n,i){n.classList.toggle("on",i===cur);n.setAttribute("aria-selected",i===cur)});
+  var p=document.getElementById("panel");
+  p.style.setProperty("--c",a.c);
+  var etapa=id==="00"?"o próprio sistema":"ferramenta "+(cur)+" de "+(ORD.length-1);
+  var rotulo=id==="00"?"SISTEMA 00":"PLUGIN "+id;
+  p.innerHTML='<div class="ptitle"><h3>'+a.n+'</h3><span class="kind">'+rotulo+' · '+a.k+' · '+etapa+'</span></div>'+
+  '<div class="cols"><div class="col"><h4>Precisa (entrada)</h4><ul>'+li(a.i)+'</ul></div>'+
+  '<div class="col"><h4>Gera (saída)</h4><ul>'+li(a.o)+'</ul></div>'+
+  '<div class="col"><h4>Depois</h4><p>'+esc(a.x)+'</p></div></div>'+
+  '<h4 class="sh4">Subdivisões internas · '+a.s.length+'</h4>'+(a.sn?'<p class="note">'+esc(a.sn)+'</p>':'')+subList(a)+
+  '<div class="ctl"><button id="pv">Anterior</button><button id="nx">Próxima</button></div>';
+  document.getElementById("pv").onclick=function(){go(cur-1)};
+  document.getElementById("nx").onclick=function(){go(cur+1)};
+}
+function go(i){cur=(i+ORD.length)%ORD.length;draw();var n=document.querySelectorAll(".node")[cur];if(n&&n.scrollIntoView)n.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"})}
+var rail=document.getElementById("rail");
+ORD.forEach(function(id,i){
+  var b=document.createElement("button");b.className="node";b.setAttribute("role","tab");b.style.setProperty("--c",A[id].c);
+  b.innerHTML='<span class="dot">'+id+'</span><small>'+A[id].n+'</small>';
+  b.onclick=function(){go(i)};rail.appendChild(b);
+});
+document.getElementById("routes").innerHTML=R.map(function(r){
+  var chain=r[0].map(function(id){return '<span class="chip" style="--c:'+A[id].c+'">'+id+'</span>'}).join("<em>→</em>");
+  return '<div class="route rv"><div class="chain">'+chain+'</div><p><b>'+r[1]+'</b></p><p>'+r[2]+'</p></div>';
+}).join("");
+draw();
+
+/* tema */
+var root=document.documentElement;
+document.getElementById("theme").onclick=function(){
+  var dark=root.getAttribute("data-theme")?root.getAttribute("data-theme")==="dark":!matchMedia("(prefers-color-scheme: light)").matches;
+  root.setAttribute("data-theme",dark?"light":"dark");
+};
+/* revelar e menu ativo */
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll(".rv").forEach(function(el){io.observe(el)});
+var links=document.querySelectorAll("#nav a");
+var so=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle("on",l.getAttribute("href")==="#"+e.target.id)})}})},{rootMargin:"-40% 0px -55% 0px"});
+document.querySelectorAll("section[id]").forEach(function(s){so.observe(s)});
+</script>
+</body>
+</html>

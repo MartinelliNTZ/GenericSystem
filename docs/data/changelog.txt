@@ -1,4 +1,11 @@
-[1.16.2][2026.10.22][16:55] - Seed da base: OS que existiam só em disco agora têm registro (069, 127, 144, 302, 315, 393)
+[1.16.3][2026.10.23][09:04] - Mapa de plugins: novo docs/mapa_plugins.html (SISTEMA + 17 plugins)
+  - docs/mapa_plugins.html: NOVO — página estática no mesmo formato/estilo do docs/mapa_apis.html, mas para os PLUGINS: hero, estatísticas, visão geral (entradas → plugin → saídas), seção do SISTEMA (00) com o ciclo de vida e os serviços do núcleo, explorador com as 17 ferramentas (rail + painel com Precisa/Gera/Depois e subdivisões internas numeradas), rotas (quem alimenta quem), padronizações e famílias de saída
+  - Conteúdo derivado do código real: core/config/ToolRegistry.py (_TOOLS), core/enum/ToolKey.py, core/enum/ToolType.py, core/enum/CategoryTool.py, plugins/BasePlugin.py e os 17 plugins (home, project_manager, file_manager, project_structure_manager, os_tracker, project_database_manager, limites_db, console, log_viewer, docling, ico_converter, image_converter, renamer, hotkey, map_viewer, preferences_manager, configuration_manager)
+  - Numeração: 00 = SISTEMA (00.1–00.14) e 01–17 = plugins; em cada plugin N.0 é o próprio plugin (UI/entry point) e N.1, N.2… os módulos internos (service, workers, modelo)
+  - docs/ (mapa de APIs e mapa de plugins) — nenhuma alteração de código Python
+
+
+
   - add_data/seed_os.py: RAW_ROWS passa a listar TAMBÉM as OS que existiam apenas em disco (069_RoyalFic, 127_Aprosoja, 144_Amaggi, 302_EUGENIO, 315_EMBRAPA, 393_ELDORADO) — criadas SEM cliente/nome comercial/CNPJ (podem ser preenchidos depois no Acompanhamento de OS: CRIAR OS com a MESMA chave mescla os dados)
   - Banco de dados (Firestore + backups JSON): base completa — 52 pastas em disco × 52 registros (069, 127, 144 e 315 foram criados; nenhum registro sem pasta)
 
