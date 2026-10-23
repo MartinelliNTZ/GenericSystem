@@ -65,15 +65,21 @@ class ReportSource(BaseUtil):
         record: Optional[Dict[str, Any]],
         tool_key: str = ToolKey.OS_TRACKER.value,
     ) -> ReportContext:
-        """Contexto do relatório: dados do registro + shapes em GeoJSON."""
+        """Contexto do relatório: dados do registro + bases + shapes em GeoJSON."""
         paths = cls.asset_paths(mother, record)
+        folder = cls.os_folder(mother, record)
         return ReportContext(
             record=dict(record or {}),
             mother=Path(mother) if mother else None,
             tool_key=tool_key,
             generated_at=datetime.now().strftime(cls.DATE_FORMAT),
             data_version=cls.data_version(record, tool_key),
+            os_folder=str(folder) if folder is not None else "",
             asset_paths=paths,
+            assets={
+                key: OsTrackerService.asset_info(record, key)
+                for key in cls.ASSET_KEYS
+            },
             shapes={
                 key: ShapeGeoJsonReader.read(path, key, tool_key)
                 for key, path in paths.items()

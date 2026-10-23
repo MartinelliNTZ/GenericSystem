@@ -54,6 +54,9 @@ main{padding:8px 32px 32px;flex:1}
 .pill{background:rgba(91,108,255,.14);color:var(--acento-2);border-radius:999px;padding:3px 12px;font-size:13px;font-weight:600}
 .pill.fantasma{background:none;border:1px dashed var(--borda);color:var(--suave);font-weight:400}
 .vazio{margin:0;padding:14px 16px;border:1px dashed var(--borda);border-radius:12px;color:var(--suave);font-size:13px}
+.caminho{margin:0;padding:10px 14px;border:1px solid var(--borda);border-radius:10px;background:var(--surface-2);font-family:Consolas,monospace;font-size:12px;color:var(--suave);overflow-wrap:anywhere}
+.bases .sub{margin-top:18px}
+.bases .sub:first-child{margin-top:0}
 .resumo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .chip{background:var(--surface-2);border:1px solid var(--borda);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--suave)}
 .chip strong{color:var(--texto)}
@@ -113,6 +116,8 @@ main{padding:8px 16px 24px}
 <a href="#fazendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg>3 · Fazendas e talhões</a>
 <a href="#limites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>4 · Limites</a>
 <a href="#zonas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>5 · Zonas de manejo</a>
+<a href="#dados-os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>6 · Dados da OS</a>
+<a href="#bases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>7 · Bases gravadas</a>
 </nav>
 <div class="side-info">Versão V1<br><span id="verData">—</span></div>
 </aside>
@@ -162,6 +167,24 @@ main{padding:8px 16px 24px}
 <aside class="legenda"><h4>Zonas de manejo</h4><div id="legZonas"></div></aside>
 </div></div>
 </section>
+
+<section class="painel" id="dados-os" aria-labelledby="t6">
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div><div><h2 id="t6"><span class="painel-numero">Painel 6</span>Dados da OS</h2><p>Identificação do registro e da pasta da OS</p></div></div>
+<div class="painel-corpo">
+<div class="cartoes" id="cartoesOs"></div>
+<h3 class="sub">Pastas criadas</h3>
+<div class="pills" id="listaPastas"></div>
+<h3 class="sub">Anos criados</h3>
+<div class="pills" id="listaAnos"></div>
+<h3 class="sub">Pasta completa</h3>
+<p class="caminho" id="pastaCompleta">—</p>
+</div>
+</section>
+
+<section class="painel" id="bases" aria-labelledby="t7">
+<div class="painel-topo"><div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div><div><h2 id="t7"><span class="painel-numero">Painel 7</span>Bases gravadas</h2><p>Resumo de cada base do banco registrada na OS</p></div></div>
+<div class="painel-corpo bases" id="basesCorpo"></div>
+</section>
 </main>
 <footer class="rodape"><span>© 2026 Agrorobótica · Fotônica em Certificações Agroambientais</span><span>Relatório geral · V1</span></footer>
 </div>
@@ -193,7 +216,19 @@ window.DADOS_PROJETO = window.DADOS_PROJETO || {
   versao_data: "",
   fazendas: [],              // ex.: [{ nome: "Fazenda A", talhoes: [{ nome: "T-01", area_ha: 30.5 }] }]
   limites: null,
-  zonas: null
+  zonas: null,
+  /* Painel 6 — Dados da OS (mesmas infos do relatório emitido em PDF) */
+  nome: "",
+  cliente: "",
+  cnpj: "",
+  pasta: "",
+  pasta_completa: "",
+  pastas_criadas: null,
+  lista_pastas: [],
+  anos_criados: [],
+  atualizado_em: "",         // ISO (ex.: "2026-10-23T13:44:20")
+  /* Painel 7 — Bases gravadas na OS */
+  bases: []                  // ex.: [{ chave, titulo, tem, feicoes, area_ha, arquivo, origem, registrado }]
 };
 </script>
 <script>
@@ -205,6 +240,24 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c
 function vazio(v){ return v == null || v === ''; }
 function num(v, c){ c = c == null ? 2 : c; return (vazio(v) || isNaN(v)) ? '—' : Number(v).toLocaleString('pt-BR', {minimumFractionDigits:c, maximumFractionDigits:c}); }
 function feicoes(fc){ return (fc && fc.features) ? fc.features : []; }
+function cartoesHtml(lista){
+  return (lista || []).map(function(c){
+    var v = vazio(c[1]) ? '' : c[1];
+    return '<div class="cartao"><span class="cartao-valor' + (vazio(v) ? ' vazio-v' : '') + '">' + (vazio(v) ? '—' : esc(v)) + '</span><span class="cartao-rotulo">' + c[0] + '</span></div>';
+  }).join('');
+}
+function pillsHtml(el, itens, textoVazio){
+  el.innerHTML = (itens || []).length
+    ? itens.map(function(i){ return '<span class="pill">' + esc(i) + '</span>'; }).join('')
+    : '<p class="vazio" style="border:0;padding:3px 8px">' + esc(textoVazio) + '</p>';
+}
+function quando(v){
+  if (vazio(v)) return '';
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return String(v);
+  return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+function nomeArquivo(p){ var t = String(vazio(p) ? '' : p); return t ? t.split(/[\\/]/).pop() : ''; }
 
 /* Cabeçalho */
 $('verData').textContent = D.versao_data || '—';
@@ -221,9 +274,7 @@ var cartoes = [
   ['Data de início', D.data_inicio],
   ['Ano do cenário base', D.ano_cenario_base]
 ];
-$('cartoes').innerHTML = cartoes.map(function(c){
-  return '<div class="cartao"><span class="cartao-valor' + (vazio(c[1]) ? ' vazio-v' : '') + '">' + (vazio(c[1]) ? '—' : esc(c[1])) + '</span><span class="cartao-rotulo">' + c[0] + '</span></div>';
-}).join('');
+$('cartoes').innerHTML = cartoesHtml(cartoes);
 $('manejos').innerHTML = (D.tipos_manejo || []).length
   ? D.tipos_manejo.map(function(t){ return '<span class="pill">' + esc(t) + '</span>'; }).join('')
   : ['Lavoura','Pasto','ETF'].map(function(t){ return '<span class="pill fantasma">' + t + '</span>'; }).join('') + '<span class="vazio" style="border:0;padding:3px 8px">exemplos — preencher tipos_manejo</span>';
@@ -309,6 +360,38 @@ if (mZ && fz.length) {
   $('avisoZonas').hidden = true;
 }
 legenda($('legZonas'), zonas.map(function(n){ return {nome:n, cor:corZona(n)}; }), ['Zona 1', 'Zona 2', 'Zona 3']);
+
+/* Painel 6 — dados da OS (mesmas infos do relatório emitido em PDF) */
+var anos = D.anos_criados || [];
+var cartoesOs = [
+  ['Nome', D.nome],
+  ['Cliente', D.cliente],
+  ['CNPJ', D.cnpj],
+  ['Pasta', D.pasta],
+  ['Pastas criadas', vazio(D.pastas_criadas) ? '' : num(D.pastas_criadas, 0)],
+  ['Anos criados', anos.length ? num(anos.length, 0) : ''],
+  ['Última atualização', quando(D.atualizado_em)]
+];
+$('cartoesOs').innerHTML = cartoesHtml(cartoesOs);
+pillsHtml($('listaPastas'), D.lista_pastas, 'Nenhuma pasta registrada.');
+pillsHtml($('listaAnos'), anos, 'Nenhum ano registrado.');
+$('pastaCompleta').textContent = D.pasta_completa || '—';
+
+/* Painel 7 — bases gravadas na OS (Limites e Zonas de manejo) */
+var bases = D.bases || [];
+$('basesCorpo').innerHTML = bases.length ? bases.map(function(b){
+  if (!b.tem) return '<h3 class="sub">' + esc(b.titulo) + '</h3><p class="vazio">Base não registrada nesta OS.</p>';
+  var linhas = [
+    ['Feições', num(b.feicoes, 0)],
+    ['Área (ha)', num(b.area_ha)],
+    ['Arquivo', nomeArquivo(b.arquivo)],
+    ['Origem', b.origem],
+    ['Registrado em', quando(b.registrado)]
+  ];
+  return '<h3 class="sub">' + esc(b.titulo) + '</h3><div class="tabela"><table><tbody>' +
+    linhas.map(function(l){ return '<tr><th>' + l[0] + '</th><td>' + (vazio(l[1]) ? '—' : esc(l[1])) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+}).join('') : '<p class="vazio">Nenhuma base registrada nesta OS.</p>';
 
 /* Menu: celular e destaque do painel visível */
 var corpo = document.body, btn = $('btnMenu');

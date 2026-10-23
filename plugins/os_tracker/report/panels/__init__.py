@@ -16,4 +16,10 @@ Painéis atuais:
 | 3 | ``PanelFazendas`` | Fazendas e talhões (derivados do shape de limites) |
 | 4 | ``PanelLimites`` | GeoJSON dos limites (mapa) |
 | 5 | ``PanelZonas`` | GeoJSON das zonas de manejo (mapa) |
+| 6 | ``PanelDadosOs`` | Dados da OS (nome, cliente, CNPJ, pasta, pastas/anos, atualização) |
+| 7 | ``PanelBases`` | Bases gravadas (feições, área, arquivo, origem, registro) |
+
+Os painéis **6** e **7** replicam no HTML TODAS as infos que o relatório emitido
+em PDF (template Word ``MODELO_RELATORIO_OS.docx``) traz em "Dados Gerais",
+"Base de Limites" e "Base de Zonas de Manejo".
 """

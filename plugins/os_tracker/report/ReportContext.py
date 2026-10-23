@@ -34,12 +34,18 @@ class ReportContext:
     tool_key: str
     generated_at: str
     data_version: str = ""
+    os_folder: str = ""
     asset_paths: Dict[str, str] = field(default_factory=dict)
+    assets: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     shapes: Dict[str, Optional[Dict[str, Any]]] = field(default_factory=dict)
 
     def value(self, key: str, default: Any = "") -> Any:
         """Valor de um campo do registro da OS (``default`` quando ausente)."""
         return (self.record or {}).get(key, default)
+
+    def asset(self, key: str) -> Dict[str, Any]:
+        """Info da base gravada na OS (``has``/``features``/``area_ha``/``file``…)."""
+        return self.assets.get(key) or {}
 
     def shape(self, key: str) -> Optional[Dict[str, Any]]:
         """GeoJSON FeatureCollection da base informada (``None`` sem shape)."""

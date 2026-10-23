@@ -21,8 +21,10 @@ from typing import Any, Dict, Tuple, Type
 from utils.BaseUtil import BaseUtil
 
 from plugins.os_tracker.report.ReportContext import ReportContext
+from plugins.os_tracker.report.panels.PanelBases import PanelBases
 from plugins.os_tracker.report.panels.PanelBuilder import PanelBuilder
 from plugins.os_tracker.report.panels.PanelCulturas import PanelCulturas
+from plugins.os_tracker.report.panels.PanelDadosOs import PanelDadosOs
 from plugins.os_tracker.report.panels.PanelFazendas import PanelFazendas
 from plugins.os_tracker.report.panels.PanelLimites import PanelLimites
 from plugins.os_tracker.report.panels.PanelVisaoGeral import PanelVisaoGeral
@@ -48,6 +50,18 @@ class ReportDataBuilder(BaseUtil):
         "fazendas": [],
         "limites": None,
         "zonas": None,
+        # Painel 6 — Dados da OS (as mesmas infos do relatório emitido em PDF).
+        "nome": "",
+        "cliente": "",
+        "cnpj": "",
+        "pasta": "",
+        "pasta_completa": "",
+        "pastas_criadas": None,
+        "lista_pastas": [],
+        "anos_criados": [],
+        "atualizado_em": "",
+        # Painel 7 — Bases gravadas na OS.
+        "bases": [],
     }
     # Painéis na ORDEM do template (um painel pode ter vários builders).
     PANELS: Tuple[Type[PanelBuilder], ...] = (
@@ -56,6 +70,8 @@ class ReportDataBuilder(BaseUtil):
         PanelFazendas,
         PanelLimites,
         PanelZonas,
+        PanelDadosOs,
+        PanelBases,
     )
 
     @classmethod

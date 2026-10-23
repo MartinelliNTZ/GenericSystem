@@ -121,6 +121,8 @@ Submódulo do Acompanhamento de OS, com classes **desacopladas** (o plugin conhe
 | `panels/PanelFazendas` | **Painel 3** (subpainéis **3.1** resumo e **3.2** talhões) — agrupa fazenda/talhão/área a partir do shape de `limites` |
 | `panels/PanelLimites` | **Painel 4** — GeoJSON dos limites para o mapa |
 | `panels/PanelZonas` | **Painel 5** — GeoJSON das zonas de manejo para o mapa |
+| `panels/PanelDadosOs` | **Painel 6** — dados da OS (nome, cliente, CNPJ, pasta, pasta completa, pastas criadas + lista, anos criados e última atualização) — o mesmo "Dados Gerais" do relatório Word/PDF |
+| `panels/PanelBases` | **Painel 7** — bases gravadas (`limites` e `zonas_manejo`): feições, área (ha), arquivo, origem e registrado em — o mesmo conteúdo das seções "Base de Limites"/"Base de Zonas de Manejo" do relatório Word/PDF |
 
 
 ### plugins/limites_db/

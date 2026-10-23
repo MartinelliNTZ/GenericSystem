@@ -484,6 +484,12 @@ alteradas.
   `ShapeGeoJsonReader` (vetor da base → GeoJSON EPSG:4326) e
   `OsReportHtmlGenerator` (template + dados → `.HTML`). O atalho **RELATÓRIO
   HTML** (painel Atalhos) gera o arquivo e **abre a pasta** do relatório.
+- **TODAS as infos do relatório emitido em PDF/Word entram no HTML**: os painéis
+  **6 · Dados da OS** (nome, cliente, CNPJ, pasta, pasta completa, pastas criadas
+  com a lista, anos criados e última atualização — o mesmo "Dados Gerais" do
+  template Word) e **7 · Bases gravadas** (para `limites` e `zonas_manejo`:
+  feições, área em ha, arquivo, origem e data de registro) replicam os campos de
+  `OsTrackerService.report_data` usados no `MODELO_RELATORIO_OS.docx`.
 - O **template** do relatório HTML é `core/template/relatorio_geral_projeto.html`
   (editável — é a fonte do layout) e traz o token `<!--{{DADOS_PROJETO}}-->`, que
   o gerador troca por um `<script>` com `window.DADOS_PROJETO`. O bloco de dados

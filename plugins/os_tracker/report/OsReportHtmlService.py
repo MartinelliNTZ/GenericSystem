@@ -53,7 +53,7 @@ class OsReportHtmlService(BaseUtil):
         data = ReportDataBuilder.build(context)
         path = OsReportHtmlGenerator.generate(
             data,
-            os_folder=ReportSource.os_folder(mother, record),
+            os_folder=context.os_folder,
             os_key=os_key,
             tool_key=tool_key,
         )
