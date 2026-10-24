@@ -22,6 +22,7 @@
     os: '',
     nome_comercial: '',
     tipos_manejo: [],
+    culturas: [],
     area_contratada_ha: null,
     n_cars: null,
     data_inicio: '',
@@ -39,7 +40,6 @@
     zonas: null,
     base_limites: null,
     base_zonas: null,
-    atividades: [],
     pastas_criadas: null,
     lista_pastas: [],
     anos_criados: [],
@@ -155,7 +155,6 @@
       ['Cliente', D.cliente],
       ['Nome comercial', D.nome_comercial],
       ['CNPJ', D.cnpj],
-      ['Pasta', D.pasta],
       ['Área contratada', vazio(D.area_contratada_ha) ? '' : num(D.area_contratada_ha) + ' ha'],
       ['Nº de CARs', vazio(D.n_cars) ? '' : num(D.n_cars, 0)],
       ['Data de início', D.data_inicio],
@@ -163,23 +162,21 @@
       ['Última atualização', quando(D.atualizado_em)]
     ];
     $('cartoes').innerHTML = cartoesHtml(cartoes);
-    texto($('pastaCompleta'), D.pasta_completa);
+  }
 
-    // Tipos de manejo: o banco ainda não fornece — a faixa sai com os exemplos
-    // em tom fantasma (nada é inventado como dado).
+  /* ---------- Painel 3 · Atividades ---------- */
+
+  // 3.1 — tipos de manejo: o banco ainda não fornece — a faixa sai com os
+  // exemplos em tom fantasma (nada é inventado como dado).
+  function pintarAtividades() {
     $('manejos').innerHTML = (D.tipos_manejo || []).length
       ? D.tipos_manejo.map(function (t) { return '<span class="pill">' + esc(t) + '</span>'; }).join('')
       : ['Lavoura', 'Pasto', 'ETF'].map(function (t) {
           return '<span class="pill fantasma">' + esc(t) + '</span>';
         }).join('') + '<span class="vazio" style="border:0;padding:3px 8px">exemplos — preencher tipos_manejo</span>';
-  }
 
-  /* ---------- Painel 3 · Atividades ---------- */
-
-  function pintarAtividades() {
-    $('listaAtividades').innerHTML = (D.atividades || []).length
-      ? D.atividades.map(function (a) { return '<div class="item">' + esc(a) + '</div>'; }).join('')
-      : '<p class="vazio" style="grid-column:1/-1">Nenhuma atividade informada.</p>';
+    // 3.2 — culturas: sem fonte no banco, o subpainel mostra o estado vazio.
+    pillsHtml($('culturas'), D.culturas, 'Nenhuma cultura informada.');
   }
 
   /* ---------- Painel 2.1 · Fazendas e talhões ---------- */
@@ -336,6 +333,13 @@
 
   function pintarBaseDados() {
     var pastas = D.lista_pastas || [], anos = D.anos_criados || [];
+
+    // 4.1 — pasta da OS: o nome da pasta + o caminho completo resolvido.
+    $('resumoPasta').innerHTML = '<span class="chip"><strong>' +
+      (vazio(D.pasta) ? '—' : esc(D.pasta)) + '</strong> pasta da OS</span>';
+    texto($('pastaCompleta'), D.pasta_completa);
+
+    // 4.2 — pastas criadas e 4.3 — anos com dados.
     $('resumoPastas').innerHTML = '<span class="chip"><strong>' + num(pastas.length, 0) +
       '</strong> pastas criadas</span>';
     pillsHtml($('listaPastas'), pastas, 'Nenhuma pasta criada.');

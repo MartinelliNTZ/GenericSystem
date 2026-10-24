@@ -38,7 +38,7 @@ class ReportDataBuilder(BaseUtil):
     # ela aparece em UM lugar: o RODAPÉ (`Desenvolvido por … · V1.0.0 · dd/mm/aaaa`).
     # TODA mudança no relatório (painel, campo, CSS, JS, modelo) sobe a versão e
     # atualiza a data — ver `docs/skills/SKILL_OS_REPORT.md` §11.
-    REPORT_VERSION = "1.0.0"
+    REPORT_VERSION = "1.1.0"
     REPORT_VERSION_DATE = "23/10/2026"
 
     # Schema do template (chave → valor neutro). O que não for preenchido por
@@ -46,7 +46,6 @@ class ReportDataBuilder(BaseUtil):
     SCHEMA: Dict[str, Any] = {
         "os": "",
         "nome_comercial": "",
-        "tipos_manejo": [],
         "area_contratada_ha": None,
         "n_cars": None,
         "data_inicio": "",
@@ -60,8 +59,6 @@ class ReportDataBuilder(BaseUtil):
         "nome": "",
         "cliente": "",
         "cnpj": "",
-        "pasta": "",
-        "pasta_completa": "",
         "atualizado_em": "",
         # Painel 2 — distribuição espacial.
         "fazendas": [],
@@ -70,8 +67,11 @@ class ReportDataBuilder(BaseUtil):
         "base_limites": None,
         "base_zonas": None,
         # Painel 3 — atividades.
-        "atividades": [],
+        "tipos_manejo": [],
+        "culturas": [],
         # Painel 4 — base de dados.
+        "pasta": "",
+        "pasta_completa": "",
         "pastas_criadas": None,
         "lista_pastas": [],
         "anos_criados": [],

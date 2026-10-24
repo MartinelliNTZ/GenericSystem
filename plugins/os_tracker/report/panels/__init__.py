@@ -15,10 +15,10 @@ Painéis atuais:
 | 2.1 | ``PanelFazendas`` | Fazendas e talhões (derivados do shape de limites) |
 | 2.2 | ``PanelLimites`` | GeoJSON dos limites (mapa) + resumo da base |
 | 2.3 | ``PanelZonas`` | GeoJSON das zonas de manejo (mapa) + resumo da base |
-| 3 | ``PanelAtividades`` | Atividades (ainda sem fonte no banco) |
-| 4 | ``PanelBaseDados`` | Base de Dados: 4.1 pastas criadas e 4.2 anos com dados |
+| 3 | ``PanelAtividades`` | Atividades: 3.1 tipos de manejo e 3.2 culturas (ainda sem fonte no banco) |
+| 4 | ``PanelBaseDados`` | Base de Dados: 4.1 pasta, 4.2 pastas criadas e 4.3 anos com dados |
 
 Os painéis **1**, **2.2**, **2.3** e **4** trazem as MESMAS infos que o relatório
 emitido em PDF (template Word ``MODELO_RELATORIO_OS.docx``) em "Dados Gerais",
-"Base de Limites", "Base de Zonas de Manejo" e as pastas/anos da OS.
+"Base de Limites", "Base de Zonas de Manejo" e a pasta/pastas/anos da OS.
 """

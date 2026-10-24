@@ -2,10 +2,12 @@
 """
 PanelAtividades — Painel 3 · Atividades
 =======================================
-Atividades da propriedade (era o painel "Culturas").
+Atividades da propriedade (era o painel "Culturas"): **3.1 Tipos de manejo** e
+**3.2 Culturas**.
 
-O banco ainda não fornece as atividades da OS, então o painel devolve a lista
-VAZIA (o template exibe o próprio estado vazio). Nada é adaptado/inventado.
+O banco ainda não fornece as duas listas, então o painel devolve as chaves
+VAZIAS (o template exibe o próprio estado vazio e, no 3.1, os exemplos em tom
+fantasma). Nada é adaptado/inventado.
 """
 
 from __future__ import annotations
@@ -24,5 +26,5 @@ class PanelAtividades(PanelBuilder):
 
     @classmethod
     def build(cls, context: ReportContext) -> Dict[str, Any]:
-        """Sem fonte no banco: lista vazia (o template mostra o estado vazio)."""
-        return {"atividades": []}
+        """Sem fonte no banco: listas vazias (o template mostra o estado vazio)."""
+        return {"tipos_manejo": [], "culturas": []}

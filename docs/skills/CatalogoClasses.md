@@ -117,12 +117,12 @@ Submódulo do Acompanhamento de OS, com classes **desacopladas** (o plugin conhe
 | `OsReportAssets` | **Une HTML + CSS + JS** num só documento: lê o template `core/template/relatorio_geral_projeto.html` e os seus assets separados (`relatorio_geral_projeto.css` e `relatorio_geral_projeto.js`, mesma pasta) e EMBUTE o CSS e o JS no HTML (troca o `<link>`/`<script src>` pelo conteúdo) — o `.HTML` gerado sai autossuficiente, sem arquivos ao lado |
 | `OsReportHtmlGenerator` | Documento + dados → `.HTML`: recebe o HTML já unido pelo `OsReportAssets` e troca o token `<!--{{DADOS_PROJETO}}-->` por `<script>window.DADOS_PROJETO = {…};</script>`; herda o DESTINO do `OsReportGenerator` (mesma pasta por TIPO) e muda só a extensão (`.HTML`) |
 | `panels/PanelBuilder` | Contrato dos builders de painel (`PANEL_ID` + `PANEL_TITLE` + `build(context)`) e helper `base_info(context, key)` — resumo de uma base gravada na OS (`tem`, `contagem`, `area_ha`, `arquivo`, `origem`, `registrado`), usado pelos subpainéis 2.2/2.3; um painel pode ter **vários** builders com subnúmero (`2.1`, `2.2` …) |
-| `panels/PanelVisaoGeral` | **Painel 1** — visão geral: projeto + dados contratuais **+ dados da OS** (nome, cliente, nome comercial, CNPJ, pasta, pasta completa e última atualização — o antigo painel "Dados da OS" foi somado aqui) |
+| `panels/PanelVisaoGeral` | **Painel 1** — visão geral: projeto + dados contratuais **+ dados da OS** (nome, cliente, nome comercial, CNPJ e última atualização — o antigo painel "Dados da OS" foi somado aqui; a **pasta** e os **tipos de manejo** saíram para os painéis 4.1 e 3.1) |
 | `panels/PanelFazendas` | **Painel 2.1** — fazendas e talhões, derivados do shape de `limites` |
 | `panels/PanelLimites` | **Painel 2.2** — GeoJSON dos limites (mapa com a **legenda sobre o mapa**) + resumo da base (`base_limites`: **Talhões**, Área (ha), Arquivo, Origem e Registrado em) |
 | `panels/PanelZonas` | **Painel 2.3** — GeoJSON das zonas de manejo (mapa com a **legenda sobre o mapa**) + resumo da base (`base_zonas`: **Zonas**, Área (ha), Arquivo, Origem e Registrado em) |
-| `panels/PanelAtividades` | **Painel 3** — atividades da propriedade (ainda sem fonte no banco) |
-| `panels/PanelBaseDados` | **Painel 4** — base de dados: **4.1** pastas criadas e **4.2** anos com dados |
+| `panels/PanelAtividades` | **Painel 3** — atividades: **3.1** tipos de manejo e **3.2** culturas (ainda sem fonte no banco) |
+| `panels/PanelBaseDados` | **Painel 4** — base de dados: **4.1** pasta, **4.2** pastas criadas e **4.3** anos com dados |
 
 
 ### plugins/limites_db/

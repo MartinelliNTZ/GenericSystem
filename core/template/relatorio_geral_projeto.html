@@ -64,17 +64,13 @@
 <div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
 <div class="painel-identidade">
 <h2 id="t1"><span class="painel-numero">01</span>Visão geral
-<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Identificação do projeto e dados cadastrais da OS — nome, cliente, nome comercial, CNPJ, pasta e última atualização. Os campos contratuais (tipos de manejo, área contratada, CARs, data de início e cenário base) só aparecem quando o banco os fornece.</span></span>
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Identificação do projeto e dados cadastrais da OS — nome, cliente, nome comercial, CNPJ e última atualização. Os campos contratuais (área contratada, CARs, data de início e cenário base) só aparecem quando o banco os fornece.</span></span>
 </h2>
 <p>Identificação do projeto, dados contratuais e dados da OS</p>
 </div>
 </div>
 <div class="painel-corpo">
 <div class="cartoes" id="cartoes"></div>
-<h3 class="sub">Tipos de manejo</h3>
-<div class="pills" id="manejos"></div>
-<h3 class="sub">Pasta</h3>
-<p class="caminho" id="pastaCompleta">—</p>
 </div>
 </section>
 
@@ -117,12 +113,17 @@
 <div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 20c4-4 8-8 14-14"/></svg></div>
 <div class="painel-identidade">
 <h2 id="t3"><span class="painel-numero">03</span>Atividades
-<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Atividades da propriedade (lavoura, pasto, integração etc.). O banco ainda não fornece a lista, então o painel mostra o estado vazio até a fonte existir.</span></span>
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">Tipos de manejo e culturas da propriedade (lavoura, pasto, integração etc.). O banco ainda não fornece as listas, então cada subpainel mostra o estado vazio até a fonte existir.</span></span>
 </h2>
-<p>Atividades da propriedade</p>
+<p>Tipos de manejo e culturas da propriedade</p>
 </div>
 </div>
-<div class="painel-corpo"><div class="itens" id="listaAtividades"></div></div>
+<div class="painel-corpo">
+<h3 class="sub"><span class="painel-numero">3.1</span>Tipos de manejo</h3>
+<div class="pills" id="manejos"></div>
+<h3 class="sub"><span class="painel-numero">3.2</span>Culturas</h3>
+<div class="pills" id="culturas"></div>
+</div>
 </section>
 
 <section class="painel" id="base-dados" aria-labelledby="t4">
@@ -130,16 +131,19 @@
 <div class="painel-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div>
 <div class="painel-identidade">
 <h2 id="t4"><span class="painel-numero">04</span>Base de Dados
-<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">O que já existe na base da OS: as pastas criadas pela ferramenta e os anos com dados registrados no banco.</span></span>
+<span class="info-tooltip"><button type="button" class="info-tooltip-btn" aria-label="Ver descrição">i</button><span class="info-tooltip-box" role="tooltip">O que já existe na base da OS: a pasta do projeto, as pastas criadas pela ferramenta e os anos com dados registrados no banco.</span></span>
 </h2>
 <p>O que já existe na base da OS</p>
 </div>
 </div>
 <div class="painel-corpo">
-<h3 class="sub"><span class="painel-numero">4.1</span>Pastas criadas</h3>
+<h3 class="sub"><span class="painel-numero">4.1</span>Pasta</h3>
+<div class="resumo" id="resumoPasta"></div>
+<p class="caminho" id="pastaCompleta">—</p>
+<h3 class="sub"><span class="painel-numero">4.2</span>Pastas criadas</h3>
 <div class="resumo" id="resumoPastas"></div>
 <div class="pills" id="listaPastas"></div>
-<h3 class="sub"><span class="painel-numero">4.2</span>Anos com dados</h3>
+<h3 class="sub"><span class="painel-numero">4.3</span>Anos com dados</h3>
 <div class="resumo" id="resumoAnos"></div>
 <div class="pills" id="listaAnos"></div>
 </div>

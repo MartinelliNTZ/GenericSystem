@@ -2,14 +2,14 @@
 """
 PanelVisaoGeral — Painel 1 · Visão geral
 ========================================
-Identificação do projeto, dados contratuais E os dados da OS (o antigo painel
-"Dados da OS" foi SOMADO a este): OS, nome, cliente, nome comercial, CNPJ,
-pasta, pasta completa e última atualização.
+Identificação do projeto e os dados da OS (o antigo painel "Dados da OS" foi
+SOMADO a este): OS, nome, cliente, nome comercial, CNPJ e última atualização. A
+PASTA saiu daqui — vive no painel 4 (Base de Dados) — e os TIPOS DE MANEJO no
+painel 3 (Atividades).
 
-Os campos contratuais do template (``tipos_manejo``, ``area_contratada_ha``,
-``n_cars``, ``data_inicio`` e ``ano_cenario_base``) permanecem VAZIOS — o banco
-ainda não os fornece e nada é adaptado/inventado (o template já traz o estado
-vazio).
+Os campos contratuais do template (``area_contratada_ha``, ``n_cars``,
+``data_inicio`` e ``ano_cenario_base``) permanecem VAZIOS — o banco ainda não os
+fornece e nada é adaptado/inventado (o template já traz o estado vazio).
 """
 
 from __future__ import annotations
@@ -35,7 +35,5 @@ class PanelVisaoGeral(PanelBuilder):
             "cliente": str(context.value("client", "") or ""),
             "nome_comercial": str(context.value("commercial_name", "") or ""),
             "cnpj": str(context.value("cnpj", "") or ""),
-            "pasta": str(context.value("path", "") or ""),
-            "pasta_completa": context.os_folder,
             "atualizado_em": str(context.value("updated_at", "") or ""),
         }

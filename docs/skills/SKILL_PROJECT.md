@@ -490,20 +490,20 @@ alteradas.
 
   | Painel | Conteúdo |
   |---|---|
-  | **1 · Visão geral** | projeto + dados contratuais **+ dados da OS** (nome, cliente, CNPJ, pasta, pasta completa, última atualização) |
+  | **1 · Visão geral** | projeto + dados contratuais **+ dados da OS** (nome, cliente, CNPJ e última atualização) |
   | **2 · Distribuição espacial** | **2.1** fazendas e talhões · **2.2** limites (mapa + resumo da base) · **2.3** zonas de manejo (mapa + resumo da base) |
-  | **3 · Atividades** | atividades da propriedade (ainda sem fonte no banco) |
-  | **4 · Base de Dados** | **4.1** pastas criadas · **4.2** anos com dados |
+  | **3 · Atividades** | **3.1** tipos de manejo · **3.2** culturas (ainda sem fonte no banco) |
+  | **4 · Base de Dados** | **4.1** pasta · **4.2** pastas criadas · **4.3** anos com dados |
 
   Cada painel/subpainel é preenchido por um builder desacoplado em
   `plugins/os_tracker/report/panels/` (`PanelBuilder` + um arquivo por painel),
   registrado em `ReportDataBuilder.PANELS` na ORDEM do template — para dividir um
   painel, basta registrar outro builder com subnúmero (ex.: `PANEL_ID = "2.4"`).
 - **TODAS as infos do relatório emitido em PDF/Word entram no HTML**: os painéis
-  **1** (o "Dados Gerais" do template Word: nome, cliente, nome comercial, CNPJ,
-  pasta e última atualização), **2.2**/**2.3** (seções "Base de Limites" e "Base
+  **1** (o "Dados Gerais" do template Word: nome, cliente, nome comercial, CNPJ e
+  última atualização), **2.2**/**2.3** (seções "Base de Limites" e "Base
   de Zonas de Manejo": feições, área em ha, arquivo, origem e data de registro) e
-  **4** (pastas criadas e anos) replicam os campos de
+  **4** (pasta, pastas criadas e anos) replicam os campos de
   `OsTrackerService.report_data` usados no `MODELO_RELATORIO_OS.docx`.
 - O **template** do relatório HTML vive em TRÊS arquivos separados, os três em
   `core/template/` (editáveis — são a fonte do layout): a **estrutura**
@@ -528,7 +528,7 @@ alteradas.
   sociais) e duas faixas: `.rodape-info` (fonte pequena — 11px — com o aviso de
   geração automática, o **tempo de processamento** quando o dado existe e a
   **data de geração**) e `.rodape-fim` (© e a **versão do relatório**,
-  `Desenvolvido por Matheus Martinelli · V1.0.0 · 23/10/2026`). A data de geração
+  `Desenvolvido por Matheus Martinelli · V1.1.0 · 23/10/2026`). A data de geração
   **NÃO** aparece no cabeçalho e a versão/data **NÃO** aparecem no menu lateral —
   quem mostra é só o rodapé. A versão do relatório vive no CÓDIGO
   (`ReportDataBuilder.REPORT_VERSION`/`REPORT_VERSION_DATE` → `versao_relatorio`)
@@ -549,7 +549,7 @@ alteradas.
   `contagem`, no lugar do antigo `feicoes`) e a **Área (ha)** — e uma linha com
   **Arquivo**, **Origem** e **Registrado em**. Base sem registro mostra "Base não
   registrada nesta OS.".
-- Chaves que o banco **ainda não fornece** (tipos de manejo, atividades, área
+- Chaves que o banco **ainda não fornece** (tipos de manejo, culturas, área
   contratada, CARs, data de início e cenário base) permanecem **vazias** — nada é
   adaptado/inventado; o template já sabe exibir o estado vazio.
 - O destino do HTML é o MESMO do relatório Word (mesma pasta por TIPO), mudando

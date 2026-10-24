@@ -449,7 +449,7 @@ main { padding: 10px 32px 40px; flex: 1; }
   color: var(--texto-suave);
 }
 
-/* ---------- Chips, pills e itens ---------- */
+/* ---------- Chips e pills ---------- */
 .resumo { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 14px; }
 .chip,
 .pill {
@@ -464,21 +464,11 @@ main { padding: 10px 32px 40px; flex: 1; }
   font-size: 13px;
   font-weight: 600;
 }
-.chip { color: var(--texto-suave); background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .015)); border-color: rgba(122, 142, 255, .12); }
+.chip { color: var(--texto-suave); background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .015)); border-color: rgba(122, 142, 255, .12); overflow-wrap: anywhere; }
 .chip strong { color: var(--texto); }
 .pill.fantasma { background: none; border: 1px dashed var(--borda); color: var(--texto-suave); font-weight: 400; }
 
 .pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.itens { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-.item {
-  padding: 10px 14px;
-  border: 1px solid rgba(122, 142, 255, .12);
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .015));
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-}
 
 /* ---------- Caminho (pasta completa) ---------- */
 .caminho {
