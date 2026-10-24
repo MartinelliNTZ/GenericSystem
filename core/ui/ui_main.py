@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
     """
 
     RESIZE_MARGIN = 8
+    WM_NCHITTEST = 0x0084
 
     def __init__(self, tools: List[Tool]):
         super().__init__()
@@ -104,7 +105,7 @@ class MainWindow(QMainWindow):
             return super().nativeEvent(event_type, message)
         try:
             msg = ctypes.wintypes.MSG.from_address(int(message))
-            if msg.message != 0x0084:
+            if msg.message != self.WM_NCHITTEST:
                 return super().nativeEvent(event_type, message)
             raw = msg.lParam
             screen_x = ctypes.c_short(raw & 0xFFFF).value
@@ -113,14 +114,30 @@ class MainWindow(QMainWindow):
         except Exception:
             return super().nativeEvent(event_type, message)
 
+    def _window_rect_px(self) -> Optional[tuple]:
+        """
+        Retângulo da janela em PIXELS FÍSICOS (Win32 GetWindowRect).
+
+        O lParam do WM_NCHITTEST chega em pixels físicos: comparar com a
+        geometria lógica do Qt (frameGeometry) desloca a área de resize em
+        telas com escala (ex: 125%), fazendo o interior da janela virar borda.
+        """
+        rect = ctypes.wintypes.RECT()
+        hwnd = ctypes.wintypes.HWND(int(self.winId()))
+        if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return None
+        return rect.left, rect.top, rect.right, rect.bottom
+
     def _hit_test(self, screen_x: int, screen_y: int) -> tuple:
         if self.isMaximized() or self.isFullScreen():
             return False, 0
-        r = self.frameGeometry()
-        x = screen_x - r.x()
-        y = screen_y - r.y()
-        w, h = r.width(), r.height()
-        m = self.RESIZE_MARGIN
+        rect = self._window_rect_px()
+        if rect is None:
+            return False, 0
+        x = screen_x - rect[0]
+        y = screen_y - rect[1]
+        w, h = rect[2] - rect[0], rect[3] - rect[1]
+        m = max(1, round(self.RESIZE_MARGIN * self.devicePixelRatioF()))
         on_left = x < m
         on_right = x > w - m
         on_top = y < m

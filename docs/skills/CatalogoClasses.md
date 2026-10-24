@@ -39,7 +39,7 @@
 ### core/ui/
 | Classe | Descrição |
 |---|---|
-| `MainWindow` | Janela principal do sistema (QMainWindow frameless). Contém AppBar, toolbar com ToolGroups, Workspace e ProgressBar global |
+| `MainWindow` | Janela principal do sistema (QMainWindow frameless). Contém AppBar, toolbar com ToolGroups, Workspace e ProgressBar global. O resize frameless é feito via `WM_NCHITTEST` no `nativeEvent`, sempre em pixels FÍSICOS (`GetWindowRect` + margem escalada pelo `devicePixelRatioF()`) para funcionar em telas com escala |
 | `Workspace` | Área de trabalho com QTabBar + QStackedWidget. Gerencia abas (abrir, fechar, arrastar) com lazy loading por ferramenta |
 | `hud_loader` | Utilitário para exibir HUD loading overlay durante operações longas |
 | `HudCircularRingsLoader` | Widget de loading visual com anéis circulares animados |
