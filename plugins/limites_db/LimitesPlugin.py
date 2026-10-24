@@ -495,9 +495,11 @@ class LimitesPlugin(BasePlugin):
         self._resumo.set_values({
             "arquivo": os.path.basename(self._meta.get("path", "")) or "—",
             "feicoes": self._format_int(self._meta.get("count", 0)),
-            "crs": self._meta.get("crs") or "—",
+            "crs": self._crs_summary(self._meta.get("crs") or ""),
             "geometria": self._meta.get("geometry") or "—",
-            "validacao": self._validation_summary(self._meta.get("problems", []) or []),
+            "validacao": self._validation_summary(
+                self._meta.get("problems", []) or [], self._meta.get("crs") or ""
+            ),
             "campos": self._fields_summary(self._meta.get("fields", [])),
             "os_caminho": (
                 LimitesService.guess_os_from_path(self._meta.get("path", "")) or "—"
@@ -936,11 +938,22 @@ class LimitesPlugin(BasePlugin):
     # ── Formatação ──────────────────────────────────────────────────
 
     @staticmethod
-    def _validation_summary(problems: list) -> str:
-        """Resumo da validação do vetor (EPSG, polígonos e geometrias)."""
-        if not problems:
-            return "OK (EPSG:4326, polígonos válidos)"
-        return f"{len(problems)} problema(s) — clique em VALIDAR"
+    def _crs_summary(crs: str) -> str:
+        """Resumo do CRS do vetor (avisa quando ele será reprojetado na gravação)."""
+        if not crs:
+            return "—"
+        if "4326" in crs:
+            return crs
+        return f"{crs} → será reprojetado para EPSG:4326"
+
+    @staticmethod
+    def _validation_summary(problems: list, crs: str = "") -> str:
+        """Resumo da validação do vetor (CRS, polígonos e geometrias)."""
+        if problems:
+            return f"{len(problems)} problema(s) — clique em VALIDAR"
+        if crs and "4326" not in crs:
+            return "OK — o vetor será reprojetado para EPSG:4326"
+        return "OK (EPSG:4326, polígonos válidos)"
 
     @staticmethod
     def _fields_summary(fields: list) -> str:

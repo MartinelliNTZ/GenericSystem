@@ -283,8 +283,15 @@ Responsável por CRS, conversão de unidades e reprojeção de camadas vetoriais
 
 ## Métodos Estáticos Principais
 
+> **Implementados (GeoDataFrame):** `reproject_gdf`, `is_geographic` e `crs_epsg`
+> — usados pelo fluxo de importação para normalizar tudo em `EPSG:4326`
+> (`DEFAULT_CRS`). Os métodos Qgs abaixo continuam **stubs**.
+
 | Método | Descrição | Retorno |
 |--------|-----------|---------|
+| `reproject_gdf(gdf, target_crs="EPSG:4326", tool_key)` | **Implementado** — reprojeta o GeoDataFrame e devolve uma **CÓPIA** (a origem não muda); `ValueError` sem CRS | `GeoDataFrame` |
+| `is_geographic(gdf)` | **Implementado** — CRS geográfico (lat/lon)? | `bool` |
+| `crs_epsg(gdf)` | **Implementado** — código EPSG do CRS (`None` se ausente) | `int` ou `None` |
 | `convert_distance_to_layer_units(layer, distance_meters)` | Converte distância em metros para unidade da camada | `float` |
 | `reproject_layer(layer, target_crs)` | Cria nova camada em memória reprojetada | `QgsVectorLayer` ou `None` |
 | `ensure_crs(layer, target_crs)` | Garante CRS desejado (reprojeta se necessário) | `QgsVectorLayer` ou `None` |
@@ -865,6 +872,7 @@ point_layer = VectorLayerGeometry.create_point_layer_from_dicts(
 | Empilhar lotes mantendo o CRS da base | VectorLayerSource | `concat_geodataframes()` |
 | Calcular perímetro de polígonos | VectorLayerMetrics | `calculate_polygon_perimeter()` |
 | Reprojetar camada vetorial | VectorLayerProjection | `reproject_layer()` |
+| Reprojetar GeoDataFrame para EPSG:4326 | VectorLayerProjection | `reproject_gdf()` |
 | Converter distância para unidade da camada | VectorLayerProjection | `convert_distance_to_layer_units()` |
 | Obter info de coordenada em múltiplos formatos | VectorLayerProjection | `get_coordinate_info()` |
 | Salvar camada vetorial em disco | VectorLayerSource | `save_vector_layer()` |
@@ -943,6 +951,7 @@ Quando precisar implementar um método stub:
 
 | Data | Versão | Descrição |
 |------|--------|-----------|
+| 2026-10-24 | 2.3.0 | `VectorLayerProjection` (GeoDataFrame): `reproject_gdf` (cópia, sem CRS levanta `ValueError`), `is_geographic` e `crs_epsg` + `DEFAULT_CRS = "EPSG:4326"`; o fluxo de importação normaliza tudo em 4326 em vez de bloquear |
 | 2026-10-23 | 2.2.0 | `VectorLayerGeometry.centroids` (GeoDataFrame) — centroide de cada feição poligonal preservando TODOS os atributos, com fallback `representative_point()` quando o centroide cai fora da geometria |
 | 2026-10-21 | 2.1.0 | `VectorLayerSource`: `read_geodataframe` (KMZ descompactado), `list_fields`, `write_geodataframe_atomic` e `concat_geodataframes`; `VectorLayerMetrics.calculate_area_hectares` (GeoDataFrame, UTM/área equivalente); extensões `.kmz`/`.json` |
 | 2026-06-23 | 2.0.0 | Adaptação para Aetheris ToolBox: stubs de todas as 11 classes, logging via BaseUtil._get_logger, ToolKey de core/enum, imports ajustados, pacotes __init__.py atualizados |

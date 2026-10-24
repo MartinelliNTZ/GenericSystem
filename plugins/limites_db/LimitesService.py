@@ -101,6 +101,7 @@ from utils.Preferences import Preferences
 from utils.ProjectStructureUtil import ProjectStructureUtil
 from utils.VeraDataStructureUtil import VeraDataStructureUtil
 from utils.vector.VectorLayerMetrics import VectorLayerMetrics
+from utils.vector.VectorLayerProjection import VectorLayerProjection
 from utils.vector.VectorLayerSource import VectorLayerSource
 
 from plugins.limites_db.CentroideService import (
@@ -272,9 +273,10 @@ class LimitesService(BaseUtil):
         """
         Bloqueia vetores fora do padrão antes de qualquer gravação.
 
-        Regras: shapefile completo (``.shp``/``.shx``/``.dbf``), CRS
-        ``EPSG:4326`` (padrão), apenas polígonos, geometrias válidas e vetor
-        com pelo menos uma feição.
+        Regras: shapefile completo (``.shp``/``.shx``/``.dbf``), CRS DEFINIDO
+        (qualquer CRS é aceito — o vetor é reprojetado para ``EPSG:4326`` por
+        ``_ensure_epsg`` antes de gravar), apenas polígonos, geometrias válidas
+        e vetor com pelo menos uma feição.
 
         Raises:
             LimitesValidationError: Vetor fora do padrão.
@@ -284,12 +286,21 @@ class LimitesService(BaseUtil):
             raise LimitesValidationError(cls._limit_problems(problems))
 
         cls._get_logger(_TOOL_KEY, "LimitesService").info(
-            "Vetor validado (EPSG + polígonos + geometrias)",
+            "Vetor validado (CRS definido + polígonos + geometrias)",
             code="LIM_VECTOR_OK",
             path=path,
             n_features=int(len(gdf)),
             crs=str(gdf.crs),
         )
+
+    @classmethod
+    def _ensure_epsg(cls, gdf: Any) -> Any:
+        """Reprojeta o GeoDataFrame para ``DEFAULT_EPSG`` quando necessário."""
+        if gdf is None or gdf.crs is None:
+            return gdf
+        if VectorLayerProjection.crs_epsg(gdf) == DEFAULT_EPSG:
+            return gdf
+        return VectorLayerProjection.reproject_gdf(gdf, DEFAULT_EPSG, _TOOL_KEY)
 
     @staticmethod
     def _sidecar_problems(path: str) -> List[str]:
@@ -313,22 +324,21 @@ class LimitesService(BaseUtil):
 
     @staticmethod
     def _geometry_problems(gdf: Any) -> List[str]:
-        """Confere CRS (padrão EPSG:4326), tipo de geometria e validade das feições."""
+        """Confere CRS definido, tipo de geometria e validade das feições.
+
+        O CRS NÃO precisa ser ``EPSG:4326``: qualquer CRS definido é
+        reprojetado para o padrão antes de gravar (``_ensure_epsg``). Sem CRS
+        (sem ``.prj``) não há como reprojetar e a operação é bloqueada.
+        """
         problems: List[str] = []
 
         if len(gdf) == 0:
             return ["O vetor não possui feições (0 registros)."]
 
-        crs = gdf.crs
-        if crs is None:
+        if gdf.crs is None:
             problems.append(
-                f"Vetor sem CRS definido (sem .prj) — o padrão é EPSG:{DEFAULT_EPSG}."
-            )
-        elif crs.to_epsg() != DEFAULT_EPSG:
-            name = getattr(crs, "name", "") or str(crs)
-            problems.append(
-                f"CRS atual: EPSG:{crs.to_epsg() or '?'} ({name}) — o padrão é "
-                f"EPSG:{DEFAULT_EPSG}. Reprojete o vetor antes de importar."
+                f"Vetor sem CRS definido (sem .prj) — o padrão é EPSG:{DEFAULT_EPSG} "
+                "e sem CRS não é possível reprojetar."
             )
 
         for index, geometry in enumerate(gdf.geometry):
@@ -505,6 +515,8 @@ class LimitesService(BaseUtil):
         cls._notify(progress_cb, 5, "Lendo vetor...")
 
         gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
+        source_crs = str(gdf.crs) if gdf.crs is not None else ""
+        gdf = cls._ensure_epsg(gdf)
         cls.validate_vector(config.vector_path, gdf)
 
         cls._notify(progress_cb, 25, "Validando atributos...")
@@ -516,6 +528,12 @@ class LimitesService(BaseUtil):
         )
         prepared = prepared[fields + [prepared.geometry.name]]
         warnings: List[str] = cls._area_warnings(prepared, config)
+        if source_crs and source_crs != str(prepared.crs):
+            warnings.insert(
+                0,
+                f"Vetor reprojetado de {source_crs} para EPSG:{DEFAULT_EPSG} "
+                "antes de gravar.",
+            )
 
         consolidated = cls._consolidated_path(config)
         if settings["unique"] and not config.update:
@@ -651,6 +669,8 @@ class LimitesService(BaseUtil):
 
         cls._notify(progress_cb, 5, "Lendo o completão da base...")
         gdf = VectorLayerSource.read_geodataframe(consolidated, tool_key=_TOOL_KEY)
+        source_crs = str(gdf.crs) if gdf.crs is not None else ""
+        gdf = cls._ensure_epsg(gdf)
         cls.validate_vector(consolidated, gdf)
 
         payload: Dict[str, Any] = {
@@ -669,6 +689,11 @@ class LimitesService(BaseUtil):
             "replaced": 0,
             "warnings": [],
         }
+
+        if source_crs and source_crs != str(gdf.crs):
+            payload["warnings"].append(
+                f"Completão reprojetado de {source_crs} para EPSG:{DEFAULT_EPSG}."
+            )
 
         prepared = cls._mode_batch(config, fields, payload)
         payload["n_features"] = int(len(prepared))
@@ -1001,6 +1026,7 @@ class LimitesService(BaseUtil):
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
 
         gdf = VectorLayerSource.read_geodataframe(config.vector_path, tool_key=_TOOL_KEY)
+        gdf = cls._ensure_epsg(gdf)
         cls.validate_vector(config.vector_path, gdf)
 
         prepared = cls._prepare(gdf, config)
@@ -1369,6 +1395,7 @@ class LimitesService(BaseUtil):
     def _read_existing(cls, target: str, fields: List[str]) -> Any:
         """Lê o destino garantindo as colunas canônicas do modo antes de mesclar."""
         existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
+        existing = cls._ensure_epsg(existing)
         defaults = {
             FIELD_OS: "",
             FIELD_AREA_CALC: 0.0,
