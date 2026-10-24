@@ -60,9 +60,12 @@ Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi``):
   ``Consolidado`` e um arquivo por OS na pasta ``Centroides`` — nunca no projeto.
 - O enriquecimento é BEST-EFFORT: falha de rede não bloqueia a importação, apenas
   gera aviso e deixa os campos vazios.
-- A recarga (``ATUALIZAR BASE``) relê o completão e REESCREVE todos os shapes das
-  pastas (base + projetos) e os centroides, refazendo o enriquecimento sem
-  reimportar o vetor de origem.
+- A recarga (``ATUALIZAR BASE``) roda nos DOIS modos (``reload_all`` →
+  ``reload_base``): parte dos completões e REESCREVE todos os shapes de todas as
+  OS (completão, arquivo de cada OS na base e cópias nos projetos) e os
+  centroides, refazendo o enriquecimento sem reimportar o vetor de origem — e as
+  feições de OS que existem na pasta da base mas não estão no completão são
+  recuperadas do arquivo por OS (``_mode_batch``).
 
 Validações do vetor (bloqueiam a operação — nada é gravado):
 - **Shapefile completo**: exige ``.shp``, ``.shx`` e ``.dbf`` no mesmo diretório;
@@ -82,7 +85,7 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -645,17 +648,16 @@ class LimitesService(BaseUtil):
         cls._notify(progress_cb, 5, "Lendo o completão da base...")
         gdf = VectorLayerSource.read_geodataframe(consolidated, tool_key=_TOOL_KEY)
         cls.validate_vector(consolidated, gdf)
-        prepared = cls._read_existing(consolidated, fields)
 
         payload: Dict[str, Any] = {
             "mode": config.mode,
             "dry_run": False,
             "reload": True,
             "update": True,
-            "n_features": int(len(prepared)),
-            "crs": str(prepared.crs),
-            "total_ha": round(float(prepared[FIELD_AREA_CALC].sum()), 4),
-            "os_keys": sorted({str(value) for value in prepared[FIELD_OS]}),
+            "n_features": 0,
+            "crs": str(gdf.crs),
+            "total_ha": 0.0,
+            "os_keys": [],
             "consolidated": consolidated,
             "os_files": [],
             "copies": [],
@@ -663,6 +665,11 @@ class LimitesService(BaseUtil):
             "replaced": 0,
             "warnings": [],
         }
+
+        prepared = cls._mode_batch(config, fields, payload)
+        payload["n_features"] = int(len(prepared))
+        payload["total_ha"] = round(float(prepared[FIELD_AREA_CALC].sum()), 4)
+        payload["os_keys"] = sorted({str(value) for value in prepared[FIELD_OS]})
 
         cls._notify(progress_cb, 20, "Extraindo centroides...")
         centroides = cls._enrich_centroides(prepared, progress_cb, payload)
@@ -676,7 +683,13 @@ class LimitesService(BaseUtil):
         cls._write_target(consolidated, prepared, fields, True)
 
         for os_key, group in prepared.groupby(FIELD_OS, sort=True):
-            key = str(os_key)
+            key = str(os_key).strip()
+            if not key:
+                payload["warnings"].append(
+                    f"{len(group)} feição(ões) sem OS ficaram fora dos arquivos por OS."
+                )
+                continue
+
             VeraDataStructureUtil.ensure_mode_folder(
                 base_root, key, settings["base_folder"], tool_key=_TOOL_KEY
             )
@@ -702,6 +715,121 @@ class LimitesService(BaseUtil):
             n_centroides=payload["centroides"]["n_centroides"],
         )
         return payload
+
+    @classmethod
+    def reload_all(
+        cls,
+        config: LimitesImportConfig,
+        progress_cb: Optional[Callable[[int, str], None]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Recarrega TODOS os shapes da base — os DOIS modos (limites e zonas).
+
+        Cada modo tem o seu próprio completão; a recarga roda nos modos que
+        EXISTEM na base (modo sem completão é ignorado e reportado em
+        ``skipped``) e o resultado é agregado em um único resumo.
+
+        Args:
+            config: Configuração com ``output_root`` da base (``mode`` é
+                sobrescrito por modo).
+            progress_cb: Callback ``(pct, mensagem)`` de progresso.
+
+        Returns:
+            Dicionário com o resumo agregado da recarga.
+
+        Raises:
+            LimitesValidationError: Nenhum completão encontrado na base.
+        """
+        logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        modes = [
+            mode
+            for mode in (MODE_LIMITES, MODE_ZONAS)
+            if os.path.exists(cls._consolidated_path(replace(config, mode=mode)))
+        ]
+
+        if not modes:
+            raise LimitesValidationError(
+                [
+                    f"Nenhum completão encontrado na base: {config.output_root}",
+                    "Importe um vetor antes de recarregar a base.",
+                ]
+            )
+
+        step = 100 // len(modes)
+        payload: Dict[str, Any] = {
+            "mode": "",
+            "mode_labels": [],
+            "dry_run": False,
+            "reload": True,
+            "update": True,
+            "n_features": 0,
+            "total_ha": 0.0,
+            "os_keys": [],
+            "os_files": [],
+            "copies": [],
+            "centroides_files": [],
+            "db_updated": 0,
+            "replaced": 0,
+            "centroides": {"n_centroides": 0, "n_altitude": 0, "n_localidade": 0},
+            "skipped": [mode for mode in MODE_SETTINGS if mode not in modes],
+            "warnings": [],
+        }
+
+        for index, mode in enumerate(modes):
+            start = index * step
+            end = 100 if index == len(modes) - 1 else (index + 1) * step
+            result = cls.reload_base(
+                replace(config, mode=mode),
+                progress_cb=cls._scale_progress(progress_cb, start, end),
+            )
+            cls._merge_payload(payload, result)
+
+        for mode in payload["skipped"]:
+            payload["warnings"].append(
+                f"{MODE_SETTINGS[mode]['label']}: sem completão na base — ignorado."
+            )
+
+        cls._notify(progress_cb, 100, "Base recarregada.")
+        logger.info(
+            "Base recarregada por completo",
+            code="LIM_RELOAD_ALL_DONE",
+            modes=len(modes),
+            n_features=payload["n_features"],
+            n_os=len(payload["os_keys"]),
+            n_files=len(payload["os_files"]) + len(payload["copies"]),
+            n_centroides=payload["centroides"]["n_centroides"],
+        )
+        return payload
+
+    @staticmethod
+    def _scale_progress(
+        progress_cb: Optional[Callable[[int, str], None]],
+        start: int,
+        end: int,
+    ) -> Optional[Callable[[int, str], None]]:
+        """Reescala o progresso ``(pct, mensagem)`` de uma etapa para uma faixa."""
+        if progress_cb is None:
+            return None
+
+        def report(pct: int, message: str) -> None:
+            progress_cb(int(start + (end - start) * (pct / 100.0)), message)
+
+        return report
+
+    @staticmethod
+    def _merge_payload(total: Dict[str, Any], partial: Dict[str, Any]) -> None:
+        """Agrega o resumo de UM modo no resumo da recarga completa."""
+        total["mode_labels"].append(MODE_SETTINGS[partial["mode"]]["label"])
+        total["n_features"] += partial["n_features"]
+        total["total_ha"] = round(total["total_ha"] + partial["total_ha"], 4)
+        total["os_files"].extend(partial["os_files"])
+        total["copies"].extend(partial["copies"])
+        total["centroides_files"].extend(partial["centroides_files"])
+        total["replaced"] += partial["replaced"]
+        total["warnings"].extend(partial["warnings"])
+        total["os_keys"] = sorted(set(total["os_keys"]) | set(partial["os_keys"]))
+        for key, value in partial["centroides"].items():
+            total["centroides"][key] += value
 
     @staticmethod
     def _progress_wrapper(
@@ -1154,6 +1282,70 @@ class LimitesService(BaseUtil):
         return removed
 
     @classmethod
+    def _mode_batch(
+        cls,
+        config: LimitesImportConfig,
+        fields: List[str],
+        payload: Dict[str, Any],
+    ) -> Any:
+        """Lote do modo: o completão + os arquivos por OS que faltam nele.
+
+        A recarga parte do completão (fonte da verdade) e RECUPERA as feições
+        dos arquivos por OS que existem na base mas não estão no completão —
+        assim NENHUMA OS da pasta fica fora da atualização.
+        """
+        logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        batch = cls._read_existing(cls._consolidated_path(config), fields)
+        present = {str(value).strip() for value in batch[FIELD_OS]}
+
+        groups: List[Any] = []
+        for folder in VeraDataStructureUtil.discover(Path(config.output_root)):
+            key = str(folder.name).strip()
+            if not key or key in present:
+                continue
+
+            path = cls._os_file_path(config, key)
+            if not os.path.exists(path):
+                continue
+
+            try:
+                groups.append(cls._read_existing(path, fields))
+            except Exception as e:
+                logger.error(
+                    "Falha ao ler o arquivo da OS na base",
+                    code="LIM_RELOAD_READ_ERR",
+                    mode=config.mode,
+                    path=path,
+                    error=str(e),
+                )
+                payload["warnings"].append(
+                    f"OS {key}: falha ao ler o arquivo da base ({e})."
+                )
+                continue
+
+            payload["warnings"].append(
+                f"OS {key}: feições recuperadas do arquivo da base "
+                "(não estavam no completão)."
+            )
+
+        if not groups:
+            return batch
+
+        merged = batch
+        for group in groups:
+            merged = VectorLayerSource.concat_geodataframes(
+                merged, group, tool_key=_TOOL_KEY
+            )
+
+        logger.info(
+            "Feições recuperadas dos arquivos por OS",
+            code="LIM_RELOAD_RECOVER",
+            mode=config.mode,
+            n_os=len(groups),
+        )
+        return merged
+
+    @classmethod
     def _read_existing(cls, target: str, fields: List[str]) -> Any:
         """Lê o destino garantindo as colunas canônicas do modo antes de mesclar."""
         existing = VectorLayerSource.read_geodataframe(target, tool_key=_TOOL_KEY).copy()
@@ -1516,7 +1708,7 @@ class LimitesExistingWorker(QRunnable):
 
 
 class LimitesReloadWorker(QRunnable):
-    """Relê o completão da base e recarrega TODOS os shapes (sem tocar em widgets)."""
+    """Relê a base e recarrega TODOS os shapes (limites + zonas, todas as OS)."""
 
     def __init__(self, generation: int, config: LimitesImportConfig) -> None:
         super().__init__()
@@ -1531,7 +1723,7 @@ class LimitesReloadWorker(QRunnable):
             def _progress(pct: int, message: str) -> None:
                 self.signals.progress.emit(self.generation, int(pct), message)
 
-            payload = LimitesService.reload_base(self.config, progress_cb=_progress)
+            payload = LimitesService.reload_all(self.config, progress_cb=_progress)
             self.signals.finished.emit(self.generation, payload)
         except LimitesValidationError as e:
             self.signals.invalid.emit(self.generation, e.problems)

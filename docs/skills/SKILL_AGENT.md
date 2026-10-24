@@ -28,6 +28,25 @@ Agir como engenheiro de software especializado no ecossistema **Aetheris ToolBox
 | Relatório de OS (HTML) | `docs/skills/SKILL_OS_REPORT.md` | Gerar/alterar o relatório HTML do Acompanhamento de OS (painéis, mapas, rodapé e versão do relatório) |
 | Catálogo de Classes | `docs/skills/CatalogoClasses.md` | Referência de classes do projeto |
 
+## 🚨 REGRA ABSOLUTA DE TESTE — NUNCA nas pastas reais
+
+> **NUNCA** execute testes, scripts, validações ou qualquer código que ESCREVA nas
+> pastas reais do usuário: a pasta-mãe (`VERRA_Farmer`), a base (`BASE_DADOS` /
+> `VERRA_DATA`), os projetos das OS, `.BancoDados`, nem os arquivos de limites,
+> zonas e centroides.
+>
+> Se precisar testar gravação/leitura de verdade, **CRIE UMA CÓPIA em uma pasta
+> temporária** (ex.: `%TEMP%` ou `_tmp_teste_*` na raiz do repositório) e aponte
+> TODAS as saídas para lá — inclusive `output_root` e a pasta-mãe.
+>
+> A pasta-mãe vem das **Preferências** do app: um teste que use `LimitesService` /
+> `_publish_to_projects` escreve nas pastas REAIS dos projetos mesmo quando o
+> `output_root` aponta para o temp. Portanto, em teste: **nunca** deixe a
+> preferência `mother_folder` apontar para a pasta real.
+>
+> Violar esta regra já causou perda de dados reais (arquivos de projeto
+> sobrescritos por dados de teste). Não há exceção.
+
 ## ⛔ REGRA DE OURO: PARE E PERGUNTE
 
 > A skill `SKILL_AGENT` é o ponto de controle. Somente ela autoriza o uso das demais skills.

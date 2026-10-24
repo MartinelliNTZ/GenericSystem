@@ -44,9 +44,10 @@ quatro campos voltam para o talhão (completão, arquivo da OS e cópia no proje
 Os centroides ficam SOMENTE na base PRIVADA (``VERRA_DATA``): completão em
 ``Consolidado`` e um arquivo por OS na pasta ``Centroides``.
 
-O botão **ATUALIZAR BASE** relê o completão da base e recarrega TODOS os shapes
-das pastas (base + projetos) e os centroides, refazendo o enriquecimento — sem
-precisar reimportar o vetor de origem.
+O botão **ATUALIZAR BASE** relê os completões da base (LIMITES e ZONAS) e
+recarrega TODOS os shapes de TODAS as OS em todas as pastas (completão, arquivo
+de cada OS na base e cópias nos projetos) e os centroides, refazendo o
+enriquecimento — sem precisar reimportar o vetor de origem.
 
 Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
 cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o vetor, o
@@ -165,9 +166,10 @@ class LimitesPlugin(BasePlugin):
                     "callback": self._on_recarregar,
                     "type": "secondary",
                     "description": (
-                        "Relê o completão da base e recarrega TODOS os shapes das pastas "
-                        "(base + projetos), refazendo os centroides e o enriquecimento "
-                        "público (altimetria e município/UF/país)"
+                        "Relê os completões da base (LIMITES e ZONAS) e recarrega TODOS os "
+                        "shapes de TODAS as OS em todas as pastas (base + projetos), "
+                        "refazendo os centroides e o enriquecimento público "
+                        "(altimetria e município/UF/país)"
                     ),
                 },
             },
@@ -609,7 +611,7 @@ class LimitesPlugin(BasePlugin):
         self._pool.start(worker)
 
     def _on_recarregar(self) -> None:
-        """Relê o completão da base e recarrega todos os shapes das pastas."""
+        """Relê a base e recarrega TODOS os shapes (limites + zonas, todas as OS)."""
         if self._running:
             return
 
@@ -619,11 +621,10 @@ class LimitesPlugin(BasePlugin):
             mode=self._mode,
             update=True,
         )
-        mode_label = MODE_SETTINGS[self._mode]["label"]
         self._persist_prefs()
-        self._begin_execution(f"Recarregando {mode_label}...")
+        self._begin_execution("Recarregando a base...")
         SignalManager.instance().console_message.emit(
-            f"Recarregando a base ({mode_label.lower()}) a partir do completão..."
+            "Recarregando TODOS os shapes da base (limites + zonas, todas as OS)..."
         )
 
         self._generation += 1
@@ -778,9 +779,14 @@ class LimitesPlugin(BasePlugin):
         warnings = payload.get("warnings", []) or []
         detail = "\n".join(warnings)
         os_keys = payload.get("os_keys", []) or []
-        mode_label = MODE_SETTINGS.get(
-            payload.get("mode", MODE_LIMITES), MODE_SETTINGS[MODE_LIMITES]
-        )["label"]
+        labels = payload.get("mode_labels") or []
+        mode_label = (
+            " + ".join(labels)
+            if labels
+            else MODE_SETTINGS.get(
+                payload.get("mode", MODE_LIMITES), MODE_SETTINGS[MODE_LIMITES]
+            )["label"]
+        )
 
         stats = (
             f"Modo: {mode_label}\n"
