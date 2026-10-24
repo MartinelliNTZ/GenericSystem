@@ -53,7 +53,7 @@ class AltimetriaApi(BaseUtil):
         cls,
         points: Iterable[Tuple[float, float]],
         tool_key: str = ToolKey.UNTRACEABLE.value,
-        progress_cb: Optional[Callable[[int, int], None]] = None,
+        progress_cb: Optional[Callable[[int, int, float], None]] = None,
     ) -> List[Optional[float]]:
         """
         Elevacao (metros) de cada ponto, na MESMA ordem recebida.
@@ -61,7 +61,9 @@ class AltimetriaApi(BaseUtil):
         Args:
             points: Iteravel de ``(latitude, longitude)`` em EPSG:4326.
             tool_key: Chave da ferramenta para logging.
-            progress_cb: Callback ``(processados, total)`` opcional.
+            progress_cb: Callback ``(processados, total, eta_segundos)`` — o
+                ``eta`` e o tempo RESTANTE estimado pela taxa medida (0 no
+                primeiro lote, quando ainda nao ha estatistica).
 
         Returns:
             Lista de elevacoes — ``None`` quando a API nao cobre o ponto
@@ -79,6 +81,7 @@ class AltimetriaApi(BaseUtil):
             dataset=cls.ENDPOINT.rsplit("/", 1)[-1],
         )
 
+        started = time.monotonic()
         values: List[Optional[float]] = []
         batches = [
             coords[index : index + cls.MAX_LOCATIONS]
@@ -87,8 +90,7 @@ class AltimetriaApi(BaseUtil):
 
         for number, batch in enumerate(batches, start=1):
             values.extend(cls._batch(batch, logger, number, len(batches)))
-            if progress_cb:
-                progress_cb(len(values), len(coords))
+            cls._report(progress_cb, len(values), len(coords), started)
 
         logger.info(
             "Altimetria concluida",
@@ -96,10 +98,26 @@ class AltimetriaApi(BaseUtil):
             n_points=len(coords),
             n_elevations=sum(1 for value in values if value is not None),
             n_batches=len(batches),
+            elapsed_s=round(time.monotonic() - started, 2),
         )
         return values
 
     # ── Interno ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _report(
+        progress_cb: Optional[Callable[[int, int, float], None]],
+        done: int,
+        total: int,
+        started: float,
+    ) -> None:
+        """Emite ``(feitos, total, eta)`` projetando o restante pela taxa medida."""
+        if progress_cb is None:
+            return
+
+        elapsed = time.monotonic() - started
+        eta = (elapsed / done) * (total - done) if done else 0.0
+        progress_cb(done, total, eta)
 
     @classmethod
     def _batch(

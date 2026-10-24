@@ -88,6 +88,7 @@ from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
+from utils.ProcessStatisticsUtil import ProcessStatisticsUtil
 from utils.VeraDataStructureUtil import VeraDataStructureUtil
 
 
@@ -131,6 +132,7 @@ class LimitesPlugin(BasePlugin):
         self._import_worker = None
         self._existing_worker = None
         self._reload_worker = None
+        self._stats_started = False
         self._auto_os = ""
         self._os_locked = False
         self._setting_auto_os = False
@@ -702,10 +704,13 @@ class LimitesPlugin(BasePlugin):
     def _begin_execution(self, message: str) -> None:
         """Bloqueia os botões, liga o HUD e sinaliza o início da execução."""
         self._running = True
+        self._stats_started = False
         self.page.set_badge(self.page.RUNNING)
         for key in ("validar", "importar", "atualizar", "recarregar"):
             self.page.buttons.set_enabled(key, False)
 
+        # O ETA entra no HUD no primeiro progresso, quando a estimativa existe
+        # (estatisticas + plano das APIs) — ver _on_import_progress.
         SignalManager.instance().hud_show.emit({"message": message})
         SignalManager.instance().execution_started.emit(self.tool_key)
 
@@ -745,16 +750,24 @@ class LimitesPlugin(BasePlugin):
         self._import_worker = worker
         self._pool.start(worker)
 
-    def _on_import_progress(self, generation: int, pct: int, message: str) -> None:
-        """Atualiza HUD e barra de progresso central."""
+    def _on_import_progress(
+        self, generation: int, pct: int, message: str, eta: float, total: int
+    ) -> None:
+        """Atualiza HUD (com ETA), barra de progresso e estatísticas."""
         if generation != self._generation:
             return
 
+        if total and not self._stats_started:
+            self.statistics.start(
+                n=0, ntype=ProcessStatisticsUtil.FEATURES, ntotal=total
+            )
+            self._stats_started = True
+
         SignalManager.instance().progress_update.emit(float(pct))
-        SignalManager.instance().hud_update.emit({
-            "message": message,
-            "progress": float(pct),
-        })
+        data = {"message": message, "progress": float(pct)}
+        if eta > 0:
+            data["eta"] = float(eta)
+        SignalManager.instance().hud_update.emit(data)
 
     def _centroides_summary(self, centroides: dict | None) -> str:
         """Linhas do resumo com as contagens dos centroides enriquecidos."""
@@ -837,6 +850,11 @@ class LimitesPlugin(BasePlugin):
                 parent=self,
             )
             self.output_message(str(VeraDataStructureUtil.root()), label="Base de Limites")
+            self.stats_message(
+                n_arquivos=len(payload.get("os_files", []) or []),
+                n_processed=payload.get("n_features", 0),
+                ntype="feições",
+            )
             console = f"{operation} concluída"
 
         if not payload.get("dry_run"):
@@ -897,6 +915,10 @@ class LimitesPlugin(BasePlugin):
     def _finish_execution(self, error: bool = False, info_only: bool = False) -> None:
         """Restaura botões/badge e encerra HUD e progresso."""
         self._running = False
+        if self._stats_started:
+            self.statistics.end()
+            self._stats_started = False
+
         for key in ("validar", "importar", "atualizar", "recarregar"):
             self.page.buttons.set_enabled(key, True)
 

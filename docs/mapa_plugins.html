@@ -405,7 +405,7 @@ s:[
 ["7.3","Vetor I/O","utils/vector/VectorLayerSource.py, utils/vector/VectorLayerMetrics.py, utils/vector/VectorLayerGeometry.py","a leitura/escrita vetorial é delegada (Contrato 25) — o plugin nunca importa geopandas direto; VectorLayerGeometry.centroids extrai o centroide de cada feição"],
 ["7.4","Banco","core/firebase/CloudProjectDatabase.py","registra limites/zonas_manejo no registro da OS (arquivo gravado RELATIVO à pasta-mãe)"],
 ["7.5","Workers","plugins/limites_db/LimitesService.py","LimitesInspectWorker, LimitesImportWorker, LimitesExistingWorker e LimitesReloadWorker (QRunnable) mantêm a UI livre"],
-["7.6","Enriquecimento","utils/AltimetriaApi.py, utils/LocalidadeApi.py, plugins/limites_db/CentroideService.py","APIs PÚBLICAS sem chave: Open Topo Data (altimetria — 100 pontos/req, 1 req/s) e IBGE (município/UF/país) — best-effort, nunca bloqueiam a importação"]
+["7.6","Enriquecimento","utils/AltimetriaApi.py, utils/LocalidadeApi.py, plugins/limites_db/CentroideService.py","APIs PÚBLICAS sem chave: Open Topo Data (altimetria — 100 pontos/req, 1 req/s) e IBGE (município/UF/país) — best-effort, nunca bloqueiam a importação; a localidade é OTIMIZADA por célula de 0,5° (1 requisição por célula + point-in-polygon local, ~43x mais rápido) e o progresso leva ETA estatístico ao HUD"]
 ],
 sn:"O modelo do vetor é do SISTEMA, não da ferramenta: a validação (7.2) e o I/O (7.3) são compartilhados. O Acompanhamento de OS só LÊ o que a 7.4 gravou."},
 

@@ -84,6 +84,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 import unicodedata
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -479,7 +480,7 @@ class LimitesService(BaseUtil):
         cls,
         config: LimitesImportConfig,
         dry_run: bool = False,
-        progress_cb: Optional[Callable[[int, str], None]] = None,
+        progress_cb: Optional[Callable[[int, str, float, int], None]] = None,
     ) -> Dict[str, Any]:
         """
         Valida e (quando ``dry_run=False``) grava o vetor na base de limites.
@@ -499,6 +500,7 @@ class LimitesService(BaseUtil):
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
         settings = cls.settings(config.mode)
         fields = settings["fields"]
+        started_at = time.monotonic()
 
         cls._notify(progress_cb, 5, "Lendo vetor...")
 
@@ -548,7 +550,7 @@ class LimitesService(BaseUtil):
             return payload
 
         cls._notify(progress_cb, 72, "Extraindo centroides...")
-        centroides = cls._enrich_centroides(prepared, progress_cb, payload)
+        centroides = cls._enrich_centroides(prepared, progress_cb, payload, started_at)
         prepared = CentroideService.merge(prepared, centroides)
 
         cls._notify(
@@ -584,6 +586,7 @@ class LimitesService(BaseUtil):
             progress_cb,
             100,
             "Atualização concluída." if config.update else "Importação concluída.",
+            time.monotonic() - started_at,
         )
 
         logger.info(
@@ -613,7 +616,7 @@ class LimitesService(BaseUtil):
     def reload_base(
         cls,
         config: LimitesImportConfig,
-        progress_cb: Optional[Callable[[int, str], None]] = None,
+        progress_cb: Optional[Callable[[int, str, float, int], None]] = None,
     ) -> Dict[str, Any]:
         """
         Relê o completão da base e RECARREGA todos os shapes das pastas.
@@ -636,6 +639,7 @@ class LimitesService(BaseUtil):
         settings = cls.settings(config.mode)
         fields = settings["fields"]
         consolidated = cls._consolidated_path(config)
+        started_at = time.monotonic()
 
         if not os.path.exists(consolidated):
             raise LimitesValidationError(
@@ -672,7 +676,7 @@ class LimitesService(BaseUtil):
         payload["os_keys"] = sorted({str(value) for value in prepared[FIELD_OS]})
 
         cls._notify(progress_cb, 20, "Extraindo centroides...")
-        centroides = cls._enrich_centroides(prepared, progress_cb, payload)
+        centroides = cls._enrich_centroides(prepared, progress_cb, payload, started_at)
         prepared = CentroideService.merge(prepared, centroides)
 
         base_root = VeraDataStructureUtil.ensure_root_folders(
@@ -703,7 +707,7 @@ class LimitesService(BaseUtil):
         cls._notify(progress_cb, 96, "Gravando centroides...")
         cls._write_centroides(centroides, config, payload)
 
-        cls._notify(progress_cb, 100, "Recarga concluída.")
+        cls._notify(progress_cb, 100, "Recarga concluída.", time.monotonic() - started_at)
 
         logger.info(
             "Base recarregada",
@@ -720,7 +724,7 @@ class LimitesService(BaseUtil):
     def reload_all(
         cls,
         config: LimitesImportConfig,
-        progress_cb: Optional[Callable[[int, str], None]] = None,
+        progress_cb: Optional[Callable[[int, str, float, int], None]] = None,
     ) -> Dict[str, Any]:
         """
         Recarrega TODOS os shapes da base — os DOIS modos (limites e zonas).
@@ -741,6 +745,7 @@ class LimitesService(BaseUtil):
             LimitesValidationError: Nenhum completão encontrado na base.
         """
         logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        started_at = time.monotonic()
         modes = [
             mode
             for mode in (MODE_LIMITES, MODE_ZONAS)
@@ -789,7 +794,7 @@ class LimitesService(BaseUtil):
                 f"{MODE_SETTINGS[mode]['label']}: sem completão na base — ignorado."
             )
 
-        cls._notify(progress_cb, 100, "Base recarregada.")
+        cls._notify(progress_cb, 100, "Base recarregada.", time.monotonic() - started_at)
         logger.info(
             "Base recarregada por completo",
             code="LIM_RELOAD_ALL_DONE",
@@ -803,16 +808,16 @@ class LimitesService(BaseUtil):
 
     @staticmethod
     def _scale_progress(
-        progress_cb: Optional[Callable[[int, str], None]],
+        progress_cb: Optional[Callable[[int, str, float, int], None]],
         start: int,
         end: int,
-    ) -> Optional[Callable[[int, str], None]]:
-        """Reescala o progresso ``(pct, mensagem)`` de uma etapa para uma faixa."""
+    ) -> Optional[Callable[[int, str, float, int], None]]:
+        """Reescala o progresso ``(pct, mensagem, eta, total)`` de uma etapa."""
         if progress_cb is None:
             return None
 
-        def report(pct: int, message: str) -> None:
-            progress_cb(int(start + (end - start) * (pct / 100.0)), message)
+        def report(pct: int, message: str, eta: float, total: int) -> None:
+            progress_cb(int(start + (end - start) * (pct / 100.0)), message, eta, total)
 
         return report
 
@@ -833,18 +838,30 @@ class LimitesService(BaseUtil):
 
     @staticmethod
     def _progress_wrapper(
-        progress_cb: Optional[Callable[[int, str], None]],
+        progress_cb: Optional[Callable[[int, str, float, int], None]],
         start: int,
         end: int,
-    ) -> Optional[Callable[[int, int], None]]:
-        """Converte o contador ``(feito, total)`` das APIs em ``(pct, mensagem)``."""
+        started_at: float,
+    ) -> Optional[Callable[[int, int, float], None]]:
+        """Converte ``(feitos, total, eta)`` das APIs em ``(pct, mensagem, eta, total)``.
+
+        O ``eta`` recebido das APIs e o tempo RESTANTE do enriquecimento; somado
+        ao tempo ja decorrido da operacao vira o TEMPO TOTAL estimado — que e o
+        valor esperado pelo HUD (``hud_show``/``hud_update`` → ``"eta"``).
+        """
         if progress_cb is None:
             return None
 
-        def report(done: int, total: int) -> None:
+        def report(done: int, total: int, eta: float) -> None:
             ratio = (done / total) if total else 1.0
             pct = int(start + (end - start) * ratio)
-            progress_cb(pct, f"Enriquecendo centroides ({done}/{total})...")
+            elapsed = time.monotonic() - started_at
+            progress_cb(
+                pct,
+                f"Enriquecendo centroides ({done}/{total})...",
+                elapsed + max(eta, 0.0),
+                total,
+            )
 
         return report
 
@@ -902,13 +919,16 @@ class LimitesService(BaseUtil):
     def _enrich_centroides(
         cls,
         prepared: Any,
-        progress_cb: Optional[Callable[[int, str], None]],
+        progress_cb: Optional[Callable[[int, str, float, int], None]],
         payload: Dict[str, Any],
+        started_at: float,
     ) -> Any:
         """Extrai os centroides, consulta as APIs públicas e resume o resultado."""
         centroides = CentroideService.build(prepared, _TOOL_KEY)
         centroides = CentroideService.enrich(
-            centroides, _TOOL_KEY, cls._progress_wrapper(progress_cb, 72, 84)
+            centroides,
+            _TOOL_KEY,
+            cls._progress_wrapper(progress_cb, 72, 84, started_at),
         )
 
         summary = CentroideService.summary(centroides)
@@ -1590,13 +1610,20 @@ class LimitesService(BaseUtil):
 
     @staticmethod
     def _notify(
-        progress_cb: Optional[Callable[[int, str], None]],
+        progress_cb: Optional[Callable[[int, str, float, int], None]],
         pct: int,
         message: str,
+        eta: float = 0.0,
+        total: int = 0,
     ) -> None:
-        """Repassa o progresso quando existe callback."""
+        """Repassa o progresso quando existe callback.
+
+        ``eta`` e o TEMPO TOTAL estimado (segundos) e ``total`` a quantidade de
+        itens da operacao (0 = desconhecido) — usados pelo HUD e pelas
+        estatisticas.
+        """
         if progress_cb is not None:
-            progress_cb(pct, message)
+            progress_cb(pct, message, float(eta), int(total))
 
     @staticmethod
     def _limit_problems(problems: List[str], limit: int = 12) -> List[str]:
@@ -1609,7 +1636,7 @@ class LimitesService(BaseUtil):
 class _LimitesSignals(QObject):
     """Sinais compartilhados pelos workers da Base de Limites."""
 
-    progress = Signal(int, int, str)   # (generation, pct, mensagem)
+    progress = Signal(int, int, str, float, int)   # (generation, pct, mensagem, eta, total)
     finished = Signal(int, object)     # (generation, payload)
     invalid = Signal(int, list)        # (generation, problemas)
     failed = Signal(int, str)          # (generation, erro)
@@ -1659,8 +1686,10 @@ class LimitesImportWorker(QRunnable):
     def run(self) -> None:
         """Executa a importação e emite progresso/resultado."""
         try:
-            def _progress(pct: int, message: str) -> None:
-                self.signals.progress.emit(self.generation, int(pct), message)
+            def _progress(pct: int, message: str, eta: float, total: int) -> None:
+                self.signals.progress.emit(
+                    self.generation, int(pct), message, float(eta), int(total)
+                )
 
             payload = LimitesService.import_file(
                 self.config,
@@ -1720,8 +1749,10 @@ class LimitesReloadWorker(QRunnable):
     def run(self) -> None:
         """Executa a recarga da base e emite progresso/resultado."""
         try:
-            def _progress(pct: int, message: str) -> None:
-                self.signals.progress.emit(self.generation, int(pct), message)
+            def _progress(pct: int, message: str, eta: float, total: int) -> None:
+                self.signals.progress.emit(
+                    self.generation, int(pct), message, float(eta), int(total)
+                )
 
             payload = LimitesService.reload_all(self.config, progress_cb=_progress)
             self.signals.finished.emit(self.generation, payload)

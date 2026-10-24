@@ -55,14 +55,19 @@ PUBLIC_FIELDS: Tuple[str, ...] = (
 
 
 def _counter(
-    progress_cb: Optional[Callable[[int, int], None]],
+    progress_cb: Optional[Callable[[int, int, float], None]],
     offset: int,
     total: int,
-) -> Optional[Callable[[int, int], None]]:
-    """Adapta o contador de um cliente de API para a contagem COMBINADA."""
+    plan_next: float = 0.0,
+) -> Optional[Callable[[int, int, float], None]]:
+    """Adapta o contador de um cliente de API para a contagem COMBINADA.
+
+    ``plan_next`` e o custo PLANEJADO da fase seguinte (segundos), somado ao
+    ``eta`` da fase atual para a estimativa ficar correta desde o inicio.
+    """
     if progress_cb is None:
         return None
-    return lambda done, size: progress_cb(offset + done, total)
+    return lambda done, size, eta: progress_cb(offset + done, total, eta + plan_next)
 
 
 class CentroideService(BaseUtil):
@@ -87,7 +92,7 @@ class CentroideService(BaseUtil):
         cls,
         centroides: Any,
         tool_key: str = ToolKey.UNTRACEABLE.value,
-        progress_cb: Optional[Callable[[int, int], None]] = None,
+        progress_cb: Optional[Callable[[int, int, float], None]] = None,
     ) -> Any:
         """
         Consulta as duas APIs publicas e devolve os centroides enriquecidos.
@@ -95,8 +100,9 @@ class CentroideService(BaseUtil):
         Args:
             centroides: GeoDataFrame de POINTs (saida de ``build``).
             tool_key: Chave da ferramenta para logging.
-            progress_cb: Callback ``(processados, total)`` do TOTAL combinado
-                das duas APIs (altimetria + localidade).
+            progress_cb: Callback ``(processados, total, eta_segundos)`` do
+                TOTAL combinado das duas APIs (altimetria + localidade); o
+                ``eta`` e o tempo RESTANTE (fase atual + plano da proxima).
 
         Returns:
             GeoDataFrame novo com ``MUNICIPIO``, ``ESTADO``, ``PAIS`` e
@@ -104,9 +110,10 @@ class CentroideService(BaseUtil):
         """
         coords, positions = cls._valid_points(centroides)
         total = len(coords) * 2
+        planned = LocalidadeApi.plan_seconds(coords)
 
         altitudes = AltimetriaApi.elevations(
-            coords, tool_key, _counter(progress_cb, 0, total)
+            coords, tool_key, _counter(progress_cb, 0, total, planned)
         )
         locations = LocalidadeApi.lookups(
             coords, tool_key, _counter(progress_cb, len(coords), total)
