@@ -287,7 +287,7 @@ footer.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:
   <div class="outs">
     <div class="out rv" style="--c:#e879f9"><h3>Estrutura e projeto</h3><p>Projeto ativo e estrutura de pastas padronizada, com changelog.</p><code>&lt;projeto&gt;.mtl</code><code>OS_&lt;chave&gt;/… · OS_&lt;chave&gt;_CHANGELOG.DOCX</code></div>
     <div class="out rv" style="--c:#38bdf8"><h3>Base de OS</h3><p>Registros de OS no Firebase, espelhados em backup JSON.</p><code>Firestore · coleção banco_dados</code><code>&lt;pasta-mãe&gt;/.BancoDados/*.json</code></div>
-    <div class="out rv" style="--c:#f472b6"><h3>Limites e zonas</h3><p>Shapes calculados em hectares, na base e copiados para o projeto.</p><code>&lt;BASE&gt;/limites/&lt;OS&gt;/&lt;OS&gt;_limites.shp</code><code>…/13_ZONAS_DE_MANEJO/&lt;OS&gt;_zonas_manejo.shp</code></div>
+    <div class="out rv" style="--c:#f472b6"><h3>Limites e zonas</h3><p>Shapes calculados em hectares — com altimetria e município/UF/país — na base e copiados para o projeto; os centroides ficam só na base privada.</p><code>VERRA_DATA/Consolidado/limites.shp</code><code>VERRA_DATA/&lt;OS&gt;/Centroides/&lt;OS&gt;_centroides.shp</code></div>
     <div class="out rv" style="--c:#a78bfa"><h3>Documentos e mídia</h3><p>Markdown, imagens convertidas, ícones ICO e arquivos renomeados.</p><code>&lt;documento&gt;.md</code><code>&lt;imagem&gt;.ico · &lt;imagem&gt;.webp</code></div>
     <div class="out rv" style="--c:#fbbf24"><h3>Telas e diagnóstico</h3><p>Mapa navegável, console de execução e visualizador de logs.</p><code>mapa (satélite + LAS/SHP/KML)</code><code>log/&lt;data&gt;_AetherisToolBox.json</code></div>
     <div class="out rv" style="--c:#94a3b8"><h3>Sistema</h3><p>Janela montada, tema aplicado e preferências persistidas.</p><code>config/&lt;APP&gt;_preferences.json</code><code>log/ · resources/styles/</code></div>
@@ -396,15 +396,16 @@ sn:"Regra de negócio (Contrato 28): a leitura é EXCLUSIVAMENTE do Firestore. C
 
 "07":{n:"Base de Limites",k:"Limites e Zonas de Manejo",c:"#10b981",
 i:["Um vetor: SHP, GPKG, KML, KMZ ou GeoJSON","O mapeamento dos campos e os valores manuais (fazenda, OS, área, tolerância)"],
-o:["VERRA_DATA/Consolidado: limites.shp / zonas_manejo.shp (completão) e VERRA_DATA/<OS>/Limites/<OS>_limites.shp + VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp (um por OS)","A cópia no projeto: 08_LIMITES/TALHOES ou 13_ZONAS_DE_MANEJO","O registro limites/zonas_manejo no banco, na OS"],
-x:"Dois modos: Limites (talhão obrigatório, duplicidade bloqueada) e Zonas de Manejo (zona obrigatória, talhão opcional, sem duplicidade). A área é sempre calculada em hectares.",
+o:["VERRA_DATA/Consolidado: limites.shp / zonas_manejo.shp (completão) e VERRA_DATA/<OS>/Limites/<OS>_limites.shp + VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp (um por OS)","Os centroides SÓ na base privada: VERRA_DATA/Consolidado/centroides.shp + VERRA_DATA/<OS>/Centroides/<OS>_centroides.shp","A cópia no projeto: 08_LIMITES/TALHOES ou 13_ZONAS_DE_MANEJO","O registro limites/zonas_manejo no banco, na OS"],
+x:"Dois modos: Limites (talhão obrigatório, duplicidade bloqueada) e Zonas de Manejo (zona obrigatória, talhão opcional, sem duplicidade). A área é sempre calculada em hectares. Ao obter um limite novo, cada feição ganha um centroide que é consultado nas duas APIs públicas (altimetria + município/UF/país) e os campos MUNICIPIO/ESTADO/PAIS/ALTITUDE voltam para o talhão — em todos os shapes. O botão ATUALIZAR BASE relê o completão e recarrega todos os shapes das pastas.",
 s:[
-["7.0","Plugin","plugins/limites_db/LimitesPlugin.py","modos Limites/Zonas, mapeamento de campos, VALIDAR (não grava), IMPORTAR (grava) e ATUALIZAR (troca as feições das OS do vetor)"],
+["7.0","Plugin","plugins/limites_db/LimitesPlugin.py","modos Limites/Zonas, mapeamento de campos, VALIDAR (não grava), IMPORTAR (grava + enriquece), ATUALIZAR (troca as feições das OS do vetor) e ATUALIZAR BASE (relê o completão e recarrega todos os shapes das pastas)"],
 ["7.1","Service","plugins/limites_db/LimitesService.py","regras por modo: normalização (TALHÃO/ZONA/CAMPO em maiúsculas), OS como texto (039, 169A), AREA_HA calculada + AREA_INF, chave OS-FAZENDA-TALHÃO única"],
 ["7.2","Validação","plugins/limites_db/LimitesService.validate_vector","roda ANTES de gravar: shapefile completo (.shp/.shx/.dbf), CRS EPSG:4326, somente polígonos válidos e vetor não vazio"],
-["7.3","Vetor I/O","utils/vector/VectorLayerSource.py, utils/vector/VectorLayerMetrics.py","a leitura/escrita vetorial é delegada (Contrato 25) — o plugin nunca importa geopandas direto"],
+["7.3","Vetor I/O","utils/vector/VectorLayerSource.py, utils/vector/VectorLayerMetrics.py, utils/vector/VectorLayerGeometry.py","a leitura/escrita vetorial é delegada (Contrato 25) — o plugin nunca importa geopandas direto; VectorLayerGeometry.centroids extrai o centroide de cada feição"],
 ["7.4","Banco","core/firebase/CloudProjectDatabase.py","registra limites/zonas_manejo no registro da OS (arquivo gravado RELATIVO à pasta-mãe)"],
-["7.5","Workers","plugins/limites_db/LimitesService.py","LimitesInspectWorker, LimitesImportWorker e LimitesExistingWorker (QRunnable) mantêm a UI livre"]
+["7.5","Workers","plugins/limites_db/LimitesService.py","LimitesInspectWorker, LimitesImportWorker, LimitesExistingWorker e LimitesReloadWorker (QRunnable) mantêm a UI livre"],
+["7.6","Enriquecimento","utils/AltimetriaApi.py, utils/LocalidadeApi.py, plugins/limites_db/CentroideService.py","APIs PÚBLICAS sem chave: Open Topo Data (altimetria — 100 pontos/req, 1 req/s) e IBGE (município/UF/país) — best-effort, nunca bloqueiam a importação"]
 ],
 sn:"O modelo do vetor é do SISTEMA, não da ferramenta: a validação (7.2) e o I/O (7.3) são compartilhados. O Acompanhamento de OS só LÊ o que a 7.4 gravou."},
 

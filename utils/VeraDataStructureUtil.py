@@ -11,8 +11,10 @@ Raiz: ``<BASE_DADOS>/VERRA_DATA``
 
     <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp           → completão de limites
     <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp      → completão de zonas
+    <BASE_DADOS>/VERRA_DATA/Consolidado/centroides.shp        → completão de centroides
     <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp     → limites da OS
     <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp     → zonas de manejo da OS
+    <BASE_DADOS>/VERRA_DATA/<OS>/Centroides/<OS>_centroides.shp → centroides da OS
 
 A raiz é resolvida por ``root()``, nesta ordem:
     1. variável de ambiente ``AETHERIS_VERRA_DATA``;
@@ -45,7 +47,8 @@ _TOOL = ToolKey.PROJECT_STRUCTURE.value
 class VeraDataStructureUtil(FolderStructureUtil):
     """FONTE ÚNICA da estrutura PRIVADA (``VERRA_DATA``) — backup geral da base.
 
-    A estrutura de UMA pasta de OS é o ``STRUCTURE`` (``Limites`` + ``ZM``); os
+    A estrutura de UMA pasta de OS é o ``STRUCTURE`` (``Limites`` + ``ZM`` +
+    ``Centroides``); os
     completões de todos os modos ficam agrupados na pasta RESERVADA
     ``Consolidado`` (que não é uma pasta de OS).
     """
@@ -71,6 +74,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
     # Pastas de dados DENTRO da pasta da OS (uma por modo da Base de Limites).
     LIMITES_FOLDER = "Limites"
     ZONAS_FOLDER = "ZM"
+    CENTROIDES_FOLDER = "Centroides"
 
     # As pastas de OS são nomeadas apenas pela CHAVE (sem prefixo).
     KEY_PREFIX = ""
@@ -82,6 +86,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
     STRUCTURE: Dict[str, Any] = {
         LIMITES_FOLDER: None,
         ZONAS_FOLDER: None,
+        CENTROIDES_FOLDER: None,
     }
 
     # ── Raiz ────────────────────────────────────────────────────────

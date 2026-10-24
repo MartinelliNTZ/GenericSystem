@@ -398,7 +398,7 @@ com a **sua própria** estrutura declarada em uma subclasse:
 | Raiz | Subclasse | Estrutura |
 |---|---|---|
 | `VERRA_Farmer` — informação **PÚBLICA** | `utils.ProjectStructureUtil` | `01_...`/`14_RELATORIOS` + anos |
-| `VERRA_DATA` — informação **PRIVADA** | `utils.VeraDataStructureUtil` | `Consolidado/` + `<OS>/Limites` + `<OS>/ZM` |
+| `VERRA_DATA` — informação **PRIVADA** | `utils.VeraDataStructureUtil` | `Consolidado/` + `<OS>/Limites` + `<OS>/ZM` + `<OS>/Centroides` |
 
 Cada subclasse declara apenas `ROOT_NAME`, `STRUCTURE` (fonte única do conteúdo
 de UMA pasta-chave), `KEY_PREFIX` (`OS_` na pública, `""` na privada),
@@ -455,8 +455,10 @@ preferência `ProjectStructure.verra_data_folder` →
 ```
 <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp           → completão de limites
 <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp      → completão de zonas
+<BASE_DADOS>/VERRA_DATA/Consolidado/centroides.shp        → completão de centroides
 <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp     → limites da OS
 <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp     → zonas de manejo da OS
+<BASE_DADOS>/VERRA_DATA/<OS>/Centroides/<OS>_centroides.shp → centroides da OS
 ```
 
 As pastas de OS são nomeadas apenas pela CHAVE (`220`) e `Consolidado` é
@@ -474,7 +476,35 @@ VeraDataStructureUtil.ensure_mode_folder(root, "220", VeraDataStructureUtil.LIMI
 ```
 
 Constantes: `LIMITES_FOLDER` (`Limites`), `ZONAS_FOLDER` (`ZM`),
-`CONSOLIDATED_FOLDER` (`Consolidado`).
+`CENTROIDES_FOLDER` (`Centroides`), `CONSOLIDATED_FOLDER` (`Consolidado`).
+
+### `utils.AltimetriaApi` e `utils.LocalidadeApi` — enriquecimento público
+
+Clientes das DUAS APIs **públicas** (sem chave e sem cadastro) usados para
+enriquecer os centroides das feições da Base de Limites. Ambos são
+**best-effort**: falha de rede NÃO interrompe o fluxo do chamador — o valor sai
+vazio (`None`/`""`) e o erro vai para o log.
+
+| Classe | Fonte | Métodos |
+|---|---|---|
+| `utils.AltimetriaApi` | Open Topo Data — `api.opentopodata.org/v1/srtm90m` | `elevations(points, tool_key, progress_cb)` → elevações em metros (`None` quando a API não cobre o ponto) |
+| `utils.LocalidadeApi` | IBGE — ArcGIS do Atlas dos Municípios + API de Localidades | `lookup(longitude, latitude, tool_key)` → `{"municipio", "estado", "pais"}`; `lookups(points, tool_key, progress_cb)` |
+
+```python
+from utils.AltimetriaApi import AltimetriaApi
+from utils.LocalidadeApi import LocalidadeApi
+
+AltimetriaApi.elevations([(-10.184, -48.3336)])          # [259.0]
+LocalidadeApi.lookup(-48.3336, -10.1840)
+# {"municipio": "PALMAS", "estado": "TO", "pais": "BRASIL"}
+```
+
+Limites respeitados pelas duas classes: **100 pontos por requisição** (lotes) e
+**1 chamada por segundo** (`MIN_INTERVAL_S`), com 2 retentativas por lote. O
+IBGE cobre apenas o Brasil — fora do território os três campos saem vazios e,
+dentro dele, o país é sempre `BRASIL`. A sigla da UF (2 letras) é derivada do
+código IBGE do município (`1721000` → `17` → `TO`), com o mapa das 27 UFs
+carregado UMA vez por sessão (`_uf_by_code`).
 
 ### `utils.ProjectStructureSnapshot`
 

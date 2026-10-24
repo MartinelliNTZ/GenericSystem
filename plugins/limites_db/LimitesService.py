@@ -51,6 +51,19 @@ Atualização (``ATUALIZAR``):
   destino e trocadas pelo lote novo — as demais OS do arquivo ficam intactas — e
   a checagem de duplicidade é ignorada.
 
+Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi``):
+- Ao obter um NOVO limite (ou zona), cada feição ganha um CENTROIDE que carrega
+  TODOS os seus atributos; o centroide é consultado nas duas APIs públicas e os
+  campos ``MUNICIPIO``, ``ESTADO``, ``PAIS`` e ``ALTITUDE`` voltam para o talhão
+  (completão, arquivo da OS na base e cópia no projeto).
+- Os centroides ficam SOMENTE na base PRIVADA (``VERRA_DATA``): completão em
+  ``Consolidado`` e um arquivo por OS na pasta ``Centroides`` — nunca no projeto.
+- O enriquecimento é BEST-EFFORT: falha de rede não bloqueia a importação, apenas
+  gera aviso e deixa os campos vazios.
+- A recarga (``ATUALIZAR BASE``) relê o completão e REESCREVE todos os shapes das
+  pastas (base + projetos) e os centroides, refazendo o enriquecimento sem
+  reimportar o vetor de origem.
+
 Validações do vetor (bloqueiam a operação — nada é gravado):
 - **Shapefile completo**: exige ``.shp``, ``.shx`` e ``.dbf`` no mesmo diretório;
 - **EPSG**: o padrão é ``EPSG:4326`` — qualquer outro CRS (ou sem ``.prj``) é
@@ -86,6 +99,15 @@ from utils.VeraDataStructureUtil import VeraDataStructureUtil
 from utils.vector.VectorLayerMetrics import VectorLayerMetrics
 from utils.vector.VectorLayerSource import VectorLayerSource
 
+from plugins.limites_db.CentroideService import (
+    CentroideService,
+    FIELD_ALTITUDE,
+    FIELD_ESTADO,
+    FIELD_MUNICIPIO,
+    FIELD_PAIS,
+    PUBLIC_FIELDS,
+)
+
 _TOOL_KEY = ToolKey.LIMITES_DB.value
 
 CONSOLIDATED_FILENAME = "limites.shp"
@@ -117,6 +139,8 @@ FIELD_KEY = "KEY"
 FIELD_AREA_CALC = "AREA_HA"
 FIELD_AREA_INF = "AREA_INF"
 
+# Campos publicos do enriquecimento (MUNICIPIO/ESTADO/PAIS/ALTITUDE) — definidos
+# no CentroideService e presentes em TODOS os shapes do modo.
 LIMITES_FIELDS = [
     FIELD_TALHAO,
     FIELD_FAZENDA,
@@ -125,7 +149,7 @@ LIMITES_FIELDS = [
     FIELD_KEY,
     FIELD_AREA_CALC,
     FIELD_AREA_INF,
-]
+] + list(PUBLIC_FIELDS)
 
 ZONAS_FIELDS = [
     FIELD_ZONA,
@@ -136,7 +160,7 @@ ZONAS_FIELDS = [
     FIELD_CLIENTE,
     FIELD_AREA_CALC,
     FIELD_AREA_INF,
-]
+] + list(PUBLIC_FIELDS)
 
 MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
     MODE_LIMITES: {
@@ -146,6 +170,8 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "base_folder": VeraDataStructureUtil.LIMITES_FOLDER,
         "project_folder": LIMITES_FOLDER,
         "project_subfolder": TALHOES_FOLDER,
+        "centroides": "centroides.shp",
+        "centroides_suffix": "_centroides",
         "db_key": "limites",
         "fields": LIMITES_FIELDS,
         "semantic": ("talhao", "fazenda", "os", "cliente", "area"),
@@ -158,6 +184,8 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "base_folder": VeraDataStructureUtil.ZONAS_FOLDER,
         "project_folder": ZONAS_FOLDER,
         "project_subfolder": "",
+        "centroides": "centroides_zonas.shp",
+        "centroides_suffix": "_centroides_zonas",
         "db_key": "zonas_manejo",
         "fields": ZONAS_FIELDS,
         "semantic": ("zona", "campo", "fazenda", "os", "talhao", "cliente", "area"),
@@ -516,6 +544,10 @@ class LimitesService(BaseUtil):
             )
             return payload
 
+        cls._notify(progress_cb, 72, "Extraindo centroides...")
+        centroides = cls._enrich_centroides(prepared, progress_cb, payload)
+        prepared = CentroideService.merge(prepared, centroides)
+
         cls._notify(
             progress_cb,
             85,
@@ -541,6 +573,9 @@ class LimitesService(BaseUtil):
 
         cls._notify(progress_cb, 92, "Copiando para os projetos...")
         cls._publish_to_projects(prepared, config, payload, logger)
+
+        cls._notify(progress_cb, 96, "Gravando centroides...")
+        cls._write_centroides(centroides, config, payload)
 
         cls._notify(
             progress_cb,
@@ -568,6 +603,123 @@ class LimitesService(BaseUtil):
     def settings(cls, mode: str) -> Dict[str, Any]:
         """Configuração do modo (``limites`` ou ``zonas``)."""
         return MODE_SETTINGS.get(mode, MODE_SETTINGS[MODE_LIMITES])
+
+    # ── Recarga da base (ATUALIZAR BASE) ───────────────────────────────────
+
+    @classmethod
+    def reload_base(
+        cls,
+        config: LimitesImportConfig,
+        progress_cb: Optional[Callable[[int, str], None]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Relê o completão da base e RECARREGA todos os shapes das pastas.
+
+        Reescreve o completão, o arquivo de cada OS na base, as cópias nos
+        projetos e os centroides — refazendo o enriquecimento público
+        (altimetria + município/UF/país) sem reimportar o vetor de origem.
+
+        Args:
+            config: Configuração com ``mode`` e ``output_root`` da base.
+            progress_cb: Callback ``(pct, mensagem)`` de progresso.
+
+        Returns:
+            Dicionário com o resumo da recarga (mesmas chaves da importação).
+
+        Raises:
+            LimitesValidationError: Completão inexistente ou vetor inválido.
+        """
+        logger = cls._get_logger(_TOOL_KEY, "LimitesService")
+        settings = cls.settings(config.mode)
+        fields = settings["fields"]
+        consolidated = cls._consolidated_path(config)
+
+        if not os.path.exists(consolidated):
+            raise LimitesValidationError(
+                [
+                    f"Completão não encontrado: {consolidated}.",
+                    "Importe um vetor antes de recarregar a base.",
+                ]
+            )
+
+        cls._notify(progress_cb, 5, "Lendo o completão da base...")
+        gdf = VectorLayerSource.read_geodataframe(consolidated, tool_key=_TOOL_KEY)
+        cls.validate_vector(consolidated, gdf)
+        prepared = cls._read_existing(consolidated, fields)
+
+        payload: Dict[str, Any] = {
+            "mode": config.mode,
+            "dry_run": False,
+            "reload": True,
+            "update": True,
+            "n_features": int(len(prepared)),
+            "crs": str(prepared.crs),
+            "total_ha": round(float(prepared[FIELD_AREA_CALC].sum()), 4),
+            "os_keys": sorted({str(value) for value in prepared[FIELD_OS]}),
+            "consolidated": consolidated,
+            "os_files": [],
+            "copies": [],
+            "db_updated": 0,
+            "replaced": 0,
+            "warnings": [],
+        }
+
+        cls._notify(progress_cb, 20, "Extraindo centroides...")
+        centroides = cls._enrich_centroides(prepared, progress_cb, payload)
+        prepared = CentroideService.merge(prepared, centroides)
+
+        base_root = VeraDataStructureUtil.ensure_root_folders(
+            Path(config.output_root), tool_key=_TOOL_KEY
+        )
+
+        cls._notify(progress_cb, 86, "Reescrevendo a base...")
+        cls._write_target(consolidated, prepared, fields, True)
+
+        for os_key, group in prepared.groupby(FIELD_OS, sort=True):
+            key = str(os_key)
+            VeraDataStructureUtil.ensure_mode_folder(
+                base_root, key, settings["base_folder"], tool_key=_TOOL_KEY
+            )
+            target = cls._os_file_path(config, key)
+            cls._write_target(target, group, fields, True)
+            payload["os_files"].append(target)
+
+        cls._notify(progress_cb, 92, "Copiando para os projetos...")
+        cls._publish_to_projects(prepared, config, payload, logger, register=False)
+
+        cls._notify(progress_cb, 96, "Gravando centroides...")
+        cls._write_centroides(centroides, config, payload)
+
+        cls._notify(progress_cb, 100, "Recarga concluída.")
+
+        logger.info(
+            "Base recarregada",
+            code="LIM_RELOAD_DONE",
+            mode=config.mode,
+            n_features=payload["n_features"],
+            n_os=len(payload["os_files"]),
+            n_copies=len(payload["copies"]),
+            n_centroides=payload["centroides"]["n_centroides"],
+        )
+        return payload
+
+    @staticmethod
+    def _progress_wrapper(
+        progress_cb: Optional[Callable[[int, str], None]],
+        start: int,
+        end: int,
+    ) -> Optional[Callable[[int, int], None]]:
+        """Converte o contador ``(feito, total)`` das APIs em ``(pct, mensagem)``."""
+        if progress_cb is None:
+            return None
+
+        def report(done: int, total: int) -> None:
+            ratio = (done / total) if total else 1.0
+            pct = int(start + (end - start) * ratio)
+            progress_cb(pct, f"Enriquecendo centroides ({done}/{total})...")
+
+        return report
+
 
     # ── Destinos ────────────────────────────────────────────────────
 
@@ -600,6 +752,90 @@ class LimitesService(BaseUtil):
             target_dir = target_dir / settings["project_subfolder"]
 
         return target_dir / f"{os_key}{settings['os_suffix']}.shp"
+
+    @classmethod
+    def _centroides_consolidated_path(cls, config: LimitesImportConfig) -> str:
+        """Caminho do completão dos centroides (pasta ``Consolidado`` da base)."""
+        folder = VeraDataStructureUtil.consolidated_folder(Path(config.output_root))
+        return str(folder / cls.settings(config.mode)["centroides"])
+
+    @classmethod
+    def _centroides_os_path(cls, config: LimitesImportConfig, os_key: str) -> str:
+        """Caminho do arquivo de centroides da OS (pasta ``Centroides`` da base)."""
+        settings = cls.settings(config.mode)
+        folder = VeraDataStructureUtil.mode_folder(
+            Path(config.output_root), os_key, VeraDataStructureUtil.CENTROIDES_FOLDER
+        )
+        return str(folder / f"{os_key}{settings['centroides_suffix']}.shp")
+
+    # ── Enriquecimento público (centroides + APIs) ─────────────────────────
+
+    @classmethod
+    def _enrich_centroides(
+        cls,
+        prepared: Any,
+        progress_cb: Optional[Callable[[int, str], None]],
+        payload: Dict[str, Any],
+    ) -> Any:
+        """Extrai os centroides, consulta as APIs públicas e resume o resultado."""
+        centroides = CentroideService.build(prepared, _TOOL_KEY)
+        centroides = CentroideService.enrich(
+            centroides, _TOOL_KEY, cls._progress_wrapper(progress_cb, 72, 84)
+        )
+
+        summary = CentroideService.summary(centroides)
+        payload["centroides"] = summary
+        if summary["n_altitude"] < summary["n_centroides"]:
+            payload["warnings"].append(
+                "Alguns centroides ficaram sem ALTITUDE (consulta ao Open Topo "
+                "Data indisponível ou ponto fora do dataset)."
+            )
+        if summary["n_localidade"] < summary["n_centroides"]:
+            payload["warnings"].append(
+                "Alguns centroides ficaram sem MUNICÍPIO/UF (consulta ao IBGE "
+                "indisponível ou ponto fora do Brasil)."
+            )
+
+        cls._get_logger(_TOOL_KEY, "LimitesService").info(
+            "Centroides enriquecidos",
+            code="LIM_CENTROIDES_OK",
+            **summary,
+        )
+        return centroides
+
+    @classmethod
+    def _write_centroides(
+        cls,
+        centroides: Any,
+        config: LimitesImportConfig,
+        payload: Dict[str, Any],
+    ) -> List[str]:
+        """Grava os centroides SÓ na base privada (completão + um arquivo por OS)."""
+        base_root = VeraDataStructureUtil.ensure_root_folders(
+            Path(config.output_root), tool_key=_TOOL_KEY
+        )
+
+        os_paths: Dict[str, str] = {}
+        for os_key in centroides[FIELD_OS].drop_duplicates():
+            key = str(os_key)
+            VeraDataStructureUtil.ensure_mode_folder(
+                base_root,
+                key,
+                VeraDataStructureUtil.CENTROIDES_FOLDER,
+                tool_key=_TOOL_KEY,
+            )
+            os_paths[key] = cls._centroides_os_path(config, key)
+
+        written = CentroideService.split(
+            centroides,
+            cls._centroides_consolidated_path(config),
+            os_paths,
+            FIELD_OS,
+            _TOOL_KEY,
+        )
+        payload["centroides_files"] = written
+        return written
+
 
     # ── Verificação de shapes existentes ────────────────────────────
 
@@ -766,8 +1002,20 @@ class LimitesService(BaseUtil):
         if not is_zonas:
             prepared[FIELD_KEY] = keys
 
+        cls._init_public_fields(prepared)
+
         prepare_fields = [f for f in settings["fields"] if f != FIELD_AREA_CALC]
         return prepared[prepare_fields + [prepared.geometry.name]]
+
+    @staticmethod
+    def _init_public_fields(gdf: Any) -> None:
+        """Cria VAZIOS os campos publicos do enriquecimento (ALTITUDE numerico)."""
+        gdf[FIELD_MUNICIPIO] = ""
+        gdf[FIELD_ESTADO] = ""
+        gdf[FIELD_PAIS] = ""
+        gdf[FIELD_ALTITUDE] = pd.Series(
+            [float("nan")] * len(gdf), index=gdf.index, dtype="float64"
+        )
 
     @staticmethod
     def _resolve_series(gdf: Any, config: LimitesImportConfig, key: str) -> List[Any]:
@@ -913,6 +1161,7 @@ class LimitesService(BaseUtil):
             FIELD_OS: "",
             FIELD_AREA_CALC: 0.0,
             FIELD_AREA_INF: float("nan"),
+            FIELD_ALTITUDE: float("nan"),
         }
         for column in fields:
             if column not in existing.columns:
@@ -943,8 +1192,14 @@ class LimitesService(BaseUtil):
         config: LimitesImportConfig,
         payload: Dict[str, Any],
         logger: Any,
+        register: bool = True,
     ) -> None:
-        """Copia o resultado para a pasta do projeto da OS e registra no banco."""
+        """Copia o resultado para a pasta do projeto da OS e registra no banco.
+
+        Com ``register=False`` (recarga da base) as cópias são gravadas SEM
+        tocar no registro da OS no banco — os dados do shape não mudaram de
+        origem, apenas ganharam os campos públicos.
+        """
         settings = cls.settings(config.mode)
         warnings: List[str] = payload["warnings"]
 
@@ -988,6 +1243,9 @@ class LimitesService(BaseUtil):
 
             payload["copies"].append(str(copy_path))
             payload["replaced"] += removed
+
+            if not register:
+                continue
 
             if record is None:
                 warnings.append(
@@ -1252,6 +1510,36 @@ class LimitesExistingWorker(QRunnable):
                 "Falha ao verificar shapes existentes",
                 code="LIM_EXISTING_ERR",
                 path=self.config.vector_path,
+                error=str(e),
+            )
+            self.signals.failed.emit(self.generation, str(e))
+
+
+class LimitesReloadWorker(QRunnable):
+    """Relê o completão da base e recarrega TODOS os shapes (sem tocar em widgets)."""
+
+    def __init__(self, generation: int, config: LimitesImportConfig) -> None:
+        super().__init__()
+        self.setAutoDelete(False)
+        self.generation = generation
+        self.config = config
+        self.signals = _LimitesSignals()
+
+    def run(self) -> None:
+        """Executa a recarga da base e emite progresso/resultado."""
+        try:
+            def _progress(pct: int, message: str) -> None:
+                self.signals.progress.emit(self.generation, int(pct), message)
+
+            payload = LimitesService.reload_base(self.config, progress_cb=_progress)
+            self.signals.finished.emit(self.generation, payload)
+        except LimitesValidationError as e:
+            self.signals.invalid.emit(self.generation, e.problems)
+        except Exception as e:
+            LimitesService._get_logger(_TOOL_KEY, "LimitesReloadWorker").error(
+                "Falha ao recarregar a base",
+                code="LIM_RELOAD_ERR",
+                mode=self.config.mode,
                 error=str(e),
             )
             self.signals.failed.emit(self.generation, str(e))

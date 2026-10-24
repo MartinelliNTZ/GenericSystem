@@ -167,6 +167,7 @@ Responsável pelas transformações geométricas de camadas vetoriais. Altera ge
 | `circular_mean_degrees(values)` | Média circular em graus | `float` |
 | `measure_distance_between_points(point_a, point_b, crs)` | Distância entre pontos (elipsoidal se CRS informado) | `float` |
 | `get_representative_point(geometry)` | Ponto representativo de Point/MultiPoint | `QgsPointXY` ou `None` |
+| `centroids(gdf, tool_key)` | **Implementado (GeoDataFrame)** — centroide de cada feição poligonal como POINT, preservando TODAS as colunas; cai para `representative_point()` quando o centroide fica FORA da geometria (côncava/MultiPolygon) | `GeoDataFrame` |
 | `create_point_layer_from_dicts(points, name, field_specs, geometry_keys, extra_fields, tool_key)` | Cria camada de pontos em memória a partir de dicts. `geometry_keys=(x_key, y_key)` | `QgsVectorLayer` ou `None` |
 | `create_line_layer_from_points(points, order_by_field, name, group_by_fields, attribute_fields, ...)` | Cria linha(s) em memória a partir de QgsFeature Point | `QgsVectorLayer` ou `None` |
 | `merge_memory_layers(layers, crs_authid, layer_name)` | Mescla camadas de memória em uma única camada | `QgsVectorLayer` ou `None` |
@@ -942,6 +943,7 @@ Quando precisar implementar um método stub:
 
 | Data | Versão | Descrição |
 |------|--------|-----------|
+| 2026-10-23 | 2.2.0 | `VectorLayerGeometry.centroids` (GeoDataFrame) — centroide de cada feição poligonal preservando TODOS os atributos, com fallback `representative_point()` quando o centroide cai fora da geometria |
 | 2026-10-21 | 2.1.0 | `VectorLayerSource`: `read_geodataframe` (KMZ descompactado), `list_fields`, `write_geodataframe_atomic` e `concat_geodataframes`; `VectorLayerMetrics.calculate_area_hectares` (GeoDataFrame, UTM/área equivalente); extensões `.kmz`/`.json` |
 | 2026-06-23 | 2.0.0 | Adaptação para Aetheris ToolBox: stubs de todas as 11 classes, logging via BaseUtil._get_logger, ToolKey de core/enum, imports ajustados, pacotes __init__.py atualizados |
 | 2026-06-23 | 1.0.0 | Criação — documentação original do Cadmus |

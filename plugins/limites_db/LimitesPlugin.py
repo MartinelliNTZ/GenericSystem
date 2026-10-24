@@ -36,6 +36,18 @@ No modo **Zonas de Manejo** existe o **Campo de manejo** (``CAMPO``): opcional,
 pode ser mapeado do vetor ou informado nos valores manuais e, quando indicado,
 consta em TODOS os shapes gerados (completão, arquivo da OS e cópia no projeto).
 
+**Enriquecimento público (automático):** ao obter um NOVO limite (ou zona), cada
+feição ganha um CENTROIDE com todos os seus atributos; o centroide é consultado
+nas duas APIs públicas — ``utils.AltimetriaApi`` (Open Topo Data → ``ALTITUDE``)
+e ``utils.LocalidadeApi`` (IBGE → ``MUNICIPIO``, ``ESTADO``, ``PAIS``) — e os
+quatro campos voltam para o talhão (completão, arquivo da OS e cópia no projeto).
+Os centroides ficam SOMENTE na base PRIVADA (``VERRA_DATA``): completão em
+``Consolidado`` e um arquivo por OS na pasta ``Centroides``.
+
+O botão **ATUALIZAR BASE** relê o completão da base e recarrega TODOS os shapes
+das pastas (base + projetos) e os centroides, refazendo o enriquecimento — sem
+precisar reimportar o vetor de origem.
+
 Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
 cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o vetor, o
 auto-preenchimento da OS pelo caminho passa a mandar — só um valor digitado pelo
@@ -61,6 +73,7 @@ from plugins.limites_db.LimitesService import (
     LimitesImportConfig,
     LimitesImportWorker,
     LimitesInspectWorker,
+    LimitesReloadWorker,
     LimitesService,
 )
 from resources.widgets.complex.GridComplexSelector import GridComplexSelector
@@ -116,6 +129,7 @@ class LimitesPlugin(BasePlugin):
         self._inspect_worker = None
         self._import_worker = None
         self._existing_worker = None
+        self._reload_worker = None
         self._auto_os = ""
         self._os_locked = False
         self._setting_auto_os = False
@@ -144,6 +158,16 @@ class LimitesPlugin(BasePlugin):
                     "description": (
                         "Procura os shapes que já existem nas pastas e, com sua confirmação, "
                         "substitui as feições das OS do vetor"
+                    ),
+                },
+                "recarregar": {
+                    "text": "ATUALIZAR BASE",
+                    "callback": self._on_recarregar,
+                    "type": "secondary",
+                    "description": (
+                        "Relê o completão da base e recarrega TODOS os shapes das pastas "
+                        "(base + projetos), refazendo os centroides e o enriquecimento "
+                        "público (altimetria e município/UF/país)"
                     ),
                 },
             },
@@ -584,6 +608,33 @@ class LimitesPlugin(BasePlugin):
         self._existing_worker = worker
         self._pool.start(worker)
 
+    def _on_recarregar(self) -> None:
+        """Relê o completão da base e recarrega todos os shapes das pastas."""
+        if self._running:
+            return
+
+        config = LimitesImportConfig(
+            vector_path="",
+            output_root=VeraDataStructureUtil.root_str(),
+            mode=self._mode,
+            update=True,
+        )
+        mode_label = MODE_SETTINGS[self._mode]["label"]
+        self._persist_prefs()
+        self._begin_execution(f"Recarregando {mode_label}...")
+        SignalManager.instance().console_message.emit(
+            f"Recarregando a base ({mode_label.lower()}) a partir do completão..."
+        )
+
+        self._generation += 1
+        worker = LimitesReloadWorker(self._generation, config)
+        worker.signals.progress.connect(self._on_import_progress)
+        worker.signals.finished.connect(self._on_import_done)
+        worker.signals.invalid.connect(self._on_import_invalid)
+        worker.signals.failed.connect(self._on_import_failed)
+        self._reload_worker = worker
+        self._pool.start(worker)
+
     def _on_check_done(self, generation: int, payload: dict) -> None:
         """Confirma a substituição dos shapes encontrados nas pastas."""
         if generation != self._generation:
@@ -651,7 +702,7 @@ class LimitesPlugin(BasePlugin):
         """Bloqueia os botões, liga o HUD e sinaliza o início da execução."""
         self._running = True
         self.page.set_badge(self.page.RUNNING)
-        for key in ("validar", "importar", "atualizar"):
+        for key in ("validar", "importar", "atualizar", "recarregar"):
             self.page.buttons.set_enabled(key, False)
 
         SignalManager.instance().hud_show.emit({"message": message})
@@ -704,6 +755,19 @@ class LimitesPlugin(BasePlugin):
             "progress": float(pct),
         })
 
+    def _centroides_summary(self, centroides: dict | None) -> str:
+        """Linhas do resumo com as contagens dos centroides enriquecidos."""
+        if not centroides:
+            return ""
+
+        return (
+            f"\nCentroides: {self._format_int(centroides.get('n_centroides', 0))}"
+            f"\nCentroides com altimetria: "
+            f"{self._format_int(centroides.get('n_altitude', 0))}"
+            f"\nCentroides com município/UF: "
+            f"{self._format_int(centroides.get('n_localidade', 0))}"
+        )
+
     def _on_import_done(self, generation: int, payload: dict) -> None:
         """Exibe o resumo da validação/importação."""
         if generation != self._generation:
@@ -725,7 +789,7 @@ class LimitesPlugin(BasePlugin):
             f"Área calculada: {self._format_number(payload.get('total_ha', 0.0))} ha"
         )
 
-        if payload.get("update"):
+        if payload.get("update") and not payload.get("reload"):
             stats += (
                 f"\nFeições substituídas: {self._format_int(payload.get('replaced', 0))}"
             )
@@ -733,8 +797,12 @@ class LimitesPlugin(BasePlugin):
         if not payload.get("dry_run"):
             stats += (
                 f"\nCópias no projeto: {self._format_int(len(payload.get('copies', []) or []))}"
-                f"\nRegistros no banco: {self._format_int(payload.get('db_updated', 0))}"
             )
+            if not payload.get("reload"):
+                stats += (
+                    f"\nRegistros no banco: {self._format_int(payload.get('db_updated', 0))}"
+                )
+            stats += self._centroides_summary(payload.get("centroides"))
 
         if payload.get("dry_run"):
             text = f"Validação concluída.\n\n{stats}\n\nNada foi gravado."
@@ -748,7 +816,11 @@ class LimitesPlugin(BasePlugin):
             )
             console = "Validação concluída"
         else:
-            operation = "Atualização" if payload.get("update") else "Importação"
+            operation = (
+                "Recarga da base"
+                if payload.get("reload")
+                else ("Atualização" if payload.get("update") else "Importação")
+            )
             text = f"{operation} concluída.\n\n{stats}"
             if warnings:
                 text += f"\n\n⚠ {len(warnings)} aviso(s) — veja os detalhes."
@@ -819,7 +891,7 @@ class LimitesPlugin(BasePlugin):
     def _finish_execution(self, error: bool = False, info_only: bool = False) -> None:
         """Restaura botões/badge e encerra HUD e progresso."""
         self._running = False
-        for key in ("validar", "importar", "atualizar"):
+        for key in ("validar", "importar", "atualizar", "recarregar"):
             self.page.buttons.set_enabled(key, True)
 
         if error:

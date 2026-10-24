@@ -109,6 +109,69 @@ class VectorLayerGeometry(BaseUtil):
         return None
 
     @staticmethod
+    def centroids(
+        gdf: Any,
+        tool_key: str = ToolKey.UNTRACEABLE.value,
+    ) -> Any:
+        """
+        Centroide de cada feicao como POINT, preservando TODAS as colunas.
+
+        Opera sobre GeoDataFrame (geopandas) — como ``VectorLayerMetrics``.
+        Quando o centroide cai FORA do poligono (geometria concava), usa
+        ``representative_point()`` para que o ponto pertença a feicao.
+
+        Args:
+            gdf: GeoDataFrame com colunas de geometria POLIGONAL.
+            tool_key: Chave da ferramenta para logging.
+
+        Returns:
+            GeoDataFrame novo (mesmo indice e mesmas colunas) com a geometria
+            trocada pelo ponto central de cada feicao.
+
+        Raises:
+            ValueError: Camada vazia, sem CRS, sem geometria ou nao poligonal.
+        """
+        logger = BaseUtil._get_logger(tool_key, "VectorLayerGeometry")
+
+        if gdf is None or len(gdf) == 0:
+            raise ValueError("Camada vazia: nao e possivel extrair centroides.")
+        if gdf.crs is None:
+            raise ValueError(
+                "Camada sem CRS definido. Defina a projecao do arquivo antes "
+                "de extrair centroides."
+            )
+
+        geom_types = set(gdf.geom_type.dropna().unique())
+        if not geom_types or not geom_types.issubset({"Polygon", "MultiPolygon"}):
+            raise ValueError(
+                "A camada deve conter apenas poligonos. Tipos encontrados: "
+                + ", ".join(sorted(geom_types))
+            )
+
+        import geopandas as gpd
+
+        points: List[Any] = []
+        for geom in gdf.geometry:
+            if geom is None or geom.is_empty:
+                points.append(None)
+                continue
+
+            center = geom.centroid
+            points.append(center if geom.contains(center) else geom.representative_point())
+
+        result = gdf.copy()
+        result[result.geometry.name] = gpd.GeoSeries(
+            points, index=result.index, crs=gdf.crs
+        )
+
+        logger.info(
+            "Centroides extraidos",
+            code="GEOM_CENTROID_DONE",
+            n_features=len(result),
+        )
+        return result
+
+    @staticmethod
     def create_point_layer_from_dicts(
         points: List[Dict[str, Any]],
         name: str,
