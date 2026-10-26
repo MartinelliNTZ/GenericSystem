@@ -296,7 +296,7 @@ consulta rápida.
 | `plugins/project_database_manager/ProjectDatabaseService.py` | Lógica pura: **NÃO cria OS** — re-escaneia as pastas das OS existentes e atualiza `folders`/`years`; + `ProjectDatabaseWorker` |
 | `core/firebase/CloudProjectDatabase.py` | **CLASSE DE BANCO (Contrato 28)**: única porta de entrada dos registros de OS (Firestore) + geração dos backups JSON |
 | `core/database/ProjectDatabaseStore.py` | Leitura/escrita atômica dos backups JSON em `.BancoDados` (usada só pela `CloudProjectDatabase`) |
-| `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os`, `normalize_os`, `project_folder`, `collect_created_data`) e tipos de nó (`BaseFile`, `Years`) |
+| `utils/ProjectStructureUtil.py` | **FONTE ÚNICA** — dicionário `PROJECT_STRUCTURE` descrevendo toda a estrutura (pastas, anos e futuros arquivos base); os acessores `DEFAULT_PROJECT_FOLDERS`, `PROJECT_FOLDER_TEMPLATES`, `DOCUMENT_YEARS_FOLDER`, `DEFAULT_YEARS` e `DOCUMENT_TEMPLATE` são **derivados** dele. Também: descoberta compartilhada (`discover_projects`, `is_year_folder`, `extract_os`, `normalize_os`, `same_os`, `project_folder`, `collect_created_data`) e tipos de nó (`BaseFile`, `Years`) |
 | `utils/ProjectDatabaseBackup.py` | `ensure_daily_backup(...)` — ZIP diário do `.BancoDados` |
 
 ### Estrutura em disco
@@ -314,6 +314,15 @@ O nome da pasta segue `OS_<chave>_<resto...>` (ex.: `OS_039_Bunge`,
 é o primeiro campo após `OS_`, é **TEXTO** e PODE CONTER **LETRA** — a letra é o
 que diferencia as OS de um mesmo projeto. Os **zeros à esquerda são preservados**
 (`OS_039_Bunge` → `039`), assim como a letra (`OS_169B_DARRO` → `169B`).
+
+**Os zeros à esquerda NÃO diferenciam duas chaves**: `50` e `050` são a MESMA OS
+(`ProjectStructureUtil.same_os` / `FolderStructureUtil.keys_match`) — só a LETRA
+diferencia (`169` ≠ `169A`). Por isso `project_folder(mother, "50")` encontra
+`OS_050_Sementes Tropical` (casamento EXATO primeiro, tolerante depois) e as
+ferramentas que recebem a chave digitada (ex.: a **OS manual** da Base de Limites)
+a **resolvem para a chave OFICIAL** — a do banco (`CloudProjectDatabase`) ou a do
+nome da pasta — antes de gravar, para que a base, a cópia no projeto e o registro
+da OS usem SEMPRE a mesma chave.
 
 **Uma pasta = UMA OS.** A chave (`os`) — que também dá nome ao arquivo — é a chave
 da pasta (`039` → `039.json`, `169A` → `169A.json`) e o registro guarda TUDO no

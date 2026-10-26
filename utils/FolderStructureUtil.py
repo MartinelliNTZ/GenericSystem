@@ -33,6 +33,7 @@ Uso:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -205,6 +206,36 @@ class FolderStructureUtil(BaseUtil):
         """Normaliza a CHAVE (texto em MAIÚSCULAS, zeros preservados)."""
         return str(key).strip().upper()
 
+    @staticmethod
+    def _key_parts(key: str) -> Optional[Tuple[int, str]]:
+        """``(número, letra)`` de uma chave numérica — ``None`` fora desse padrão.
+
+        ``"050"`` → ``(50, "")``; ``"169a"`` → ``(169, "A")``; ``"X1"`` → ``None``.
+        """
+        match = re.fullmatch(r"(\d+)([A-Z]*)", key)
+        if match is None:
+            return None
+        return (int(match.group(1)), match.group(2))
+
+    @classmethod
+    def keys_match(cls, first: str, second: str) -> bool:
+        """Indica se DUAS chaves apontam para a MESMA pasta-chave.
+
+        A comparação é EXATA na chave normalizada; quando as duas são numéricas
+        (com letra opcional), os **zeros à esquerda não diferenciam** a chave
+        (``"50"`` ≡ ``"050"``) — apenas a LETRA diferencia (``"169"`` ≠ ``"169A"``).
+        Chaves fora do padrão numérico só casam exatamente.
+        """
+        left = cls.normalize_key(first)
+        right = cls.normalize_key(second)
+        if not left or not right:
+            return False
+        if left == right:
+            return True
+
+        parts = cls._key_parts(left)
+        return parts is not None and parts == cls._key_parts(right)
+
     @classmethod
     def folder(
         cls,
@@ -212,14 +243,24 @@ class FolderStructureUtil(BaseUtil):
         key: str,
         tool_key: str = ToolKey.UNTRACEABLE.value,
     ) -> Optional[Path]:
-        """Pasta-chave da raiz — ``None`` quando não existe."""
+        """Pasta-chave da raiz — ``None`` quando não existe.
+
+        A busca é primeiro EXATA pela chave e, sem par exato, TOLERANTE aos zeros
+        à esquerda (``"50"`` encontra ``OS_050_...``) — ver ``keys_match``.
+        """
         if root is None:
             return None
         target = cls.normalize_key(key)
         if not target:
             return None
-        for candidate in cls.discover(Path(root), tool_key=tool_key):
+
+        candidates = cls.discover(Path(root), tool_key=tool_key)
+        for candidate in candidates:
             if cls.extract_key(candidate.name) == target:
+                return candidate
+
+        for candidate in candidates:
+            if cls.keys_match(cls.extract_key(candidate.name), target):
                 return candidate
         return None
 

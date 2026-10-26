@@ -25,6 +25,12 @@ A OS é **TEXTO** e pode conter **LETRA** (ex.: ``169A``, ``181B``): a letra já
 diferencia as OS de um mesmo projeto, então cada OS tem o seu próprio arquivo e a
 sua própria pasta.
 
+A chave da OS vinda do vetor (campo mapeado ou valor manual) é RESOLVIDA para a
+chave **OFICIAL** da OS — a do banco (``CloudProjectDatabase``) ou a do nome da
+pasta do projeto — antes de qualquer gravação: ``50`` entra como ``050``, de modo
+que a base, a cópia no projeto (``OS_050_...``) e o registro da OS usem SEMPRE a
+mesma chave (os zeros à esquerda não diferenciam a OS; a LETRA diferencia).
+
 Regras de negócio (limites):
 - TALHÃO é obrigatório (sempre vem de um campo do vetor).
 - FAZENDA e OS são obrigatórios (campo mapeado OU valor manual).
@@ -520,7 +526,7 @@ class LimitesService(BaseUtil):
         cls.validate_vector(config.vector_path, gdf)
 
         cls._notify(progress_cb, 25, "Validando atributos...")
-        prepared = cls._prepare(gdf, config)
+        prepared = cls._prepare(gdf, config, cls._os_key_resolver(logger))
 
         cls._notify(progress_cb, 55, "Calculando área...")
         prepared = VectorLayerMetrics.calculate_area_hectares(
@@ -1029,7 +1035,7 @@ class LimitesService(BaseUtil):
         gdf = cls._ensure_epsg(gdf)
         cls.validate_vector(config.vector_path, gdf)
 
-        prepared = cls._prepare(gdf, config)
+        prepared = cls._prepare(gdf, config, cls._os_key_resolver(logger))
         os_keys = sorted({str(value) for value in prepared[FIELD_OS]})
 
         targets: List[str] = []
@@ -1093,8 +1099,14 @@ class LimitesService(BaseUtil):
         cls,
         gdf: Any,
         config: LimitesImportConfig,
+        resolve_os: Optional[Callable[[str], str]] = None,
     ) -> Any:
-        """Resolve os valores de cada feição e devolve o GeoDataFrame canônico."""
+        """Resolve os valores de cada feição e devolve o GeoDataFrame canônico.
+
+        ``resolve_os`` (opcional) converte a chave digitada/do vetor na chave
+        OFICIAL da OS (banco + pasta do projeto) — assim ``50`` entra como
+        ``050`` e a cópia cai na pasta ``OS_050_...``.
+        """
         settings = cls.settings(config.mode)
         semantic = settings["semantic"]
         is_zonas = config.mode == MODE_ZONAS
@@ -1133,6 +1145,8 @@ class LimitesService(BaseUtil):
             os_key = cls.normalize_os(columns["os"][index])
             if os_key is None:
                 problems.append(f"{label}: OS vazia ou inválida (obrigatória).")
+            elif resolve_os is not None:
+                os_key = resolve_os(os_key)
 
             area = cls.parse_float(columns["area"][index])
             if area is not None and area <= 0:
@@ -1408,12 +1422,28 @@ class LimitesService(BaseUtil):
 
         return existing[fields + [existing.geometry.name]]
 
-    @staticmethod
-    def _drop_batch_os(existing: Any, batch: Any) -> Any:
-        """Remove do arquivo existente as feições das OS presentes no lote."""
-        keys = {str(value).strip() for value in batch[FIELD_OS]}
-        keep = [str(value).strip() not in keys for value in existing[FIELD_OS]]
+    @classmethod
+    def _drop_batch_os(cls, existing: Any, batch: Any) -> Any:
+        """Remove do arquivo existente as feições das OS presentes no lote.
+
+        A comparação das chaves é TOLERANTE aos zeros à esquerda
+        (``ProjectStructureUtil.same_os``): um lote com ``050`` remove as feições
+        antigas gravadas como ``50`` (e vice-versa) — a LETRA continua
+        diferenciando (``169`` ≠ ``169A``).
+        """
+        keys = [str(value).strip() for value in batch[FIELD_OS]]
+        keep = [
+            not cls._os_in_batch(str(value).strip(), keys)
+            for value in existing[FIELD_OS]
+        ]
         return existing[keep]
+
+    @staticmethod
+    def _os_in_batch(key: str, keys: List[str]) -> bool:
+        """Indica se ``key`` pertence ao lote (chave EXATA ou a MESMA OS)."""
+        if key in keys:
+            return True
+        return any(ProjectStructureUtil.same_os(key, candidate) for candidate in keys)
 
     @staticmethod
     def _write_canonical(gdf: Any, target: str, fields: List[str]) -> None:
@@ -1421,6 +1451,73 @@ class LimitesService(BaseUtil):
         VectorLayerSource.write_geodataframe_atomic(
             gdf[fields + [gdf.geometry.name]], target, tool_key=_TOOL_KEY
         )
+
+    # ── Chave oficial da OS ─────────────────────────────────────────
+
+    @classmethod
+    def _os_key_resolver(cls, logger: Any) -> Callable[[str], str]:
+        """Resolvedor das chaves do lote: banco (fonte oficial) + pastas do projeto."""
+        mother = cls._load_mother_folder()
+        return cls._key_resolver(cls._official_os_keys(mother, logger), logger)
+
+    @classmethod
+    def _official_os_keys(cls, mother: Optional[Path], logger: Any) -> List[str]:
+        """Chaves OFICIAIS conhecidas: banco (Firebase) + pastas ``OS_*`` da pasta-mãe."""
+        keys: List[str] = []
+        try:
+            for record in CloudProjectDatabase.load_orders(tool_key=_TOOL_KEY):
+                keys.append(str(record.get("os", "")))
+        except Exception as e:
+            logger.warning(
+                "Falha ao ler as chaves das OS do banco",
+                code="LIM_DB_KEYS_ERR",
+                error=str(e),
+            )
+
+        if mother is not None:
+            for folder in ProjectStructureUtil.discover_projects(
+                mother, tool_key=_TOOL_KEY
+            ):
+                keys.append(ProjectStructureUtil.extract_os(folder.name))
+
+        return [key for key in keys if key]
+
+    @classmethod
+    def _key_resolver(
+        cls, official: List[str], logger: Any
+    ) -> Callable[[str], str]:
+        """Devolve ``resolve(chave)`` — a chave OFICIAL da OS (ou a própria chave).
+
+        A resolução é pela chave EXATA e, sem par exato, pelos zeros à esquerda
+        (``50`` → ``050``). O resultado é memorizado: cada chave é resolvida uma
+        única vez por lote.
+        """
+        known = sorted({cls.normalize_os(key) for key in official if key})
+        cache: Dict[str, str] = {}
+
+        def resolve(key: str) -> str:
+            if key not in cache:
+                cache[key] = cls._official_key(key, known, logger)
+            return cache[key]
+
+        return resolve
+
+    @classmethod
+    def _official_key(cls, key: str, known: List[str], logger: Any) -> str:
+        """Chave OFICIAL equivalente a ``key`` (a própria ``key`` sem equivalente)."""
+        if key in known:
+            return key
+
+        for candidate in known:
+            if ProjectStructureUtil.same_os(candidate, key):
+                logger.info(
+                    "Chave da OS ajustada para a chave oficial",
+                    code="LIM_OS_KEY_FIX",
+                    typed=key,
+                    official=candidate,
+                )
+                return candidate
+        return key
 
     # ── Estrutura do projeto (Verra) + banco ────────────────────────
 

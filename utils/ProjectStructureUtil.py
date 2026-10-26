@@ -166,6 +166,17 @@ class ProjectStructureUtil(FolderStructureUtil):
         return FolderStructureUtil.normalize_key(os_key)
 
     @classmethod
+    def same_os(cls, first: str, second: str) -> bool:
+        """Indica se DUAS chaves são a MESMA OS (zeros à esquerda NÃO diferenciam).
+
+        A chave oficial continua sendo a que está na pasta/banco (``050``), mas a
+        comparação aceita a forma sem os zeros à esquerda (``50`` ≡ ``050``) — a
+        LETRA continua diferenciando (``169`` ≠ ``169A``). Chaves fora do padrão
+        numérico só casam exatamente.
+        """
+        return cls.keys_match(first, second)
+
+    @classmethod
     def project_folder(
         cls,
         mother: Optional[Path],
@@ -175,7 +186,9 @@ class ProjectStructureUtil(FolderStructureUtil):
         """Pasta do projeto (OS) na pasta-mãe — ``None`` quando não existe.
 
         Localiza a pasta ``OS_<chave>...`` cuja chave bate com ``os_key``
-        (ex.: ``169A`` → ``OS_169A_AGUA_VIVA``).
+        (ex.: ``169A`` → ``OS_169A_AGUA_VIVA``); sem par exato, aceita a chave
+        sem os zeros à esquerda (``50`` → ``OS_050_Sementes Tropical``) — ver
+        ``same_os``.
         """
         return cls.folder(mother, os_key, tool_key=tool_key)
 

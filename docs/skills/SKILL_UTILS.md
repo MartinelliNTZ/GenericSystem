@@ -405,8 +405,15 @@ de UMA pasta-chave), `KEY_PREFIX` (`OS_` na pública, `""` na privada),
 `RESERVED_FOLDERS` (pastas da raiz que NÃO são pastas-chave) e `BASE_FILES_DIR`.
 O engine deriva `FOLDER_NAMES`, `FOLDER_TEMPLATES`, `SPECIAL_FOLDER`,
 `SPECIAL_ENTRIES` e `SPECIAL_TEMPLATE` (`derive()`) e oferece `discover`,
-`is_reserved`, `extract_key`, `normalize_key`, `folder`, `to_relative_path`,
-`resolve_path`, `collect_created` e `ensure_folder`.
+`is_reserved`, `extract_key`, `normalize_key`, `keys_match`, `folder`,
+`to_relative_path`, `resolve_path`, `collect_created` e `ensure_folder`.
+
+**Casamento de chaves (`keys_match`)** — a chave é TEXTO e os zeros à esquerda são
+PRESERVADOS na pasta (`OS_039_Bunge` → `039`), mas **não diferenciam** duas chaves:
+`"50"` ≡ `"050"` e `"169a"` ≡ `"169A"`; apenas a LETRA diferencia (`169` ≠ `169A`)
+e chaves fora do padrão numérico só casam exatamente. `folder()` procura primeiro o
+par EXATO e, sem ele, o tolerante — por isso `folder(root, "50")` encontra a pasta
+`OS_050_...` (a pública expõe o mesmo atalho como `ProjectStructureUtil.same_os`).
 
 ### `utils.ProjectStructureUtil` — estrutura PÚBLICA (VERRA_Farmer)
 
