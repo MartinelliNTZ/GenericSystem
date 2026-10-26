@@ -1,3 +1,11 @@
+[1.21.3][2026.10.26][17:20] - Base de Limites: o registro no banco passa a guardar o CAMINHO COMPLETO do vetor (`source_path`)
+  - plugins/limites_db/LimitesService.py: `_register_limits` grava `source_path` (o caminho do vetor como foi selecionado — ex.: `Z:/PROJETOS_2022/OS_50/SHP/TALHOES_SEMENTES_TROPICAL_MARTINELLI.shp`) junto do `source`, que continua sendo apenas o NOME do arquivo — o bloco `limites`/`zonas_manejo` da OS passa a permitir rastrear de onde o shape veio (antes só o nome do arquivo era registrado)
+  - plugins/os_tracker/OsTrackerService.py: `asset_info` passa a devolver `source_path` (vazio quando o registro é antigo/sem o campo) — os registros já gravados seguem funcionando
+  - plugins/os_tracker/OsTrackerPlugin.py: o tooltip das infos de cada base no painel Dados Gerais mostra a nova linha **Vetor: <caminho completo>** (além de "Origem" e "Registrado em")
+  - docs/skills/SKILL_DATABASE.md, SKILL_PROJECT.md e CatalogoClasses.md: o campo `source_path` e a nova linha do tooltip documentados
+  - Observação: o `Acompanhamento de OS`/relatório só passam a exibir o caminho completo nos registros gravados DEPOIS desta versão (o campo é gravado no próximo IMPORTAR/ATUALIZAR de cada OS)
+
+
 [1.21.2][2026.10.26][16:53] - Chave da OS sem os zeros à esquerda: cópia no projeto não era gerada (`50` ≠ `050`)
   - utils/FolderStructureUtil.py: NOVO `keys_match(first, second)` (+ `_key_parts`) — duas chaves apontam para a MESMA pasta quando a chave normalizada é igual ou, sendo numéricas com letra opcional, quando os zeros à esquerda NÃO diferenciam (`50` ≡ `050`, `169a` ≡ `169A`); a LETRA continua diferenciando (`169` ≠ `169A`) e chaves fora do padrão numérico só casam exatamente; `folder(root, key)` passa a procurar o par EXATO primeiro e, sem ele, o tolerante — `folder(root, "50")` agora encontra `OS_050_Sementes Tropical`
   - utils/ProjectStructureUtil.py: NOVO `same_os(first, second)` (atalho de `keys_match`) e `project_folder` documentando que a chave OFICIAL é a da pasta/banco, mas a busca aceita a forma sem os zeros à esquerda

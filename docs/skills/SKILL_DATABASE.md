@@ -94,6 +94,7 @@ caminho e pastas/anos criados:
     "inserted_at": "2026-10-21T16:57:00",
     "file": "OS_039_Bunge/08_LIMITES/TALHOES/039_limites.shp",
     "source": "P230_001_01_OURO_VERDE_TALHOES.shp",
+    "source_path": "Z:/PROJETOS_2022/OS_230/SHP/P230_001_01_OURO_VERDE_TALHOES.shp",
     "features": 12,
     "area_ha": 1234.5678
   }
@@ -104,8 +105,12 @@ caminho e pastas/anos criados:
     pasta-mãe (ex.: projeto em outro drive), o caminho **ABSOLUTO** é gravado
     (`LimitesService._stored_file_path`) para o registro continuar abrindo no
     Explorer.
+  - `source` é apenas o **NOME do arquivo** do vetor importado e `source_path` é o
+    **caminho completo** do vetor (como foi selecionado na Base de Limites) —
+    gravado para rastrear de onde o shape veio.
   - Ao **ATUALIZAR** pela Base de Limites, o mesmo objeto é reescrito na OS
-    (`inserted_at`, `file`, `source`, `features` e `area_ha` do novo vetor) — as
+    (`inserted_at`, `file`, `source`, `source_path`, `features` e `area_ha` do novo
+    vetor) — as
     feições antigas das OS do vetor são substituídas no completão, no arquivo da
     OS e na cópia do projeto.
   - O **ATUALIZAR DADOS** do Banco de Dados preserva `limites` — ele só reescreve

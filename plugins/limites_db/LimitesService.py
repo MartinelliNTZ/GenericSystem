@@ -1684,6 +1684,7 @@ class LimitesService(BaseUtil):
             "inserted_at": datetime.now().isoformat(timespec="seconds"),
             "file": cls._stored_file_path(mother, file_path),
             "source": os.path.basename(config.vector_path),
+            "source_path": str(config.vector_path),
             "features": int(len(group)),
             "area_ha": round(float(group[FIELD_AREA_CALC].sum()), 4),
         }

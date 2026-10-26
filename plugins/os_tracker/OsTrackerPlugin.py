@@ -399,13 +399,15 @@ class OsTrackerPlugin(BasePlugin):
 
     @staticmethod
     def _asset_tooltip(info: Dict[str, Any]) -> str:
-        """Detalhes do registro do banco (arquivo de origem e data de registro)."""
+        """Detalhes do registro do banco (vetor de origem e data de registro)."""
         if not info.get("has"):
             return "Sem registro na OS."
 
         lines = []
         if info.get("source"):
             lines.append(f"Origem: {info['source']}")
+        if info.get("source_path"):
+            lines.append(f"Vetor: {info['source_path']}")
         when = OsTrackerService.format_when(str(info.get("inserted_at", "")))
         if when:
             lines.append(f"Registrado em: {when}")

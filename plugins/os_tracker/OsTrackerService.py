@@ -163,8 +163,8 @@ class OsTrackerService(BaseUtil):
         """
         Resumo do asset ``limites``/``zonas_manejo`` gravado na OS pelo banco.
 
-        Chaves: ``has``, ``features``, ``area_ha``, ``file``, ``source`` e
-        ``inserted_at``.
+        Chaves: ``has``, ``features``, ``area_ha``, ``file``, ``source``,
+        ``source_path`` e ``inserted_at``.
         """
         data = (record or {}).get(key)
         if not isinstance(data, dict) or not data:
@@ -174,6 +174,7 @@ class OsTrackerService(BaseUtil):
                 "area_ha": 0.0,
                 "file": "",
                 "source": "",
+                "source_path": "",
                 "inserted_at": "",
             }
 
@@ -183,6 +184,7 @@ class OsTrackerService(BaseUtil):
             "area_ha": cls._as_float(data.get("area_ha")),
             "file": str(data.get("file", "") or ""),
             "source": str(data.get("source", "") or ""),
+            "source_path": str(data.get("source_path", "") or ""),
             "inserted_at": str(data.get("inserted_at", "") or ""),
         }
 

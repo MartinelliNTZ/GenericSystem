@@ -457,8 +457,8 @@ alteradas.
 - O painel **"Dados Gerais"** exibe TODOS os dados em um único `GridLabel` de
   **2 colunas**, na mesma formatação: OS, cliente, pastas criadas, anos criados e
   as infos de cada base do banco — **Feições/Área de Limites** e **Feições/Área de
-  Zonas de manejo** (`OsTrackerService.asset_info`; o tooltip traz a origem e a
-  data de registro).
+  Zonas de manejo** (`OsTrackerService.asset_info`; o tooltip traz a origem — nome
+  e **caminho completo do vetor** (`source`/`source_path`) — e a data de registro).
 - O painel **"Atalhos"** (`GridButtonPanel`) abre, com um clique, a **pasta da
   OS** (`OsTrackerService.project_folder`), a **pasta do arquivo de cada base
   obtida** (`LIMITES`/`ZONAS DE MANEJO` — um botão por link registrado, escondido
