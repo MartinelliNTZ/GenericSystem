@@ -7,9 +7,15 @@ Etapa de enriquecimento da Base de Limites: extrai o CENTROIDE de cada feicao
 dentro do talhao de origem.
 
     API 1 — Altimetria  (``utils.AltimetriaApi`` / Open Topo Data) → ``ALTITUDE``
-    API 2 — Localidade  (``utils.LocalidadeApi`` / IBGE)           → ``MUNICIPIO``,
+    API 2 — Localidade  (``utils.LocalidadeApi`` / malha do IBGE)  → ``MUNICIPIO``,
                                                                      ``ESTADO``,
+                                                                     ``REGIAO``,
                                                                      ``PAIS``
+
+A API 2 e OFFLINE: le a MALHA MUNICIPAL do IBGE
+(``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>/BR_Municipios_<ano>.shp``) e
+devolve o municipio, a sigla da UF, a regiao (Norte/Nordeste/Centro-Oeste/
+Sudeste/Sul) e o pais de cada centroide — sem NENHUMA requisicao de rede.
 
 O centroide carrega TODOS os atributos da feicao de origem. Os centroides sao
 gravados SOMENTE na estrutura PRIVADA (``VERRA_DATA``) — completao em
@@ -42,6 +48,7 @@ from utils.vector.VectorLayerSource import VectorLayerSource
 
 FIELD_MUNICIPIO = "MUNICIPIO"
 FIELD_ESTADO = "ESTADO"
+FIELD_REGIAO = "REGIAO"
 FIELD_PAIS = "PAIS"
 FIELD_ALTITUDE = "ALTITUDE"
 
@@ -49,6 +56,7 @@ FIELD_ALTITUDE = "ALTITUDE"
 PUBLIC_FIELDS: Tuple[str, ...] = (
     FIELD_MUNICIPIO,
     FIELD_ESTADO,
+    FIELD_REGIAO,
     FIELD_PAIS,
     FIELD_ALTITUDE,
 )
@@ -105,8 +113,8 @@ class CentroideService(BaseUtil):
                 ``eta`` e o tempo RESTANTE (fase atual + plano da proxima).
 
         Returns:
-            GeoDataFrame novo com ``MUNICIPIO``, ``ESTADO``, ``PAIS`` e
-            ``ALTITUDE`` preenchidos (vazio quando a consulta falha).
+            GeoDataFrame novo com ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS``
+            e ``ALTITUDE`` preenchidos (vazio quando a consulta falha).
         """
         coords, positions = cls._valid_points(centroides)
         total = len(coords) * 2
@@ -169,6 +177,7 @@ class CentroideService(BaseUtil):
             "n_centroides": int(len(centroides)),
             "n_altitude": int(centroides[FIELD_ALTITUDE].notna().sum()),
             "n_localidade": int(cls._filled(centroides[FIELD_MUNICIPIO])),
+            "n_regiao": int(cls._filled(centroides[FIELD_REGIAO])),
         }
 
     # ── Interno ─────────────────────────────────────────────────────
@@ -200,6 +209,7 @@ class CentroideService(BaseUtil):
         values: List[Optional[float]] = [None] * len(centroides)
         municipios = [""] * len(centroides)
         estados = [""] * len(centroides)
+        regioes = [""] * len(centroides)
         paises = [""] * len(centroides)
 
         for offset, position in enumerate(positions):
@@ -208,6 +218,7 @@ class CentroideService(BaseUtil):
             if item:
                 municipios[position] = item["municipio"]
                 estados[position] = item["estado"]
+                regioes[position] = item["regiao"]
                 paises[position] = item["pais"]
 
         enriched[FIELD_ALTITUDE] = pd.Series(
@@ -215,6 +226,7 @@ class CentroideService(BaseUtil):
         )
         enriched[FIELD_MUNICIPIO] = municipios
         enriched[FIELD_ESTADO] = estados
+        enriched[FIELD_REGIAO] = regioes
         enriched[FIELD_PAIS] = paises
         return enriched
 

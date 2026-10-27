@@ -60,12 +60,15 @@ Atualização (``ATUALIZAR``):
 Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi``):
 - Ao obter um NOVO limite (ou zona), cada feição ganha um CENTROIDE que carrega
   TODOS os seus atributos; o centroide é consultado nas duas APIs públicas e os
-  campos ``MUNICIPIO``, ``ESTADO``, ``PAIS`` e ``ALTITUDE`` voltam para o talhão
-  (completão, arquivo da OS na base e cópia no projeto).
+  campos ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS`` e ``ALTITUDE`` voltam
+  para o talhão (completão, arquivo da OS na base e cópia no projeto).
 - Os centroides ficam SOMENTE na base PRIVADA (``VERRA_DATA``): completão em
   ``Consolidado`` e um arquivo por OS na pasta ``Centroides`` — nunca no projeto.
-- O enriquecimento é BEST-EFFORT: falha de rede não bloqueia a importação, apenas
-  gera aviso e deixa os campos vazios.
+- A localidade (``MUNICIPIO``/``ESTADO``/``REGIAO``/``PAIS``) é OFFLINE: sai da
+  MALHA MUNICIPAL do IBGE (``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>``,
+  resolvida por ``utils.PublicDataStructureUtil``); só a ALTITUDE usa rede.
+- O enriquecimento é BEST-EFFORT: falha de rede/malha não bloqueia a importação,
+  apenas gera aviso e deixa os campos vazios.
 - A recarga (``ATUALIZAR BASE``) roda nos DOIS modos (``reload_all`` →
   ``reload_base``): parte dos completões e REESCREVE todos os shapes de todas as
   OS (completão, arquivo de cada OS na base e cópias nos projetos) e os
@@ -126,6 +129,7 @@ from plugins.limites_db.CentroideService import (
     FIELD_ESTADO,
     FIELD_MUNICIPIO,
     FIELD_PAIS,
+    FIELD_REGIAO,
     PUBLIC_FIELDS,
 )
 from plugins.limites_db.ResumoOsService import ResumoOsService
@@ -822,7 +826,12 @@ class LimitesService(BaseUtil):
             "db_updated": 0,
             "replaced": 0,
             "resumo_file": "",
-            "centroides": {"n_centroides": 0, "n_altitude": 0, "n_localidade": 0},
+            "centroides": {
+                "n_centroides": 0,
+                "n_altitude": 0,
+                "n_localidade": 0,
+                "n_regiao": 0,
+            },
             "skipped": [mode for mode in MODE_SETTINGS if mode not in modes],
             "warnings": [],
         }
@@ -990,8 +999,8 @@ class LimitesService(BaseUtil):
             )
         if summary["n_localidade"] < summary["n_centroides"]:
             payload["warnings"].append(
-                "Alguns centroides ficaram sem MUNICÍPIO/UF (consulta ao IBGE "
-                "indisponível ou ponto fora do Brasil)."
+                "Alguns centroides ficaram sem MUNICÍPIO/UF/REGIÃO (malha "
+                "municipal do IBGE ausente ou ponto fora do Brasil)."
             )
 
         cls._get_logger(_TOOL_KEY, "LimitesService").info(
@@ -1368,6 +1377,7 @@ class LimitesService(BaseUtil):
         """Cria VAZIOS os campos publicos do enriquecimento (ALTITUDE numerico)."""
         gdf[FIELD_MUNICIPIO] = ""
         gdf[FIELD_ESTADO] = ""
+        gdf[FIELD_REGIAO] = ""
         gdf[FIELD_PAIS] = ""
         gdf[FIELD_ALTITUDE] = pd.Series(
             [float("nan")] * len(gdf), index=gdf.index, dtype="float64"

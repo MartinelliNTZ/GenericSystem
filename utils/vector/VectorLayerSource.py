@@ -345,6 +345,7 @@ class VectorLayerSource(BaseUtil):
     def read_geodataframe(
         path: str,
         tool_key: str = ToolKey.UNTRACEABLE.value,
+        bbox: Optional[Tuple[float, float, float, float]] = None,
     ) -> Any:
         """
         Le um arquivo vetorial preservando a geometria (GeoDataFrame).
@@ -355,6 +356,10 @@ class VectorLayerSource(BaseUtil):
         Args:
             path: Caminho do arquivo vetorial.
             tool_key: Chave da ferramenta para logging.
+            bbox: Filtro espacial OPCIONAL ``(minx, miny, maxx, maxy)`` no CRS do
+                ARQUIVO — le so as feicoes que intersectam a caixa (usa o indice
+                espacial do driver). Com ``bbox`` o resultado VAZIO e VALIDO (nao
+                levanta erro): o chamador decide o que fazer sem feicoes.
 
         Returns:
             GeoDataFrame com geometria e CRS (quando o arquivo tiver).
@@ -389,12 +394,15 @@ class VectorLayerSource(BaseUtil):
         try:
             if ext == ".kmz":
                 source, tmp_dir = VectorLayerSource._extract_kmz(path, tool_key)
-            gdf = gpd.read_file(source)
+            read_kwargs = {}
+            if bbox is not None:
+                read_kwargs["bbox"] = tuple(float(value) for value in bbox)
+            gdf = gpd.read_file(source, **read_kwargs)
         finally:
             if tmp_dir:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        if gdf is None or gdf.empty:
+        if gdf is None or (gdf.empty and bbox is None):
             logger.error("Arquivo vetorial vazio", code="VECTOR_EMPTY", path=path)
             raise ValueError(f"Arquivo vetorial vazio: {path}")
 
@@ -404,6 +412,7 @@ class VectorLayerSource(BaseUtil):
             path=path,
             n_features=len(gdf),
             crs=str(gdf.crs) if gdf.crs is not None else "N/A",
+            bbox=list(bbox) if bbox is not None else "",
         )
         return gdf
 
