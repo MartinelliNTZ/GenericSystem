@@ -49,6 +49,13 @@ recarrega TODOS os shapes de TODAS as OS em todas as pastas (completão, arquivo
 de cada OS na base e cópias nos projetos) e os centroides, refazendo o
 enriquecimento — sem precisar reimportar o vetor de origem.
 
+**Planilha-resumo da base (privada):** ao final de IMPORTAR, ATUALIZAR e
+ATUALIZAR BASE a ferramenta regera ``<VERRA_DATA>/resumo_os.xlsx`` (aba
+``Resumo``) — uma linha por OS com a chave da OS, a **área final** (soma da área
+do shape de limites da OS) e a data em que as **zonas de manejo** da OS foram
+inseridas no sistema (``ResumoOsService``). O VALIDAR não grava nem atualiza a
+planilha.
+
 Preferências: carregadas ao INICIAR (modo, vetor e valores manuais — fazenda, OS,
 cliente, área e tolerância) e atualizadas a cada mudança. Ao TROCAR o vetor, o
 auto-preenchimento da OS pelo caminho passa a mandar — só um valor digitado pelo
@@ -824,6 +831,10 @@ class LimitesPlugin(BasePlugin):
                     f"\nRegistros no banco: {self._format_int(payload.get('db_updated', 0))}"
                 )
             stats += self._centroides_summary(payload.get("centroides"))
+            if payload.get("resumo_file"):
+                stats += (
+                    f"\nPlanilha-resumo: {os.path.basename(payload['resumo_file'])}"
+                )
 
         if payload.get("dry_run"):
             text = f"Validação concluída.\n\n{stats}\n\nNada foi gravado."

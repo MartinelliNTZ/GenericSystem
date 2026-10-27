@@ -73,6 +73,16 @@ Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi``):
   feições de OS que existem na pasta da base mas não estão no completão são
   recuperadas do arquivo por OS (``_mode_batch``).
 
+Planilha-resumo da base privada (``ResumoOsService``):
+- A cada IMPORTAR/ATUALIZAR/ATUALIZAR BASE a planilha
+  ``<VERRA_DATA>/resumo_os.xlsx`` é REGERADA por inteiro (aba ``Resumo``): uma
+  linha por OS da base com a chave da OS, a ÁREA FINAL (soma de ``AREA_HA`` do
+  shape de LIMITES da OS) e a data (``ZM``) em que as zonas de manejo da OS
+  foram inseridas no sistema (``inserted_at`` do registro ``zonas_manejo`` da OS
+  no banco oficial).
+- É BEST-EFFORT: falha ao gerar a planilha não desfaz a operação — vira aviso no
+  resumo e vai para o log; sem o banco, as datas já gravadas são preservadas.
+
 Validações do vetor (bloqueiam a operação — nada é gravado):
 - **Shapefile completo**: exige ``.shp``, ``.shx`` e ``.dbf`` no mesmo diretório;
 - **EPSG**: o padrão é ``EPSG:4326`` — qualquer outro CRS (ou sem ``.prj``) é
@@ -118,6 +128,7 @@ from plugins.limites_db.CentroideService import (
     FIELD_PAIS,
     PUBLIC_FIELDS,
 )
+from plugins.limites_db.ResumoOsService import ResumoOsService
 
 _TOOL_KEY = ToolKey.LIMITES_DB.value
 
@@ -559,6 +570,7 @@ class LimitesService(BaseUtil):
             "db_updated": 0,
             "update": bool(config.update),
             "replaced": 0,
+            "resumo_file": "",
             "warnings": warnings,
         }
 
@@ -605,6 +617,9 @@ class LimitesService(BaseUtil):
 
         cls._notify(progress_cb, 96, "Gravando centroides...")
         cls._write_centroides(centroides, config, payload)
+
+        cls._notify(progress_cb, 98, "Atualizando a planilha-resumo...")
+        cls._refresh_resumo(config, payload, logger)
 
         cls._notify(
             progress_cb,
@@ -806,6 +821,7 @@ class LimitesService(BaseUtil):
             "centroides_files": [],
             "db_updated": 0,
             "replaced": 0,
+            "resumo_file": "",
             "centroides": {"n_centroides": 0, "n_altitude": 0, "n_localidade": 0},
             "skipped": [mode for mode in MODE_SETTINGS if mode not in modes],
             "warnings": [],
@@ -824,6 +840,9 @@ class LimitesService(BaseUtil):
             payload["warnings"].append(
                 f"{MODE_SETTINGS[mode]['label']}: sem completão na base — ignorado."
             )
+
+        cls._notify(progress_cb, 98, "Atualizando a planilha-resumo...")
+        cls._refresh_resumo(config, payload, logger)
 
         cls._notify(progress_cb, 100, "Base recarregada.", time.monotonic() - started_at)
         logger.info(
@@ -1015,6 +1034,155 @@ class LimitesService(BaseUtil):
         payload["centroides_files"] = written
         return written
 
+    # ── Planilha-resumo da base (VERRA_DATA) ────────────────────────
+
+    @classmethod
+    def _refresh_resumo(
+        cls,
+        config: LimitesImportConfig,
+        payload: Dict[str, Any],
+        logger: Any,
+    ) -> None:
+        """Regerá a planilha-resumo da base privada (BEST-EFFORT)."""
+        try:
+            path = ResumoOsService.write(
+                Path(config.output_root),
+                cls._resumo_rows(config, logger),
+                _TOOL_KEY,
+            )
+        except Exception as e:
+            logger.error(
+                "Falha ao gerar a planilha-resumo",
+                code="LIM_RESUMO_ERR",
+                root=str(config.output_root),
+                error=str(e),
+            )
+            payload["warnings"].append(f"Planilha-resumo não atualizada ({e}).")
+            return
+
+        payload["resumo_file"] = str(path or "")
+        logger.info(
+            "Planilha-resumo atualizada",
+            code="LIM_RESUMO_OK",
+            path=str(path or ""),
+        )
+
+    @classmethod
+    def _resumo_rows(
+        cls,
+        config: LimitesImportConfig,
+        logger: Any,
+    ) -> List[Tuple[str, Optional[float], str]]:
+        """Linhas da planilha: ``(OS, área final, data da ZM)`` por OS da base."""
+        areas = cls._resumo_areas(config, logger)
+        dates = cls._zm_dates(logger)
+        return [
+            (key, areas[key], dates.get(key, ""))
+            for key in sorted(areas, key=cls._os_sort_key)
+        ]
+
+    @classmethod
+    def _resumo_areas(
+        cls,
+        config: LimitesImportConfig,
+        logger: Any,
+    ) -> Dict[str, Optional[float]]:
+        """Área final por OS (shape de LIMITES) + as OS que só têm zonas de manejo."""
+        areas: Dict[str, Optional[float]] = cls._os_areas(config, MODE_LIMITES, logger)
+        for key in cls._os_keys(config, MODE_ZONAS, logger):
+            areas.setdefault(key, None)
+        return areas
+
+    @classmethod
+    def _os_areas(
+        cls,
+        config: LimitesImportConfig,
+        mode: str,
+        logger: Any,
+    ) -> Dict[str, float]:
+        """Soma de ``AREA_HA`` do completão do modo, agrupada por OS."""
+        batch = cls._read_completado(config, mode, logger)
+        if batch is None:
+            return {}
+
+        return {
+            str(os_key).strip(): float(group[FIELD_AREA_CALC].sum())
+            for os_key, group in batch.groupby(FIELD_OS, sort=False)
+            if str(os_key).strip()
+        }
+
+    @classmethod
+    def _os_keys(
+        cls,
+        config: LimitesImportConfig,
+        mode: str,
+        logger: Any,
+    ) -> List[str]:
+        """Chaves das OS presentes no completão do modo (vazio quando não existe)."""
+        batch = cls._read_completado(config, mode, logger)
+        if batch is None:
+            return []
+
+        return [str(value).strip() for value in batch[FIELD_OS] if str(value).strip()]
+
+    @classmethod
+    def _read_completado(
+        cls,
+        config: LimitesImportConfig,
+        mode: str,
+        logger: Any,
+    ) -> Optional[Any]:
+        """Lê o completão do modo (``None`` quando não existe ou está ilegível)."""
+        path = cls._consolidated_path(replace(config, mode=mode))
+        if not os.path.exists(path):
+            return None
+
+        try:
+            return cls._read_existing(path, cls.settings(mode)["fields"])
+        except Exception as e:
+            logger.error(
+                "Falha ao ler o completão para a planilha-resumo",
+                code="LIM_RESUMO_READ_ERR",
+                mode=mode,
+                path=path,
+                error=str(e),
+            )
+            return None
+
+    @classmethod
+    def _zm_dates(cls, logger: Any) -> Dict[str, str]:
+        """Data de inserção das ZONAS DE MANEJO por OS (banco oficial)."""
+        db_key = cls.settings(MODE_ZONAS)["db_key"]
+        try:
+            records = CloudProjectDatabase.load_orders(tool_key=_TOOL_KEY)
+        except Exception as e:
+            logger.warning(
+                "Falha ao ler as datas das zonas no banco",
+                code="LIM_RESUMO_DB_ERR",
+                error=str(e),
+            )
+            return {}
+
+        dates: Dict[str, str] = {}
+        for record in records:
+            key = str(record.get("os", "") or "").strip()
+            data = record.get(db_key)
+            if not key or not isinstance(data, dict):
+                continue
+
+            inserted = str(data.get("inserted_at", "") or "").strip()
+            if inserted:
+                dates[key] = inserted
+
+        return dates
+
+    @staticmethod
+    def _os_sort_key(key: str) -> Tuple[int, int, str]:
+        """Ordena as OS por número (``050`` < ``169A``) e o resto alfabeticamente."""
+        match = re.fullmatch(r"(\d+)([A-Z]?)", key)
+        if match:
+            return 0, int(match.group(1)), match.group(2)
+        return 1, 0, key
 
     # ── Verificação de shapes existentes ────────────────────────────
 
