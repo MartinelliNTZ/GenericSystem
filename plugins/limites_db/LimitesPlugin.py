@@ -38,20 +38,23 @@ consta em TODOS os shapes gerados (completão, arquivo da OS e cópia no projeto
 
 **Enriquecimento público (automático):** ao obter um NOVO limite (ou zona), cada
 feição ganha um CENTROIDE com todos os seus atributos; o centroide é consultado
-nas duas APIs públicas — ``utils.AltimetriaApi`` (Open Topo Data → ``ALTITUDE``)
-e ``utils.LocalidadeApi`` (MALHA MUNICIPAL do IBGE, OFFLINE →
-``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS``) — e os cinco campos voltam para
-o talhão (completão, arquivo da OS e cópia no projeto). Os centroides ficam
-SOMENTE na base PRIVADA (``VERRA_DATA``): completão em ``Consolidado`` e um
-arquivo por OS na pasta ``Centroides``.
+nas APIs públicas — ``utils.AltimetriaApi`` (Open Topo Data → ``ALTITUDE``),
+``utils.LocalidadeApi`` (MALHA MUNICIPAL do IBGE, OFFLINE → ``MUNICIPIO``,
+``ESTADO``, ``REGIAO``, ``PAIS``) e ``utils.BiomaApi`` (MALHA DE BIOMAS do IBGE,
+OFFLINE → ``BIOMA``) — e os seis campos voltam para o talhão (completão,
+arquivo da OS e cópia no projeto). Os centroides ficam SOMENTE na base PRIVADA
+(``VERRA_DATA``): completão em ``Consolidado`` e um arquivo por OS na pasta
+``Centroides``.
 
-A localidade sai da malha municipal em
-``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>/BR_Municipios_<ano>.shp``
-(resolvida por ``utils.PublicDataStructureUtil`` — a versão MAIS NOVA da pasta é
-usada automaticamente ao atualizar a base pública): o ponto de cada centroide
-cai no polígono do município e dele saem o nome do município, a SIGLA da UF e a
-REGIÃO (Norte/Nordeste/Centro-Oeste/Sudeste/Sul). Sem rede e sem a malha os
-campos ficam vazios (best-effort) e o caminho usado aparece no painel Resumo.
+As malhas saem da BASE PÚBLICA (``<BASE_DADOS>/PUBLICOS``) — municípios em
+``IBGE_BR_Municipios_<ano>/BR_Municipios_<ano>.shp`` e biomas em
+``IBGE_BIOMAS/lml_bioma_e250k_v<AAAAMMDD>_A.shp`` — resolvidas por
+``utils.PublicDataStructureUtil`` (a versão MAIS NOVA de cada uma é usada
+automaticamente ao atualizar a base pública): o ponto de cada centroide cai no
+polígono e dele saem o nome do município, a SIGLA da UF, a REGIÃO
+(Norte/Nordeste/Centro-Oeste/Sudeste/Sul) e o BIOMA (Amazônia, Caatinga,
+Cerrado, Mata Atlântica, Pampa, Pantanal). Sem rede e sem a malha os campos
+ficam vazios (best-effort) e os caminhos usados aparecem no painel Resumo.
 
 O botão **ATUALIZAR BASE** relê os completões da base (LIMITES e ZONAS) e
 recarrega TODOS os shapes de TODAS as OS em todas as pastas (completão, arquivo
@@ -102,6 +105,7 @@ from resources.widgets.GroupPainel import GroupPainel
 from resources.widgets.SectionPanel import SectionPanel
 from resources.widgets.SeparatorWidget import SeparatorWidget
 from resources.widgets.simple.SimpleComboBox import SimpleComboBox
+from utils.BiomaApi import BiomaApi
 from utils.LocalidadeApi import LocalidadeApi
 from utils.MessageBox import MessageBox
 from utils.Preferences import Preferences
@@ -188,7 +192,7 @@ class LimitesPlugin(BasePlugin):
                         "Relê os completões da base (LIMITES e ZONAS) e recarrega TODOS os "
                         "shapes de TODAS as OS em todas as pastas (base + projetos), "
                         "refazendo os centroides e o enriquecimento público "
-                        "(altimetria e município/UF/região/país)"
+                        "(altimetria e município/UF/região/país/bioma)"
                     ),
                 },
             },
@@ -347,6 +351,10 @@ class LimitesPlugin(BasePlugin):
             "municipios": {
                 "label": "Municípios",
                 "value": LocalidadeApi.shape_path(self.tool_key) or "—",
+            },
+            "biomas": {
+                "label": "Biomas",
+                "value": BiomaApi.shape_path(self.tool_key) or "—",
             },
         }, columns=2)
         painel_resumo = GroupPainel("Resumo da Origem")
@@ -805,6 +813,8 @@ class LimitesPlugin(BasePlugin):
             f"{self._format_int(centroides.get('n_localidade', 0))}"
             f"\nCentroides com região: "
             f"{self._format_int(centroides.get('n_regiao', 0))}"
+            f"\nCentroides com bioma: "
+            f"{self._format_int(centroides.get('n_bioma', 0))}"
         )
 
     def _on_import_done(self, generation: int, payload: dict) -> None:

@@ -951,7 +951,7 @@ Quando precisar implementar um método stub:
 
 | Data | Versão | Descrição |
 |------|--------|-----------|
-| 2026-10-27 | 2.4.0 | `VectorLayerSource.read_geodataframe(..., bbox=None)` (GeoDataFrame): leitura ESPACIAL opcional — só as feições que intersectam a caixa entram na memória e, com `bbox`, o resultado vazio é válido (usado pela `LocalidadeApi` para ler a malha municipal do IBGE de 320 MB por célula) |
+| 2026-10-27 | 2.4.0 | `VectorLayerSource.read_geodataframe(..., bbox=None)` (GeoDataFrame): leitura ESPACIAL opcional — só as feições que intersectam a caixa entram na memória e, com `bbox`, o resultado vazio é válido (usado pelo `MalhaLookup`/`LocalidadeApi`/`BiomaApi` para ler as malhas do IBGE de 320 MB por célula) |
 | 2026-10-24 | 2.3.0 | `VectorLayerProjection` (GeoDataFrame): `reproject_gdf` (cópia, sem CRS levanta `ValueError`), `is_geographic` e `crs_epsg` + `DEFAULT_CRS = "EPSG:4326"`; o fluxo de importação normaliza tudo em 4326 em vez de bloquear |
 | 2026-10-23 | 2.2.0 | `VectorLayerGeometry.centroids` (GeoDataFrame) — centroide de cada feição poligonal preservando TODOS os atributos, com fallback `representative_point()` quando o centroide cai fora da geometria |
 | 2026-10-21 | 2.1.0 | `VectorLayerSource`: `read_geodataframe` (KMZ descompactado), `list_fields`, `write_geodataframe_atomic` e `concat_geodataframes`; `VectorLayerMetrics.calculate_area_hectares` (GeoDataFrame, UTM/área equivalente); extensões `.kmz`/`.json` |

@@ -57,16 +57,19 @@ Atualização (``ATUALIZAR``):
   destino e trocadas pelo lote novo — as demais OS do arquivo ficam intactas — e
   a checagem de duplicidade é ignorada.
 
-Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi``):
+Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi`` +
+``utils.BiomaApi``):
 - Ao obter um NOVO limite (ou zona), cada feição ganha um CENTROIDE que carrega
-  TODOS os seus atributos; o centroide é consultado nas duas APIs públicas e os
-  campos ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS`` e ``ALTITUDE`` voltam
-  para o talhão (completão, arquivo da OS na base e cópia no projeto).
+  TODOS os seus atributos; o centroide é consultado nas APIs públicas e os
+  campos ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS``, ``BIOMA`` e
+  ``ALTITUDE`` voltam para o talhão (completão, arquivo da OS na base e cópia
+  no projeto).
 - Os centroides ficam SOMENTE na base PRIVADA (``VERRA_DATA``): completão em
   ``Consolidado`` e um arquivo por OS na pasta ``Centroides`` — nunca no projeto.
-- A localidade (``MUNICIPIO``/``ESTADO``/``REGIAO``/``PAIS``) é OFFLINE: sai da
-  MALHA MUNICIPAL do IBGE (``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>``,
-  resolvida por ``utils.PublicDataStructureUtil``); só a ALTITUDE usa rede.
+- A localidade (``MUNICIPIO``/``ESTADO``/``REGIAO``/``PAIS``) e o ``BIOMA`` são
+  OFFLINE: saem das MALHAS do IBGE da BASE PÚBLICA
+  (``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>`` e ``.../IBGE_BIOMAS``,
+  resolvidas por ``utils.PublicDataStructureUtil``); só a ALTITUDE usa rede.
 - O enriquecimento é BEST-EFFORT: falha de rede/malha não bloqueia a importação,
   apenas gera aviso e deixa os campos vazios.
 - A recarga (``ATUALIZAR BASE``) roda nos DOIS modos (``reload_all`` →
@@ -126,6 +129,7 @@ from utils.vector.VectorLayerSource import VectorLayerSource
 from plugins.limites_db.CentroideService import (
     CentroideService,
     FIELD_ALTITUDE,
+    FIELD_BIOMA,
     FIELD_ESTADO,
     FIELD_MUNICIPIO,
     FIELD_PAIS,
@@ -831,6 +835,7 @@ class LimitesService(BaseUtil):
                 "n_altitude": 0,
                 "n_localidade": 0,
                 "n_regiao": 0,
+                "n_bioma": 0,
             },
             "skipped": [mode for mode in MODE_SETTINGS if mode not in modes],
             "warnings": [],
@@ -1001,6 +1006,11 @@ class LimitesService(BaseUtil):
             payload["warnings"].append(
                 "Alguns centroides ficaram sem MUNICÍPIO/UF/REGIÃO (malha "
                 "municipal do IBGE ausente ou ponto fora do Brasil)."
+            )
+        if summary["n_bioma"] < summary["n_centroides"]:
+            payload["warnings"].append(
+                "Alguns centroides ficaram sem BIOMA (malha de biomas do IBGE "
+                "ausente ou ponto fora dos biomas mapeados)."
             )
 
         cls._get_logger(_TOOL_KEY, "LimitesService").info(
@@ -1379,6 +1389,7 @@ class LimitesService(BaseUtil):
         gdf[FIELD_ESTADO] = ""
         gdf[FIELD_REGIAO] = ""
         gdf[FIELD_PAIS] = ""
+        gdf[FIELD_BIOMA] = ""
         gdf[FIELD_ALTITUDE] = pd.Series(
             [float("nan")] * len(gdf), index=gdf.index, dtype="float64"
         )

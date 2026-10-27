@@ -11,11 +11,15 @@ dentro do talhao de origem.
                                                                      ``ESTADO``,
                                                                      ``REGIAO``,
                                                                      ``PAIS``
+    API 3 — Bioma       (``utils.BiomaApi`` / malha do IBGE)       → ``BIOMA``
 
-A API 2 e OFFLINE: le a MALHA MUNICIPAL do IBGE
-(``<BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_<ano>/BR_Municipios_<ano>.shp``) e
-devolve o municipio, a sigla da UF, a regiao (Norte/Nordeste/Centro-Oeste/
-Sudeste/Sul) e o pais de cada centroide — sem NENHUMA requisicao de rede.
+As APIs 2 e 3 sao OFFLINE: leem as MALHAS oficiais do IBGE da BASE PUBLICA
+(``<BASE_DADOS>/PUBLICOS`` — malha municipal ``IBGE_BR_Municipios_<ano>`` e
+malha de biomas ``IBGE_BIOMAS``, resolvidas por ``utils.PublicDataStructureUtil``)
+e devolvem, para cada centroide, o municipio, a sigla da UF, a regiao
+(Norte/Nordeste/Centro-Oeste/Sudeste/Sul), o pais e o bioma (Amazônia, Caatinga,
+Cerrado, Mata Atlântica, Pampa, Pantanal) — sem NENHUMA requisicao de rede. O
+motor comum das duas e ``utils.MalhaLookup``.
 
 O centroide carrega TODOS os atributos da feicao de origem. Os centroides sao
 gravados SOMENTE na estrutura PRIVADA (``VERRA_DATA``) — completao em
@@ -42,6 +46,7 @@ import pandas as pd
 from core.enum.ToolKey import ToolKey
 from utils.AltimetriaApi import AltimetriaApi
 from utils.BaseUtil import BaseUtil
+from utils.BiomaApi import BiomaApi
 from utils.LocalidadeApi import LocalidadeApi
 from utils.vector.VectorLayerGeometry import VectorLayerGeometry
 from utils.vector.VectorLayerSource import VectorLayerSource
@@ -50,6 +55,7 @@ FIELD_MUNICIPIO = "MUNICIPIO"
 FIELD_ESTADO = "ESTADO"
 FIELD_REGIAO = "REGIAO"
 FIELD_PAIS = "PAIS"
+FIELD_BIOMA = "BIOMA"
 FIELD_ALTITUDE = "ALTITUDE"
 
 # Campos publicos obtidos pelas APIs (mesma ordem nos shapes e nos centroides).
@@ -58,6 +64,7 @@ PUBLIC_FIELDS: Tuple[str, ...] = (
     FIELD_ESTADO,
     FIELD_REGIAO,
     FIELD_PAIS,
+    FIELD_BIOMA,
     FIELD_ALTITUDE,
 )
 
@@ -109,29 +116,35 @@ class CentroideService(BaseUtil):
             centroides: GeoDataFrame de POINTs (saida de ``build``).
             tool_key: Chave da ferramenta para logging.
             progress_cb: Callback ``(processados, total, eta_segundos)`` do
-                TOTAL combinado das duas APIs (altimetria + localidade); o
-                ``eta`` e o tempo RESTANTE (fase atual + plano da proxima).
+                TOTAL combinado das TRES fases (altimetria + localidade + bioma);
+                o ``eta`` e o tempo RESTANTE (fase atual + plano das proximas).
 
         Returns:
-            GeoDataFrame novo com ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS``
-            e ``ALTITUDE`` preenchidos (vazio quando a consulta falha).
+            GeoDataFrame novo com ``MUNICIPIO``, ``ESTADO``, ``REGIAO``, ``PAIS``,
+            ``BIOMA`` e ``ALTITUDE`` preenchidos (vazio quando a consulta falha).
         """
         coords, positions = cls._valid_points(centroides)
-        total = len(coords) * 2
-        planned = LocalidadeApi.plan_seconds(coords)
+        total = len(coords) * 3
+        local_plan = LocalidadeApi.plan_seconds(coords)
+        bioma_plan = BiomaApi.plan_seconds(coords)
 
         altitudes = AltimetriaApi.elevations(
-            coords, tool_key, _counter(progress_cb, 0, total, planned)
+            coords,
+            tool_key,
+            _counter(progress_cb, 0, total, local_plan + bioma_plan),
         )
         locations = LocalidadeApi.lookups(
-            coords, tool_key, _counter(progress_cb, len(coords), total)
+            coords, tool_key, _counter(progress_cb, len(coords), total, bioma_plan)
+        )
+        biomas = BiomaApi.lookups(
+            coords, tool_key, _counter(progress_cb, 2 * len(coords), total)
         )
 
-        return cls._apply(centroides, positions, altitudes, locations)
+        return cls._apply(centroides, positions, altitudes, locations, biomas)
 
     @classmethod
     def merge(cls, talhoes: Any, centroides: Any) -> Any:
-        """Devolve os talhoes com os 4 campos publicos vindos dos centroides."""
+        """Devolve os talhoes com os 6 campos publicos vindos dos centroides."""
         merged = talhoes.copy()
         for field in PUBLIC_FIELDS:
             merged[field] = centroides[field].to_numpy()
@@ -178,6 +191,7 @@ class CentroideService(BaseUtil):
             "n_altitude": int(centroides[FIELD_ALTITUDE].notna().sum()),
             "n_localidade": int(cls._filled(centroides[FIELD_MUNICIPIO])),
             "n_regiao": int(cls._filled(centroides[FIELD_REGIAO])),
+            "n_bioma": int(cls._filled(centroides[FIELD_BIOMA])),
         }
 
     # ── Interno ─────────────────────────────────────────────────────
@@ -203,6 +217,7 @@ class CentroideService(BaseUtil):
         positions: List[int],
         altitudes: List[Optional[float]],
         locations: List[Dict[str, str]],
+        biomas: List[Dict[str, str]],
     ) -> Any:
         """Escreve os valores consultados nos centroides (posicao a posicao)."""
         enriched = centroides.copy()
@@ -211,6 +226,7 @@ class CentroideService(BaseUtil):
         estados = [""] * len(centroides)
         regioes = [""] * len(centroides)
         paises = [""] * len(centroides)
+        bioma_values = [""] * len(centroides)
 
         for offset, position in enumerate(positions):
             values[position] = altitudes[offset] if offset < len(altitudes) else None
@@ -221,6 +237,10 @@ class CentroideService(BaseUtil):
                 regioes[position] = item["regiao"]
                 paises[position] = item["pais"]
 
+            bioma = biomas[offset] if offset < len(biomas) else None
+            if bioma:
+                bioma_values[position] = bioma["bioma"]
+
         enriched[FIELD_ALTITUDE] = pd.Series(
             values, index=enriched.index, dtype="float64"
         )
@@ -228,6 +248,7 @@ class CentroideService(BaseUtil):
         enriched[FIELD_ESTADO] = estados
         enriched[FIELD_REGIAO] = regioes
         enriched[FIELD_PAIS] = paises
+        enriched[FIELD_BIOMA] = bioma_values
         return enriched
 
     @staticmethod

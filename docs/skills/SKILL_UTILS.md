@@ -24,7 +24,7 @@ Use `utils` sempre que precisar de:
 - monitoramento de tempo/ETA de processamento (`ProcessStatisticsUtil`)
 - leitura de metadados de arquivos LAS/LAZ (`LasUtil` / `utils.las.LasLayerSource`)
 - leitura de CRS e reprojeção de LAS/LAZ (`LasLayerProjection` / `utils.las.LasLayerProjection`)
-- bases PÚBLICAS de referência (malhas oficiais lidas OFFLINE — `PublicDataStructureUtil`)
+- bases PÚBLICAS de referência (malhas oficiais lidas OFFLINE — `PublicDataStructureUtil` e `MalhaLookup`)
 
 ## 📦 Módulos principais e suas responsabilidades
 
@@ -486,34 +486,61 @@ VeraDataStructureUtil.ensure_mode_folder(root, "220", VeraDataStructureUtil.LIMI
 Constantes: `LIMITES_FOLDER` (`Limites`), `ZONAS_FOLDER` (`ZM`),
 `CENTROIDES_FOLDER` (`Centroides`), `CONSOLIDATED_FOLDER` (`Consolidado`).
 
+### `utils.MalhaLookup` — ponto → polígono em MALHAS públicas (OFFLINE)
+
+Motor COMPARTILHADO do enriquecimento: dado o shape de uma malha oficial e uma
+lista de pontos `(latitude, longitude)`, devolve os ATRIBUTOS do polígono que
+contém cada ponto — sem rede. Agrupa os pontos em células de 0,5°
+(`CELL_DEGREES`), faz UMA leitura ESPACIAL por célula
+(`VectorLayerSource.read_geodataframe(..., bbox=...)`) e resolve o
+point-in-polygon LOCALMENTE (`shapely.covers`), com cache de sessão por
+`caminho + campos`. O CRS vem do `.prj` (malha projetada tem bbox e pontos
+transformados por `pyproj`).
+
+```python
+from utils.MalhaLookup import MalhaLookup
+
+MalhaLookup.lookup(shape, -48.3336, -10.1840, ("NM_BIOMA",))   # {"NM_BIOMA": "CERRADO"}
+MalhaLookup.lookups(shape, points, ("NM_MUN", "SIGLA_UF"), tool_key, progress_cb)
+MalhaLookup.plan_seconds(shape, points)                        # ETA da fase
+MalhaLookup.clean_text("Mata Atlântica")                       # "MATA_ATLANTICA"
+```
+
+Best-effort: malha ausente/ilegível (ou sem os campos pedidos) não interrompe o
+fluxo — os campos saem vazios e o erro vai para o log (`MALHA_*`).
+
 ### `utils.PublicDataStructureUtil` — base PÚBLICA (malhas oficiais)
 
 **FONTE ÚNICA da pasta das BASES PÚBLICAS** (`<BASE_DADOS>/PUBLICOS`) — as
 malhas OFICIAIS de referência (shapefiles de domínio público) lidas OFFLINE
-pelas ferramentas. Hoje hospeda a MALHA MUNICIPAL do IBGE. A raiz é resolvida
-por `root()` nesta ordem: variável de ambiente `AETHERIS_PUBLIC_DATA` →
-preferência `ProjectStructure.public_data_folder` →
+pelas ferramentas. Hoje hospeda as malhas do IBGE: a MALHA MUNICIPAL e a MALHA
+DE BIOMAS. A raiz é resolvida por `root()` nesta ordem: variável de ambiente
+`AETHERIS_PUBLIC_DATA` → preferência `ProjectStructure.public_data_folder` →
 `<pai da pasta-mãe>/BASE_DADOS/PUBLICOS` → `DEFAULT_ROOT`.
 
 ```
 <BASE_DADOS>/PUBLICOS/IBGE_BR_Municipios_2025/BR_Municipios_2025.shp
+<BASE_DADOS>/PUBLICOS/IBGE_BIOMAS/lml_bioma_e250k_v20250911_A.shp
 ```
 
 ```python
 from utils.PublicDataStructureUtil import PublicDataStructureUtil
 
-root = PublicDataStructureUtil.root()               # raiz resolvida
-PublicDataStructureUtil.municipios_folders()        # pastas IBGE_BR_Municipios_* (mais nova primeiro)
-PublicDataStructureUtil.municipios_shape()          # .../BR_Municipios_2025.shp (None se ausente)
+root = PublicDataStructureUtil.root()          # raiz resolvida
+PublicDataStructureUtil.municipios_folders()   # pastas IBGE_BR_Municipios_* (mais nova primeiro)
+PublicDataStructureUtil.municipios_shape()     # .../BR_Municipios_2025.shp (None se ausente)
+PublicDataStructureUtil.biomas_shape()         # .../lml_bioma_e250k_v20250911_A.shp
 ```
 
-Atualizar a base pública é só trocar a pasta em disco: a versão **mais nova** é
-descoberta automaticamente (o ANO do nome da pasta manda — `2026` > `2025`), sem
-reconfigurar nada. `AETHERIS_IBGE_MUNICIPIOS` (arquivo) força um shape específico.
+Atualizar a base pública é só trocar os arquivos em disco: a versão **mais
+nova** é descoberta automaticamente — pasta do ANO mais recente
+(`IBGE_BR_Municipios_2026` > `..._2025`) e shape mais novo da pasta
+(`lml_bioma_e250k_v<AAAAMMDD>_A.shp`) — sem reconfigurar nada.
+`AETHERIS_IBGE_MUNICIPIOS` / `AETHERIS_IBGE_BIOMAS` (arquivo) forçam um shape.
 
-### `utils.AltimetriaApi` e `utils.LocalidadeApi` — enriquecimento público
+### `utils.AltimetriaApi`, `utils.LocalidadeApi` e `utils.BiomaApi` — enriquecimento
 
-Clientes do enriquecimento dos centroides das feições da Base de Limites. Ambos
+Clientes do enriquecimento dos centroides das feições da Base de Limites. Todos
 são **best-effort**: falha de rede/malha NÃO interrompe o fluxo do chamador — o
 valor sai vazio (`None`/`""`) e o erro vai para o log.
 
@@ -521,36 +548,39 @@ valor sai vazio (`None`/`""`) e o erro vai para o log.
 |---|---|---|
 | `utils.AltimetriaApi` | Open Topo Data (REDE) — `api.opentopodata.org/v1/srtm90m` | `elevations(points, tool_key, progress_cb)` → elevações em metros (`None` quando a API não cobre o ponto); lotes de 100 |
 | `utils.LocalidadeApi` | MALHA MUNICIPAL do IBGE (OFFLINE) — `PublicDataStructureUtil.municipios_shape()` | `lookup(longitude, latitude, tool_key)` → `{"municipio", "estado", "regiao", "pais"}`; `lookups(points, tool_key, progress_cb)`; `plan_seconds(points)`; `shape_path(tool_key)` |
+| `utils.BiomaApi` | MALHA DE BIOMAS do IBGE (OFFLINE) — `PublicDataStructureUtil.biomas_shape()` | `lookup(longitude, latitude, tool_key)` → `{"bioma"}`; `lookups(points, tool_key, progress_cb)`; `plan_seconds(points)`; `shape_path(tool_key)` |
 
-O `progress_cb` das duas classes é `(processados, total, eta_segundos)`, com o
-`eta` RESTANTE projetado pela taxa medida — ou seja, o ETA se auto-corrige a cada
-lote/célula (`elapsed / done × (total - done)`).
+As duas de malha são wrappers finos do `utils.MalhaLookup`. O `progress_cb` das
+três é `(processados, total, eta_segundos)`, com o `eta` RESTANTE projetado pela
+taxa medida — ou seja, o ETA se auto-corrige a cada lote/célula
+(`elapsed / done × (total - done)`).
 
-A `LocalidadeApi` é **100% OFFLINE** e **otimizada por célula**: agrupa os pontos
-em células de `CELL_DEGREES` (0,5°), faz UMA leitura ESPACIAL (`bbox` — só os
-municípios que a intersectam entram na memória) por célula e resolve
-ponto → município LOCALMENTE (point-in-polygon com shapely, `covers`). Os campos
-saem do shape: `NM_MUN` → `MUNICIPIO`, `SIGLA_UF` → `ESTADO`, `NM_REGIAO` →
-`REGIAO` (`NORTE`/`NORDESTE`/`CENTRO-OESTE`/`SUDESTE`/`SUL`), e o país é sempre
-`BRASIL` dentro do território. Medido na base real: **1277 talhões → 6,4 s**,
-**1277/1277 resolvidos**, sem NENHUMA requisição de rede.
+A `LocalidadeApi` sai do shape municipal: `NM_MUN` → `MUNICIPIO`, `SIGLA_UF` →
+`ESTADO`, `NM_REGIAO` → `REGIAO` (`NORTE`/`NORDESTE`/`CENTRO-OESTE`/`SUDESTE`/
+`SUL`) e o país é sempre `BRASIL` dentro do território. A `BiomaApi` sai do
+shape de biomas: `NM_BIOMA` → `BIOMA` (`AMAZONIA`, `CAATINGA`, `CERRADO`,
+`MATA_ATLANTICA`, `PAMPA`, `PANTANAL`). Medido na base real: **1277 talhões →
+~8 s nas duas malhas juntas**, **1277/1277 resolvidos**, sem NENHUMA requisição
+de rede.
 
 ```python
 from utils.AltimetriaApi import AltimetriaApi
+from utils.BiomaApi import BiomaApi
 from utils.LocalidadeApi import LocalidadeApi
 
 AltimetriaApi.elevations([(-10.184, -48.3336)])          # [259.0]
 LocalidadeApi.lookup(-48.3336, -10.1840)
 # {"municipio": "PALMAS", "estado": "TO", "regiao": "NORTE", "pais": "BRASIL"}
+BiomaApi.lookup(-48.3336, -10.1840)
+# {"bioma": "CERRADO"}
 ```
 
 Limites respeitados: a altimetria usa **100 pontos por requisição** e **1 chamada
-por segundo** (`MIN_INTERVAL_S`), com 2 retentativas por lote; a malha cobre
-apenas o Brasil — fora do território os quatro campos saem vazios. O texto é
+por segundo** (`MIN_INTERVAL_S`), com 2 retentativas por lote; as malhas cobrem
+apenas o Brasil — fora do território os campos saem vazios. O texto é
 normalizado como sempre foi (MAIÚSCULAS, sem acento, espaços → `_`:
-`São Paulo` → `SAO_PAULO`), então o que já está gravado nos shapes continua
-batendo. Se a malha estiver em CRS projetado, o bbox e os pontos são
-transformados para o CRS do shape (`pyproj`).
+`São Paulo` → `SAO_PAULO`, `Mata Atlântica` → `MATA_ATLANTICA`), então o que já
+está gravado nos shapes continua batendo.
 
 ### `utils.ProjectStructureSnapshot`
 
