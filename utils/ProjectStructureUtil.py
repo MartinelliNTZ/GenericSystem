@@ -100,7 +100,10 @@ class ProjectStructureUtil(FolderStructureUtil):
         "05_ASA": None,
         "06_CAR": None,
         "07_MATRICULA": None,
-        "08_LIMITES": None,
+        "08_LIMITES": {
+            "TALHOES": None,
+            "AREAS_DE_CONTROLE": None,
+        },
         "09_HISTORICO_COBERTURA_SOLO": None,
         "10_VERRA": None,
         "11_AGROROBOTICA": None,

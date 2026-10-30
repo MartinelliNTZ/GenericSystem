@@ -2,7 +2,7 @@
 """
 LimitesService — Regras de negócio da Base de Limites e das Zonas de Manejo
 ==========================================================================
-Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
+Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em TRÊS modos:
 
 **Limites** (``MODE_LIMITES``):
     <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp              → completão (todas as OS)
@@ -14,10 +14,16 @@ Importa vetores (SHP, GPKG, KML, KMZ, GeoJSON) em dois modos:
     <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp        → um arquivo por OS
     <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 
+**Áreas de Controle** (``MODE_AREAS``):
+    <BASE_DADOS>/VERRA_DATA/Consolidado/areas_controle.shp       → completão de áreas
+    <BASE_DADOS>/VERRA_DATA/<OS>/Areas/<OS>_areas_controle.shp   → um arquivo por OS
+    <pasta da OS>/08_LIMITES/AREAS_DE_CONTROLE/<OS>_areas_controle.shp
+
 ``VERRA_DATA`` é a pasta de BACKUP GERAL da base (dentro de ``BASE_DADOS``): os
 completões de todos os modos ficam agrupados na subpasta ``Consolidado`` e cada OS
-tem as suas próprias subpastas — ``Limites`` para os limites e ``ZM`` para as zonas
-de manejo (``MODE_SETTINGS[mode]["base_folder"]``). A raiz e a estrutura são
+tem as suas próprias subpastas — ``Limites`` para os limites, ``ZM`` para as zonas
+de manejo e ``Areas`` para as áreas de controle
+(``MODE_SETTINGS[mode]["base_folder"]``). A raiz e a estrutura são
 definidas em ``utils.VeraDataStructureUtil`` (engine ``utils.FolderStructureUtil``,
 o mesmo da estrutura pública ``utils.ProjectStructureUtil`` — Contrato 7).
 
@@ -50,6 +56,13 @@ Regras de negócio (zonas de manejo):
 - AREA_HA continua sendo CALCULADA em hectares.
 - O registro vai para a chave ``zonas_manejo`` da OS.
 
+Regras de negócio (áreas de controle):
+- Os campos de IDENTIFICAÇÃO são os únicos obrigatórios: FAZENDA e OS (campo
+  mapeado ou valor manual).
+- TALHÃO é OPCIONAL e NÃO há regra de duplicidade (a ``KEY`` não é gerada).
+- AREA_HA continua sendo CALCULADA em hectares.
+- O registro vai para a chave ``areas_controle`` da OS.
+
 Atualização (``ATUALIZAR``):
 - Antes de gravar, a ferramenta procura os shapes que já existem (completão,
   arquivo da OS na base e cópia no projeto) e pergunta se devem ser substituídos.
@@ -72,7 +85,7 @@ Enriquecimento público (``utils.AltimetriaApi`` + ``utils.LocalidadeApi`` +
   resolvidas por ``utils.PublicDataStructureUtil``); só a ALTITUDE usa rede.
 - O enriquecimento é BEST-EFFORT: falha de rede/malha não bloqueia a importação,
   apenas gera aviso e deixa os campos vazios.
-- A recarga (``ATUALIZAR BASE``) roda nos DOIS modos (``reload_all`` →
+- A recarga (``ATUALIZAR BASE``) roda nos TRÊS modos (``reload_all`` →
   ``reload_base``): parte dos completões e REESCREVE todos os shapes de todas as
   OS (completão, arquivo de cada OS na base e cópias nos projetos) e os
   centroides, refazendo o enriquecimento sem reimportar o vetor de origem — e as
@@ -83,7 +96,8 @@ Planilha-resumo da base privada (``ResumoOsService``):
 - A cada IMPORTAR/ATUALIZAR/ATUALIZAR BASE a planilha
   ``<VERRA_DATA>/resumo_os.xlsx`` é REGERADA por inteiro (aba ``Resumo``): uma
   linha por OS da base com a chave da OS, a ÁREA FINAL (soma de ``AREA_HA`` do
-  shape de LIMITES da OS) e a data (``ZM``) em que as zonas de manejo da OS
+  shape de LIMITES da OS), a ÁREA CONTROLE (soma de ``AREA_HA`` do shape de
+  ÁREAS DE CONTROLE da OS) e a data (``ZM``) em que as zonas de manejo da OS
   foram inseridas no sistema (``inserted_at`` do registro ``zonas_manejo`` da OS
   no banco oficial).
 - É BEST-EFFORT: falha ao gerar a planilha não desfaz a operação — vira aviso no
@@ -151,12 +165,15 @@ SHP_SIDECARS = (".shp", ".shx", ".dbf")
 
 MODE_LIMITES = "limites"
 MODE_ZONAS = "zonas"
+MODE_AREAS = "areas"
 
 # Estrutura Verra:
 #   <projeto>/08_LIMITES/TALHOES/<OS>_limites.shp
+#   <projeto>/08_LIMITES/AREAS_DE_CONTROLE/<OS>_areas_controle.shp
 #   <projeto>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 LIMITES_FOLDER = "08_LIMITES"
 TALHOES_FOLDER = "TALHOES"
+AREAS_CONTROLE_FOLDER = "AREAS_DE_CONTROLE"
 ZONAS_FOLDER = "13_ZONAS_DE_MANEJO"
 
 FIELD_TALHAO = "TALHAO"
@@ -192,6 +209,17 @@ ZONAS_FIELDS = [
     FIELD_AREA_INF,
 ] + list(PUBLIC_FIELDS)
 
+# Áreas de controle: sem nome próprio — só os campos de IDENTIFICAÇÃO (OS e
+# FAZENDA obrigatórios, TALHÃO opcional) + área calculada/informada.
+AREAS_FIELDS = [
+    FIELD_TALHAO,
+    FIELD_FAZENDA,
+    FIELD_OS,
+    FIELD_CLIENTE,
+    FIELD_AREA_CALC,
+    FIELD_AREA_INF,
+] + list(PUBLIC_FIELDS)
+
 MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
     MODE_LIMITES: {
         "label": "Limites",
@@ -219,6 +247,20 @@ MODE_SETTINGS: Dict[str, Dict[str, Any]] = {
         "db_key": "zonas_manejo",
         "fields": ZONAS_FIELDS,
         "semantic": ("zona", "campo", "fazenda", "os", "talhao", "cliente", "area"),
+        "unique": False,
+    },
+    MODE_AREAS: {
+        "label": "Áreas de Controle",
+        "consolidated": "areas_controle.shp",
+        "os_suffix": "_areas_controle",
+        "base_folder": VeraDataStructureUtil.AREAS_FOLDER,
+        "project_folder": LIMITES_FOLDER,
+        "project_subfolder": AREAS_CONTROLE_FOLDER,
+        "centroides": "centroides_areas.shp",
+        "centroides_suffix": "_centroides_areas",
+        "db_key": "areas_controle",
+        "fields": AREAS_FIELDS,
+        "semantic": ("talhao", "fazenda", "os", "cliente", "area"),
         "unique": False,
     },
 }
@@ -654,7 +696,7 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def settings(cls, mode: str) -> Dict[str, Any]:
-        """Configuração do modo (``limites`` ou ``zonas``)."""
+        """Configuração do modo (``limites``, ``zonas`` ou ``areas``)."""
         return MODE_SETTINGS.get(mode, MODE_SETTINGS[MODE_LIMITES])
 
     # ── Recarga da base (ATUALIZAR BASE) ───────────────────────────────────
@@ -781,7 +823,7 @@ class LimitesService(BaseUtil):
         progress_cb: Optional[Callable[[int, str, float, int], None]] = None,
     ) -> Dict[str, Any]:
         """
-        Recarrega TODOS os shapes da base — os DOIS modos (limites e zonas).
+        Recarrega TODOS os shapes da base — os TRÊS modos (limites, zonas e áreas).
 
         Cada modo tem o seu próprio completão; a recarga roda nos modos que
         EXISTEM na base (modo sem completão é ignorado e reportado em
@@ -802,7 +844,7 @@ class LimitesService(BaseUtil):
         started_at = time.monotonic()
         modes = [
             mode
-            for mode in (MODE_LIMITES, MODE_ZONAS)
+            for mode in (MODE_LIMITES, MODE_ZONAS, MODE_AREAS)
             if os.path.exists(cls._consolidated_path(replace(config, mode=mode)))
         ]
 
@@ -940,7 +982,7 @@ class LimitesService(BaseUtil):
 
     @classmethod
     def _os_file_path(cls, config: LimitesImportConfig, os_key: str) -> str:
-        """Caminho do arquivo do modo na subpasta da OS (``Limites`` ou ``ZM``)."""
+        """Caminho do arquivo do modo na subpasta da OS (``Limites``/``ZM``/``Areas``)."""
         settings = cls.settings(config.mode)
         folder = VeraDataStructureUtil.mode_folder(
             Path(config.output_root), os_key, settings["base_folder"]
@@ -961,6 +1003,13 @@ class LimitesService(BaseUtil):
             target_dir = target_dir / settings["project_subfolder"]
 
         return target_dir / f"{os_key}{settings['os_suffix']}.shp"
+
+    @staticmethod
+    def _project_label(settings: Dict[str, Any]) -> str:
+        """Pasta da cópia no projeto (``08_LIMITES/TALHOES``, ``13_ZONAS_DE_MANEJO``...)."""
+        folder = settings["project_folder"]
+        subfolder = settings["project_subfolder"]
+        return f"{folder}/{subfolder}" if subfolder else folder
 
     @classmethod
     def _centroides_consolidated_path(cls, config: LimitesImportConfig) -> str:
@@ -1091,12 +1140,13 @@ class LimitesService(BaseUtil):
         cls,
         config: LimitesImportConfig,
         logger: Any,
-    ) -> List[Tuple[str, Optional[float], str]]:
-        """Linhas da planilha: ``(OS, área final, data da ZM)`` por OS da base."""
+    ) -> List[Tuple[str, Optional[float], Optional[float], str]]:
+        """Linhas da planilha: ``(OS, área final, área de controle, data da ZM)``."""
         areas = cls._resumo_areas(config, logger)
+        controle = cls._os_areas(config, MODE_AREAS, logger)
         dates = cls._zm_dates(logger)
         return [
-            (key, areas[key], dates.get(key, ""))
+            (key, areas[key], controle.get(key), dates.get(key, ""))
             for key in sorted(areas, key=cls._os_sort_key)
         ]
 
@@ -1106,10 +1156,11 @@ class LimitesService(BaseUtil):
         config: LimitesImportConfig,
         logger: Any,
     ) -> Dict[str, Optional[float]]:
-        """Área final por OS (shape de LIMITES) + as OS que só têm zonas de manejo."""
+        """Área final por OS (shape de LIMITES) + as OS que só têm zonas/áreas."""
         areas: Dict[str, Optional[float]] = cls._os_areas(config, MODE_LIMITES, logger)
-        for key in cls._os_keys(config, MODE_ZONAS, logger):
-            areas.setdefault(key, None)
+        for mode in (MODE_ZONAS, MODE_AREAS):
+            for key in cls._os_keys(config, mode, logger):
+                areas.setdefault(key, None)
         return areas
 
     @classmethod
@@ -1296,6 +1347,7 @@ class LimitesService(BaseUtil):
         """
         settings = cls.settings(config.mode)
         semantic = settings["semantic"]
+        is_limites = config.mode == MODE_LIMITES
         is_zonas = config.mode == MODE_ZONAS
 
         columns = {key: cls._resolve_series(gdf, config, key) for key in semantic}
@@ -1315,7 +1367,7 @@ class LimitesService(BaseUtil):
             label = f"Feição {index + 1}"
 
             talhao = cls.normalize_text(columns.get("talhao", empty)[index])
-            if not talhao and not is_zonas:
+            if not talhao and is_limites:
                 problems.append(f"{label}: TALHÃO vazio (obrigatório).")
 
             zona = cls.normalize_text(columns.get("zona", empty)[index])
@@ -1352,7 +1404,7 @@ class LimitesService(BaseUtil):
 
             os_keys.append(os_key)
 
-            if is_zonas:
+            if not is_limites:
                 keys.append("")
                 continue
 
@@ -1374,7 +1426,7 @@ class LimitesService(BaseUtil):
         prepared[FIELD_OS] = os_keys
         prepared[FIELD_CLIENTE] = clientes
         prepared[FIELD_AREA_INF] = pd.Series(areas, index=prepared.index, dtype="float64")
-        if not is_zonas:
+        if FIELD_KEY in settings["fields"]:
             prepared[FIELD_KEY] = keys
 
         cls._init_public_fields(prepared)
@@ -1410,7 +1462,6 @@ class LimitesService(BaseUtil):
     def _area_warnings(cls, gdf: Any, config: LimitesImportConfig) -> List[str]:
         """Compara a área informada com a calculada e devolve os avisos de divergência."""
         warnings: List[str] = []
-        is_zonas = config.mode == MODE_ZONAS
 
         for _, row in gdf.iterrows():
             informed = row[FIELD_AREA_INF]
@@ -1422,10 +1473,7 @@ class LimitesService(BaseUtil):
                 continue
 
             calculated = float(row[FIELD_AREA_CALC])
-            if is_zonas:
-                key = f"{row[FIELD_OS]}-{row[FIELD_FAZENDA]}-{row[FIELD_ZONA]}"
-            else:
-                key = str(row[FIELD_KEY])
+            key = cls._warn_key(row, config)
 
             diff_pct = abs(calculated - informed) / informed * 100.0
             if diff_pct > config.tolerance_pct:
@@ -1435,6 +1483,20 @@ class LimitesService(BaseUtil):
                 )
 
         return warnings
+
+    @staticmethod
+    def _warn_key(row: Any, config: LimitesImportConfig) -> str:
+        """Identificação da feição nos avisos (``KEY`` do modo ou OS-FAZENDA[-ZONA/TALHÃO])."""
+        if FIELD_KEY in row.index:
+            return str(row[FIELD_KEY])
+
+        parts = [
+            str(row.get(FIELD_OS, "") or ""),
+            str(row.get(FIELD_FAZENDA, "") or ""),
+        ]
+        extra = FIELD_ZONA if config.mode == MODE_ZONAS else FIELD_TALHAO
+        parts.append(str(row.get(extra, "") or ""))
+        return "-".join(part for part in parts if part)
 
     @classmethod
     def _check_duplicates(cls, gdf: Any, consolidated_path: str) -> None:
@@ -1732,7 +1794,7 @@ class LimitesService(BaseUtil):
         if mother is None:
             warnings.append(
                 "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
-                f"{settings['project_folder']} não foi gerada."
+                f"{cls._project_label(settings)} não foi gerada."
             )
             return
 
@@ -1792,7 +1854,7 @@ class LimitesService(BaseUtil):
         if mother is None:
             return [
                 "Pasta-mãe não configurada no Gerenciador de Estrutura — a cópia em "
-                f"{settings['project_folder']} não será gerada."
+                f"{cls._project_label(settings)} não será gerada."
             ]
 
         warnings: List[str] = []

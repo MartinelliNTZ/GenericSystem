@@ -119,6 +119,10 @@ caminho e pastas/anos criados:
   no registro da OS (mesma estrutura, com `file` apontando para
   `13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp`). As duas chaves convivem no registro
   e também são preservadas pelo ATUALIZAR DADOS.
+- No modo **Áreas de Controle** a mesma ferramenta grava a chave **`areas_controle`**
+  no registro da OS (mesma estrutura, com `file` apontando para
+  `08_LIMITES/AREAS_DE_CONTROLE/<OS>_areas_controle.shp`). As TRÊS chaves convivem
+  no registro e também são preservadas pelo ATUALIZAR DADOS.
 - O seed **cria a base de OS** (OS + cliente + pasta) direto no Firestore via
   `CloudProjectDatabase` (`add_data/seed_os.py`). Novas OS são criadas pelo
   **Acompanhamento de OS** (botão CRIAR OS; só a chave é obrigatória — pode conter

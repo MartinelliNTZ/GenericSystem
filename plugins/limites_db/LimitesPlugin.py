@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-LimitesPlugin — Base de Limites e Zonas de Manejo
-=================================================
-Ferramenta CENTRAL com DOIS modos de importação:
+LimitesPlugin — Base de Limites, Zonas de Manejo e Áreas de Controle
+====================================================================
+Ferramenta CENTRAL com TRÊS modos de importação:
 
 - **Limites** (``08_LIMITES/TALHOES``): talhão obrigatório, duplicidade bloqueada;
 - **Zonas de Manejo** (``13_ZONAS_DE_MANEJO``): zona obrigatória, talhão opcional
-  e SEM regra de duplicidade.
+  e SEM regra de duplicidade;
+- **Áreas de Controle** (``08_LIMITES/AREAS_DE_CONTROLE``): só os campos de
+  IDENTIFICAÇÃO são obrigatórios (OS e fazenda), talhão opcional e SEM regra de
+  duplicidade.
 
-Ambos gravam:
+Todos gravam:
 
     <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp              → completão de limites
     <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp        → arquivo da OS
     <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp         → completão de zonas
     <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp        → arquivo da OS
+    <BASE_DADOS>/VERRA_DATA/Consolidado/areas_controle.shp       → completão de áreas
+    <BASE_DADOS>/VERRA_DATA/<OS>/Areas/<OS>_areas_controle.shp   → arquivo da OS
     <pasta da OS>/08_LIMITES/TALHOES/<OS>_limites.shp
+    <pasta da OS>/08_LIMITES/AREAS_DE_CONTROLE/<OS>_areas_controle.shp
     <pasta da OS>/13_ZONAS_DE_MANEJO/<OS>_zonas_manejo.shp
 
 ``VERRA_DATA`` é a pasta de BACKUP GERAL da base: os completões ficam agrupados na
 subpasta ``Consolidado`` e cada OS tem as suas subpastas — ``Limites`` para os
-limites e ``ZM`` para as zonas de manejo.
+limites, ``ZM`` para as zonas de manejo e ``Areas`` para as áreas de controle.
 
 Fluxo: escolhe o modo → seleciona o vetor → mapeia os campos → informa
 manualmente o que não foi mapeado → VALIDAR (não grava) ou IMPORTAR (calcula a
@@ -64,7 +70,8 @@ enriquecimento — sem precisar reimportar o vetor de origem.
 **Planilha-resumo da base (privada):** ao final de IMPORTAR, ATUALIZAR e
 ATUALIZAR BASE a ferramenta regera ``<VERRA_DATA>/resumo_os.xlsx`` (aba
 ``Resumo``) — uma linha por OS com a chave da OS, a **área final** (soma da área
-do shape de limites da OS) e a data em que as **zonas de manejo** da OS foram
+do shape de limites da OS), a **área de controle** (soma da área do shape de
+áreas de controle da OS) e a data em que as **zonas de manejo** da OS foram
 inseridas no sistema (``ResumoOsService``). O VALIDAR não grava nem atualiza a
 planilha.
 
@@ -86,6 +93,7 @@ from core.manager.SignalManager import SignalManager
 from plugins.BasePlugin import BasePlugin
 from plugins.limites_db.LimitesService import (
     DEFAULT_TOLERANCE_PCT,
+    MODE_AREAS,
     MODE_LIMITES,
     MODE_SETTINGS,
     MODE_ZONAS,
@@ -140,6 +148,13 @@ class LimitesPlugin(BasePlugin):
             ("cliente", "Cliente", "Campo do cliente (opcional)."),
             ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
         ),
+        MODE_AREAS: (
+            ("talhao", "Talhão", "Opcional nas áreas de controle."),
+            ("fazenda", "Fazenda", "Se não mapeado, informe a fazenda no valor manual."),
+            ("os", "OS", "Se não mapeado, informe a OS no valor manual (ex.: 169A)."),
+            ("cliente", "Cliente", "Campo do cliente (opcional)."),
+            ("area", "Área informada", "Campo da área informada em hectares (opcional)."),
+        ),
     }
 
     def __init__(self, parent=None) -> None:
@@ -189,7 +204,7 @@ class LimitesPlugin(BasePlugin):
                     "callback": self._on_recarregar,
                     "type": "secondary",
                     "description": (
-                        "Relê os completões da base (LIMITES e ZONAS) e recarrega TODOS os "
+                        "Relê os completões da base (LIMITES, ZONAS e ÁREAS) e recarrega TODOS os "
                         "shapes de TODAS as OS em todas as pastas (base + projetos), "
                         "refazendo os centroides e o enriquecimento público "
                         "(altimetria e município/UF/região/país/bioma)"
@@ -294,6 +309,10 @@ class LimitesPlugin(BasePlugin):
                 "label": "Zonas de Manejo",
                 "description": "Importa as zonas de manejo (sem regra de duplicidade)",
             },
+            MODE_AREAS: {
+                "label": "Áreas de Controle",
+                "description": "Importa as áreas de controle (talhão opcional, sem duplicidade)",
+            },
         }, num_columns=2)
         self._modo.changed.connect(self._on_mode_changed)
 
@@ -367,10 +386,10 @@ class LimitesPlugin(BasePlugin):
         self.page.set_badge(self.page.PRONTA)
         self._apply_mode_visibility()
 
-    # ── Modo (limites / zonas) ──────────────────────────────────────
+    # ── Modo (limites / zonas / áreas) ──────────────────────────────
 
     def _on_mode_changed(self, key: str) -> None:
-        """Troca o modo de importação (limites ou zonas de manejo)."""
+        """Troca o modo de importação (limites, zonas de manejo ou áreas de controle)."""
         if key not in MODE_SETTINGS:
             return
 
@@ -506,7 +525,7 @@ class LimitesPlugin(BasePlugin):
         )
 
     def _apply_fields(self) -> None:
-        """Repopula os combos (dos dois modos) e pré-seleciona os campos sugeridos.
+        """Repopula os combos (dos três modos) e pré-seleciona os campos sugeridos.
 
         A sugestão é SEMPRE recalculada a partir do vetor atual — o mapeamento não
         vem das preferências.

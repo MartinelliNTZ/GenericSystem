@@ -11,9 +11,11 @@ Raiz: ``<BASE_DADOS>/VERRA_DATA``
 
     <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp           → completão de limites
     <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp      → completão de zonas
+    <BASE_DADOS>/VERRA_DATA/Consolidado/areas_controle.shp    → completão de áreas de controle
     <BASE_DADOS>/VERRA_DATA/Consolidado/centroides.shp        → completão de centroides
     <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp     → limites da OS
     <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp     → zonas de manejo da OS
+    <BASE_DADOS>/VERRA_DATA/<OS>/Areas/<OS>_areas_controle.shp → áreas de controle da OS
     <BASE_DADOS>/VERRA_DATA/<OS>/Centroides/<OS>_centroides.shp → centroides da OS
 
 A raiz é resolvida por ``root()``, nesta ordem:
@@ -48,7 +50,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
     """FONTE ÚNICA da estrutura PRIVADA (``VERRA_DATA``) — backup geral da base.
 
     A estrutura de UMA pasta de OS é o ``STRUCTURE`` (``Limites`` + ``ZM`` +
-    ``Centroides``); os
+    ``Areas`` + ``Centroides``); os
     completões de todos os modos ficam agrupados na pasta RESERVADA
     ``Consolidado`` (que não é uma pasta de OS).
     """
@@ -74,6 +76,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
     # Pastas de dados DENTRO da pasta da OS (uma por modo da Base de Limites).
     LIMITES_FOLDER = "Limites"
     ZONAS_FOLDER = "ZM"
+    AREAS_FOLDER = "Areas"
     CENTROIDES_FOLDER = "Centroides"
 
     # As pastas de OS são nomeadas apenas pela CHAVE (sem prefixo).
@@ -86,6 +89,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
     STRUCTURE: Dict[str, Any] = {
         LIMITES_FOLDER: None,
         ZONAS_FOLDER: None,
+        AREAS_FOLDER: None,
         CENTROIDES_FOLDER: None,
     }
 
@@ -162,7 +166,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
         os_key: str,
         folder_name: str,
     ) -> Path:
-        """Pasta de um modo (``Limites`` | ``ZM``) dentro da pasta da OS."""
+        """Pasta de um modo (``Limites`` | ``ZM`` | ``Areas``) dentro da pasta da OS."""
         return cls.os_folder(root, os_key) / folder_name
 
     # ── Materialização ──────────────────────────────────────────────
@@ -187,7 +191,7 @@ class VeraDataStructureUtil(FolderStructureUtil):
         folder_name: str,
         tool_key: str = _TOOL,
     ) -> Path:
-        """Garante a pasta de um modo (``Limites`` | ``ZM``) da OS em disco."""
+        """Garante a pasta de um modo (``Limites`` | ``ZM`` | ``Areas``) da OS em disco."""
         return cls.ensure_folder(
             cls.mode_folder(root, os_key, folder_name), tool_key=tool_key
         )

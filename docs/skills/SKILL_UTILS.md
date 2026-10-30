@@ -399,7 +399,7 @@ com a **sua própria** estrutura declarada em uma subclasse:
 | Raiz | Subclasse | Estrutura |
 |---|---|---|
 | `VERRA_Farmer` — informação **PÚBLICA** | `utils.ProjectStructureUtil` | `01_...`/`14_RELATORIOS` + anos |
-| `VERRA_DATA` — informação **PRIVADA** | `utils.VeraDataStructureUtil` | `Consolidado/` + `<OS>/Limites` + `<OS>/ZM` + `<OS>/Centroides` |
+| `VERRA_DATA` — informação **PRIVADA** | `utils.VeraDataStructureUtil` | `Consolidado/` + `<OS>/Limites` + `<OS>/ZM` + `<OS>/Areas` + `<OS>/Centroides` |
 
 Cada subclasse declara apenas `ROOT_NAME`, `STRUCTURE` (fonte única do conteúdo
 de UMA pasta-chave), `KEY_PREFIX` (`OS_` na pública, `""` na privada),
@@ -463,9 +463,11 @@ preferência `ProjectStructure.verra_data_folder` →
 ```
 <BASE_DADOS>/VERRA_DATA/Consolidado/limites.shp           → completão de limites
 <BASE_DADOS>/VERRA_DATA/Consolidado/zonas_manejo.shp      → completão de zonas
+<BASE_DADOS>/VERRA_DATA/Consolidado/areas_controle.shp    → completão de áreas de controle
 <BASE_DADOS>/VERRA_DATA/Consolidado/centroides.shp        → completão de centroides
 <BASE_DADOS>/VERRA_DATA/<OS>/Limites/<OS>_limites.shp     → limites da OS
 <BASE_DADOS>/VERRA_DATA/<OS>/ZM/<OS>_zonas_manejo.shp     → zonas de manejo da OS
+<BASE_DADOS>/VERRA_DATA/<OS>/Areas/<OS>_areas_controle.shp → áreas de controle da OS
 <BASE_DADOS>/VERRA_DATA/<OS>/Centroides/<OS>_centroides.shp → centroides da OS
 ```
 
@@ -484,7 +486,8 @@ VeraDataStructureUtil.ensure_mode_folder(root, "220", VeraDataStructureUtil.LIMI
 ```
 
 Constantes: `LIMITES_FOLDER` (`Limites`), `ZONAS_FOLDER` (`ZM`),
-`CENTROIDES_FOLDER` (`Centroides`), `CONSOLIDATED_FOLDER` (`Consolidado`).
+`AREAS_FOLDER` (`Areas`), `CENTROIDES_FOLDER` (`Centroides`),
+`CONSOLIDATED_FOLDER` (`Consolidado`).
 
 ### `utils.MalhaLookup` — ponto → polígono em MALHAS públicas (OFFLINE)
 

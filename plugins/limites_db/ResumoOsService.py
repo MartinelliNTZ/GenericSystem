@@ -9,12 +9,14 @@ Mantem o XLSX de acompanhamento da base privada, gravado na RAIZ da
 
 Aba ``Resumo``, com o cabeçalho e UMA LINHA POR OS:
 
-    OS | ÁREA FINAL | ZM
+    OS | ÁREA FINAL | ÁREA CONTROLE | ZM
 
 - **OS**: chave OFICIAL da OS como TEXTO (``050``, ``169A``) — o zero à esquerda
   é preservado (a célula sai com formato de texto).
 - **ÁREA FINAL**: soma de ``AREA_HA`` de TODAS as feições do shape de LIMITES da
   OS (em hectares).
+- **ÁREA CONTROLE**: soma de ``AREA_HA`` de TODAS as feições do shape de ÁREAS DE
+  CONTROLE da OS (em hectares) — vazia quando a OS não tem áreas de controle.
 - **ZM**: data em que as zonas de manejo da OS foram inseridas no sistema
   (``inserted_at`` do registro ``zonas_manejo`` da OS no banco oficial), gravada
   como DATA real (``DD/MM/YYYY``).
@@ -27,7 +29,7 @@ acompanhamento não se perde.
 Uso:
     from plugins.limites_db.ResumoOsService import ResumoOsService
 
-    ResumoOsService.write(root, [(os_key, area_ha, inserted_at), ...], tool_key)
+    ResumoOsService.write(root, [(os_key, area_ha, area_controle_ha, inserted_at), ...], tool_key)
 """
 
 from __future__ import annotations
@@ -48,17 +50,18 @@ _TOOL_KEY = ToolKey.LIMITES_DB.value
 
 
 class ResumoOsService(BaseUtil):
-    """Planilha-resumo da base privada: OS x area final x data da ZM."""
+    """Planilha-resumo da base privada: OS x area final x area de controle x ZM."""
 
     FILE_NAME = "resumo_os.xlsx"
     SHEET_NAME = "Resumo"
-    HEADERS: Tuple[str, ...] = ("OS", "ÁREA FINAL", "ZM")
+    HEADERS: Tuple[str, ...] = ("OS", "ÁREA FINAL", "ÁREA CONTROLE", "ZM")
+    DATE_HEADER = "ZM"
 
-    # Formatos das células (Excel): OS como TEXTO, área numérica e ZM como DATA.
+    # Formatos das células (Excel): OS como TEXTO, áreas numéricas e ZM como DATA.
     TEXT_FORMAT = "@"
     AREA_FORMAT = "#,##0.00"
     DATE_FORMAT = "DD/MM/YYYY"
-    COLUMN_WIDTHS: Tuple[int, ...] = (14, 16, 14)
+    COLUMN_WIDTHS: Tuple[int, ...] = (14, 16, 16, 14)
 
     AREA_DECIMALS = 2
     # Formatos aceitos na leitura da data da ZM (banco e planilha anterior).
@@ -88,9 +91,9 @@ class ResumoOsService(BaseUtil):
 
         Args:
             root: Raiz da base privada (``VERRA_DATA``).
-            rows: Sequência de ``(OS, área final em ha, data da ZM)`` — a área
-                pode ser ``None`` e a data pode vir vazia (nesse caso a data já
-                gravada na planilha é preservada).
+            rows: Sequência de ``(OS, área final em ha, área de controle em ha,
+                data da ZM)`` — as áreas podem ser ``None`` e a data pode vir
+                vazia (nesse caso a data já gravada na planilha é preservada).
             tool_key: Chave da ferramenta para logging.
 
         Returns:
@@ -122,11 +125,15 @@ class ResumoOsService(BaseUtil):
 
     @classmethod
     def _row(cls, row: Sequence[Any], previous: Dict[str, Any]) -> Tuple[Any, ...]:
-        """Linha pronta: OS como texto, área arredondada e data da ZM resolvida."""
-        values = list(row) + [None, None, None]
+        """Linha pronta: OS como texto, áreas arredondadas e data da ZM resolvida."""
+        values = list(row) + [None, None, None, None]
         os_key = str(values[0] or "").strip()
-        area = cls._round_area(values[1])
-        return os_key, area, cls._date(values[2], previous.get(os_key))
+        return (
+            os_key,
+            cls._round_area(values[1]),
+            cls._round_area(values[2]),
+            cls._date(values[3], previous.get(os_key)),
+        )
 
     @classmethod
     def _round_area(cls, area: Any) -> Optional[float]:
@@ -195,7 +202,7 @@ class ResumoOsService(BaseUtil):
         for index, width in enumerate(cls.COLUMN_WIDTHS, start=1):
             sheet.column_dimensions[get_column_letter(index)].width = width
 
-        formats = (cls.TEXT_FORMAT, cls.AREA_FORMAT, cls.DATE_FORMAT)
+        formats = (cls.TEXT_FORMAT, cls.AREA_FORMAT, cls.AREA_FORMAT, cls.DATE_FORMAT)
         for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
             for index, number_format in enumerate(formats):
                 row[index].number_format = number_format
@@ -204,8 +211,10 @@ class ResumoOsService(BaseUtil):
     def _read_dates(cls, target: Path, logger: Any) -> Dict[str, Any]:
         """Datas da ZM já gravadas na planilha atual (``{}`` sem arquivo/ilegível).
 
-        O arquivo é SEMPRE fechado: no modo ``read_only`` o openpyxl mantém o
-        handle aberto e a substituição atômica seguinte falharia (Windows).
+        A coluna da ZM é localizada pelo CABEÇALHO — a planilha gravada ANTES da
+        coluna da área de controle (3 colunas) continua legível. O arquivo é
+        SEMPRE fechado: no modo ``read_only`` o openpyxl mantém o handle aberto e
+        a substituição atômica seguinte falharia (Windows).
         """
         if not target.is_file():
             return {}
@@ -214,10 +223,12 @@ class ResumoOsService(BaseUtil):
         try:
             workbook = load_workbook(target, read_only=True, data_only=True)
             sheet = workbook[cls.SHEET_NAME]
+            rows = list(sheet.iter_rows(values_only=True))
+            index = cls._date_column(rows)
             return {
-                str(row[0]).strip(): row[2]
-                for row in sheet.iter_rows(min_row=2, values_only=True)
-                if row and len(row) > 2 and row[0] and row[2]
+                str(row[0]).strip(): row[index]
+                for row in rows[1:]
+                if row and row[0] and len(row) > index and row[index]
             }
         except Exception as e:
             logger.warning(
@@ -230,6 +241,16 @@ class ResumoOsService(BaseUtil):
         finally:
             if workbook is not None:
                 workbook.close()
+
+    @classmethod
+    def _date_column(cls, rows: Sequence[Sequence[Any]]) -> int:
+        """Índice da coluna da ZM (pelo cabeçalho; sem ele, a ÚLTIMA coluna)."""
+        header = [
+            str(value or "").strip().upper() for value in (rows[0] if rows else ())
+        ]
+        if cls.DATE_HEADER in header:
+            return header.index(cls.DATE_HEADER)
+        return max(len(header) - 1, 0)
 
     @staticmethod
     def _save(workbook: Workbook, target: Path, logger: Any) -> None:
